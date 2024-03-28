@@ -816,12 +816,21 @@ export declare type NodeTypes = {
     INSTANCE: INSTANCE;
 };
 export declare type NodeType = keyof NodeTypes;
-export declare type Node<NType extends NodeType = NodeType> = {
+
+export interface BaseNode<NType extends NodeType = NodeType> {
     id: string;
     name: string;
     visible: boolean;
     type: NType;
-    pluginData: any;
-    sharedPluginData: any;
+    pluginData?: any;
+    sharedPluginData?: any;
     isFixed?: boolean;
-} & NodeTypes[NType];
+}
+
+export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & NodeTypes[NType] & {
+    children?: Node<NType>[]
+};
+
+export interface NodeConverter<NType extends NodeType = NodeType> {
+    convert: (node: NodeTypes[NType]) => {}
+}

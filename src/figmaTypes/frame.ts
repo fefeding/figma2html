@@ -1,7 +1,12 @@
 
-import { FRAME } from './types';
+import type { FRAME, Node, NodeConverter, NodeTypes } from './types';
 
-// 转frame为html结构对象
-export function convert(node: FRAME) {
+export class FRAMEConverter implements NodeConverter<'FRAME'> {
+    convert(node: FRAME) {
+        const res = {};
+        return res;
+    }
 
 }
+
+export default FRAMEConverter;
