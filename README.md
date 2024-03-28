@@ -1,8 +1,8 @@
-# j-util
+# j-figma2html
 工具类
 
 ```bash
-npm i j-design-util
+npm i j-figma2html
 ```
 
 # API

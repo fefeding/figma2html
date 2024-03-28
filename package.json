@@ -1,7 +1,7 @@
 {
-  "name": "j-design-util",
-  "version": "1.0.20",
-  "description": "工具类",
+  "name": "j-figma2html",
+  "version": "1.0.1",
+  "description": "figma 转 html 工具类",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -10,16 +10,10 @@
   "scripts": {
     "dev": "node test/dev",
     "build": "gulp && node ./build/build.js && npm run docs:build",
-    "test": "vitest",
-    "update": "npx taze major  -w",
-    "release": "npx bumpp --commit --tag --push",
     "api:json": "npx api-extractor run",
     "api:md": "npx api-documenter markdown -i ./docs/.api -o ./docs/api && node ./build/md.js",
     "api": "npm run api:json && npm run api:md",
-    "push": "npm publish --registry=https://registry.npmjs.org",
-    "docs:dev": "npm run api && vitepress dev",
-    "docs:build": "npm run api && vitepress build",
-    "docs:preview": "npm run api && vitepress preview"
+    "push": "npm publish --registry=https://registry.npmjs.org"
   },
   "devDependencies": {
     "@babel/core": "^7.23.7",
