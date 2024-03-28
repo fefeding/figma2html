@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "dev": "node test/dev",
-    "build": "gulp && node ./build/build.js && npm run docs:build",
+    "build": "gulp",
     "api:json": "npx api-extractor run",
     "api:md": "npx api-documenter markdown -i ./docs/.api -o ./docs/api && node ./build/md.js",
     "api": "npm run api:json && npm run api:md",
