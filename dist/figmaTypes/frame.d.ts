@@ -1,5 +1,6 @@
-import type { FRAME, NodeConverter } from './types';
-export declare class FRAMEConverter implements NodeConverter<'FRAME'> {
-    convert(node: FRAME): {};
+import type { Node, DomNode } from './types';
+import BaseConverter from './baseNode';
+export declare class FRAMEConverter extends BaseConverter<'FRAME'> {
+    convert(node: Node<'FRAME'>, dom: DomNode): Promise<DomNode>;
 }
 export default FRAMEConverter;

@@ -1,6 +1,6 @@
 import { type Color } from 'j-design-util';
 /** A string enum with value, describing the end caps of vector paths. */
-export declare enum StrokeCap {
+export enum StrokeCap {
     NONE = "NONE",
     ROUND = "ROUND",
     SQUARE = "SQUARE",
@@ -8,32 +8,32 @@ export declare enum StrokeCap {
     TRIANGLE_ARROW = "TRIANGLE_ARROW"
 }
 /** Where stroke is drawn relative to the vector outline as a string enum */
-export declare enum StrokeAlign {
+export enum StrokeAlign {
     INSIDE = "INSIDE",
     OUTSIDE = "OUTSIDE",
     CENTER = "CENTER"
 }
 /** A string enum with value, describing how corners in vector paths are rendered. */
-export declare enum StrokeJoin {
+export enum StrokeJoin {
     MITER = "MITER",
     BEVEL = "BEVEL",
     ROUND = "ROUND"
 }
-export declare enum ImageType {
+export enum ImageType {
     JPG = "JPG",
     PNG = "PNG",
     SVG = "SVG",
     PDF = "PDF"
 }
 /** A string enum with value, indicating the type of boolean operation applied */
-export declare enum BooleanOperationType {
+export enum BooleanOperationType {
     UNION = "UNION",
     INTERSECT = "INTERSECT",
     SUBTRACT = "SUBTRACT",
     EXCLUDE = "EXCLUDE"
 }
 /** Text casing applied to the node, default is the original casing */
-export declare enum TextCase {
+export enum TextCase {
     ORIGINAL = "ORIGINAL",
     UPPER = "UPPER",
     LOWER = "LOWER",
@@ -42,20 +42,20 @@ export declare enum TextCase {
     SMALL_CAPS_FORCED = "SMALL_CAPS_FORCED"
 }
 /** Text decoration applied to the node */
-export declare enum TextDecoration {
+export enum TextDecoration {
     NONE = "NONE",
     STRIKETHROUGH = "STRIKETHROUGH",
     UNDERLINE = "UNDERLINE"
 }
 /** Dimensions along which text will auto resize, default is that the text does not auto-resize. */
-export declare enum TextAutoResize {
+export enum TextAutoResize {
     NONE = "NONE",
     HEIGHT = "HEIGHT",
     WIDTH_AND_HEIGHT = "WIDTH_AND_HEIGHT",
     TRUNCATE = "TRUNCATE"
 }
 /** The unit of the line height value specified by the user. */
-export declare enum LineHeightUnit {
+export enum LineHeightUnit {
     PIXELS = "PIXELS",
     'FONT_SIZE_%' = "FONT_SIZE_%",
     'INTRINSIC_%' = "INTRINSIC_%"
@@ -76,7 +76,7 @@ export declare type ExportSetting = {
     /** Constraint that determines sizing of exported asset */
     constraint: Constrain;
 };
-export declare enum ConstrainType {
+export enum ConstrainType {
     /** Scale by value */
     SCALE = "SCALE",
     /** Scale proportionally and set width to value */
@@ -140,7 +140,7 @@ export declare type Rectangle = {
  * "COLOR"
  * "LUMINOSITY"
  */
-export declare enum BlendMode {
+export enum BlendMode {
     /** (Only applicable to objects with children) */
     PASS_THROUGH = "PASS_THROUGH",
     /** (Only applicable to objects with children) */
@@ -176,7 +176,7 @@ export declare enum BlendMode {
  * "EASE_IN_AND_OUT": Ease in and then out with an animation curve similar to CSS ease-in-out.
  * "LINEAR": No easing, similar to CSS linear.
  */
-export declare enum EasingType {
+export enum EasingType {
     /** Ease in with an animation curve similar to CSS ease-in. */
     EASE_IN = "EASE_IN",
     /** Ease out with an animation curve similar to CSS ease-out. */
@@ -186,14 +186,14 @@ export declare enum EasingType {
     /** No easing, similar to CSS linear. */
     LINEAR = "LINEAR"
 }
-export declare enum LayoutConstraintVertical {
+export enum LayoutConstraintVertical {
     TOP = "TOP",
     BOTTOM = "BOTTOM",
     CENTER = "CENTER",
     TOP_BOTTOM = "TOP_BOTTOM",
     SCALE = "SCALE"
 }
-export declare enum LayoutConstraintHorizontal {
+export enum LayoutConstraintHorizontal {
     LEFT = "LEFT",
     RIGHT = "RIGHT",
     CENTER = "CENTER",
@@ -221,7 +221,7 @@ export declare type LayoutConstraint = {
      */
     horizontal: LayoutConstraintHorizontal;
 };
-export declare enum LayoutAlign {
+export enum LayoutAlign {
     /** Determines if the layer should stretch along the parent’s counter axis. This property is only provided for direct children of auto-layout frames. */
     INHERIT = "INHERIT",
     STRETCH = "STRETCH",
@@ -230,12 +230,12 @@ export declare enum LayoutAlign {
     CENTER = "CENTER",
     MAX = "MAX"
 }
-export declare enum LayoutGridPattern {
+export enum LayoutGridPattern {
     COLUMNS = "COLUMNS",
     ROWS = "ROWS",
     GRID = "GRID"
 }
-export declare enum LayoutGridAlignment {
+export enum LayoutGridAlignment {
     MIN = "MIN",
     MAX = "MAX",
     CENTER = "CENTER"
@@ -269,11 +269,11 @@ export declare type LayoutGrid = {
     /** Number of columns or rows */
     count: number;
 };
-export declare enum AxisSizingMode {
+export enum AxisSizingMode {
     FIXED = "FIXED",
     AUTO = "AUTO"
 }
-export declare enum EffectType {
+export enum EffectType {
     INNER_SHADOW = "INNER_SHADOW",
     DROP_SHADOW = "DROP_SHADOW",
     LAYER_BLUR = "LAYER_BLUR",
@@ -315,16 +315,17 @@ export declare type Hyperlink = {
     /** ID of frame hyperlink points to, if NODE type */
     nodeID: string;
 };
-export declare enum PaintType {
+export enum PaintType {
     SOLID = "SOLID",
     GRADIENT_LINEAR = "GRADIENT_LINEAR",
     GRADIENT_RADIAL = "GRADIENT_RADIAL",
     GRADIENT_ANGULAR = "GRADIENT_ANGULAR",
     GRADIENT_DIAMOND = "GRADIENT_DIAMOND",
     IMAGE = "IMAGE",
-    EMOJI = "EMOJI"
+    EMOJI = "EMOJI",
+    VIDEO = "VIDEO"
 }
-export declare enum PaintSolidScaleMode {
+export enum PaintSolidScaleMode {
     FILL = "FILL",
     FIT = "FIT",
     TILE = "TILE",
@@ -393,7 +394,7 @@ export declare type Vector = {
 };
 /** A 2x3 2D affine transformation matrix */
 export declare type Transform = [[number, number, number], [number, number, number]];
-export declare enum PathWindingRule {
+export enum PathWindingRule {
     EVENODD = "EVENODD",
     NONZERO = "NONZERO"
 }
@@ -738,7 +739,7 @@ export declare type RECTANGLE = VECTOR & {
     rectangleCornerRadii: [number, number, number, number];
 };
 /** List types are represented as string enums with one of these possible values: ORDERED: Text is an ordered list (numbered), UNORDERED: Text is an unordered list (bulleted), NONE: Text is plain text and not part of any list */
-export declare enum LineTypes {
+export enum LineTypes {
     ORDERED = "ORDERED",
     UNORDERED = "UNORDERED",
     NONE = "NONE"
@@ -828,9 +829,31 @@ export interface BaseNode<NType extends NodeType = NodeType> {
 }
 
 export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & NodeTypes[NType] & {
-    children?: Node<NType>[]
+    children?: Node<NType>[];
+    absoluteBoundingBox?: Rectangle;
+    fills?: Paint[];
+    cornerRadius?: number;
+    /** default: 0. The padding between the left border of the frame and its children. This property is only applicable for auto-layout frames. */
+    paddingLeft?: number;
+    /** default: 0. The padding between the right border of the frame and its children. This property is only applicable for auto-layout frames. */
+    paddingRight?: number;
+    /** default: 0. The padding between the top border of the frame and its children. This property is only applicable for auto-layout frames. */
+    paddingTop?: number;
+    /** default: 0. The padding between the bottom border of the frame and its children. This property is only applicable for auto-layout frames. */
+    paddingBottom?: number;
+    effects?: Effect[];
+    style?: TypeStyle;
 };
 
+export declare type DomNode = {
+    id: string;
+    name: string;
+    type: 'div'|'img'|'span';
+    style: CSSStyleDeclaration;
+    text?: string;
+    children: DomNode[];
+}
+
 export interface NodeConverter<NType extends NodeType = NodeType> {
-    convert: (node: NodeTypes[NType]) => {}
+    convert: (node: Node<NType>, dom?: DomNode) => Promise<DomNode>
 }

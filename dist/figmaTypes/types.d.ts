@@ -322,7 +322,8 @@ export declare enum PaintType {
     GRADIENT_ANGULAR = "GRADIENT_ANGULAR",
     GRADIENT_DIAMOND = "GRADIENT_DIAMOND",
     IMAGE = "IMAGE",
-    EMOJI = "EMOJI"
+    EMOJI = "EMOJI",
+    VIDEO = "VIDEO"
 }
 export declare enum PaintSolidScaleMode {
     FILL = "FILL",
@@ -827,8 +828,17 @@ export interface BaseNode<NType extends NodeType = NodeType> {
 }
 export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & NodeTypes[NType] & {
     children?: Node<NType>[];
+    absoluteBoundingBox?: Rectangle;
+    fills?: Paint[];
+};
+export declare type DomNode = {
+    id: string;
+    name: string;
+    type: 'div' | 'img' | 'span';
+    style: CSSStyleDeclaration;
+    children: DomNode[];
 };
 export interface NodeConverter<NType extends NodeType = NodeType> {
-    convert: (node: NodeTypes[NType]) => {};
+    convert: (node: Node<NType>, dom?: DomNode) => Promise<DomNode>;
 }
 export {};
