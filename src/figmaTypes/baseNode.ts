@@ -3,15 +3,39 @@ import { Node, DomNode, NodeTypes, NodeType, NodeConverter, PaintType, PaintSoli
 import { util } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
-    async convert(node:  Node<NType>, dom: DomNode) {
+    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node) {
         dom.style = dom.style || {} as CSSStyleDeclaration;
 
+        // 位置
+        dom.bounds = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+        };
         if(node.absoluteBoundingBox) {
-            dom.style.width = util.toPX(node.absoluteBoundingBox.width).toString();
-            dom.style.height = util.toPX(node.absoluteBoundingBox.height).toString();
-            dom.style.left = util.toPX(node.absoluteBoundingBox.x).toString();
-            dom.style.top = util.toPX(node.absoluteBoundingBox.y).toString();
+            dom.bounds.width = node.absoluteBoundingBox.width;
+            dom.bounds.height = node.absoluteBoundingBox.height;
+
+            dom.style.width = util.toPX(dom.bounds.width).toString();
+            dom.style.height = util.toPX(dom.bounds.height).toString();
+            // 相对于父位置
+            if(parentNode && parentNode.absoluteBoundingBox) {
+                dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x; 
+                dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y; 
+            }
+            // 没有父元素，就认为约对定位为0
+            else {
+                dom.bounds.x = 0;
+                dom.bounds.y = 0;
+            }
+            dom.style.left = util.toPX(dom.bounds.x).toString();
+            dom.style.top = util.toPX(dom.bounds.y).toString();
+
+            dom.absoluteBoundingBox = node.absoluteBoundingBox;
         }
+        // 背景色
+        if(node.backgroundColor) dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
 
         if(node.cornerRadius) {
             dom.style.borderRadius = util.toPX(node.cornerRadius);

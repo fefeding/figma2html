@@ -819,10 +819,10 @@ export declare type NodeTypes = {
 export declare type NodeType = keyof NodeTypes;
 
 export interface BaseNode<NType extends NodeType = NodeType> {
-    id: string;
-    name: string;
-    visible: boolean;
-    type: NType;
+    id?: string;
+    name?: string;
+    visible?: boolean;
+    type?: NType;
     pluginData?: any;
     sharedPluginData?: any;
     isFixed?: boolean;
@@ -831,6 +831,7 @@ export interface BaseNode<NType extends NodeType = NodeType> {
 export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & NodeTypes[NType] & {
     children?: Node<NType>[];
     absoluteBoundingBox?: Rectangle;
+    backgroundColor?: Color;
     fills?: Paint[];
     cornerRadius?: number;
     /** default: 0. The padding between the left border of the frame and its children. This property is only applicable for auto-layout frames. */
@@ -843,17 +844,23 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     paddingBottom?: number;
     effects?: Effect[];
     style?: TypeStyle;
+    document?: DOCUMENT;
+
 };
 
 export declare type DomNode = {
     id: string;
     name: string;
-    type: 'div'|'img'|'span';
+    type: 'div'|'img'|'span'|'document'|'page'|'frame';
     style: CSSStyleDeclaration;
+    bounds?: Rectangle;
+    absoluteBoundingBox?: Rectangle;
     text?: string;
     children: DomNode[];
+
+    figmaData?: Node;
 }
 
 export interface NodeConverter<NType extends NodeType = NodeType> {
-    convert: (node: Node<NType>, dom?: DomNode) => Promise<DomNode>
+    convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node) => Promise<DomNode>
 }

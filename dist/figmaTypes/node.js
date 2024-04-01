@@ -6,9 +6,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.convert = void 0;
 const baseNode_1 = __importDefault(require("./baseNode"));
 const frame_1 = __importDefault(require("./frame"));
+const text_1 = __importDefault(require("./text"));
 const ConverterMaps = {
     'BASE': new baseNode_1.default(),
-    'FRAME': new frame_1.default()
+    'FRAME': new frame_1.default(),
+    'TEXT': new text_1.default(),
 };
 // 转node为html结构对象
 async function convert(node) {

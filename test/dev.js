@@ -1,11 +1,13 @@
-const fs = require('fs');
-const path = require('path');
-const Converter = require('../dist/index.js');
+const express = require('express');
+const builder = require('../build/build.js');
+const app = express();
 
-console.log(Converter);
-const data = JSON.parse(fs.readFileSync(path.join(__dirname, '../example/bg.json'),'utf8'));
-Converter.convert(data).then((res) => {
-    const p = path.join(__dirname, '../example/bg_dom.json');
-    fs.writeFileSync(p, JSON.stringify(res), 'utf8');
-    console.log(res);
-});
+builder.watch();// 监听文件修改
+
+app.use(express.static("./"));
+
+const port = 8806;
+
+app.listen(port)
+
+console.log(`dev server listend at ${port}`);

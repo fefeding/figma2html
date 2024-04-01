@@ -6,11 +6,68 @@ const j_design_util_1 = require("j-design-util");
 class BaseConverter {
     async convert(node, dom) {
         dom.style = dom.style || {};
+        console.log(node.absoluteBoundingBox);
         if (node.absoluteBoundingBox) {
             dom.style.width = j_design_util_1.util.toPX(node.absoluteBoundingBox.width).toString();
             dom.style.height = j_design_util_1.util.toPX(node.absoluteBoundingBox.height).toString();
+            dom.style.left = j_design_util_1.util.toPX(node.absoluteBoundingBox.x).toString();
+            dom.style.top = j_design_util_1.util.toPX(node.absoluteBoundingBox.y).toString();
         }
+        if (node.cornerRadius) {
+            dom.style.borderRadius = j_design_util_1.util.toPX(node.cornerRadius);
+        }
+        // padding
+        for (const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
+            if (node[padding])
+                dom.style[padding] = j_design_util_1.util.toPX(node[padding]);
+        }
+        this.convertStyle(node, dom);
         this.convertFills(node, dom); // 解析fills
+        this.convertEffects(node, dom); // 滤镜
+        return dom;
+    }
+    // 转换style
+    convertStyle(node, dom) {
+        if (!node.style)
+            return dom;
+        if (node.style.fontFamily)
+            dom.style.fontFamily = node.style.fontFamily;
+        if (node.style.fontSize)
+            dom.style.fontSize = j_design_util_1.util.toPX(node.style.fontSize);
+        if (node.style.fontWeight)
+            dom.style.fontWeight = node.style.fontWeight.toString();
+        if (node.style.italic)
+            dom.style.fontStyle = 'italic';
+        if (node.style.letterSpacing)
+            dom.style.letterSpacing = j_design_util_1.util.toPX(node.style.letterSpacing);
+        if (node.style.lineHeightPx)
+            dom.style.lineHeight = j_design_util_1.util.toPX(node.style.lineHeightPx);
+        if (node.style.textAlignHorizontal)
+            dom.style.textAlign = node.style.textAlignHorizontal;
+        if (node.style.textAlignVertical)
+            dom.style.verticalAlign = node.style.textAlignVertical;
+        return dom;
+    }
+    // 转换滤镜
+    convertEffects(node, dom) {
+        if (node.effects) {
+            for (const effect of node.effects) {
+                if (!effect.visible === false)
+                    continue;
+                switch (effect.type) {
+                    case types_1.EffectType.DROP_SHADOW:
+                    case types_1.EffectType.INNER_SHADOW: {
+                        dom.style.filter += ` drop-shadow(${j_design_util_1.util.toPX(effect.offset.x)} ${j_design_util_1.util.toPX(effect.offset.y)} ${j_design_util_1.util.toPX(effect.radius)} ${j_design_util_1.util.colorToString(effect.color)})`;
+                        break;
+                    }
+                    case types_1.EffectType.LAYER_BLUR:
+                    case types_1.EffectType.BACKGROUND_BLUR: {
+                        dom.style.filter += ` blur(${j_design_util_1.util.toPX(effect.radius)})`;
+                        break;
+                    }
+                }
+            }
+        }
         return dom;
     }
     // 处理填充
