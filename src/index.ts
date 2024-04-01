@@ -18,11 +18,24 @@ async function loadFigmaFile(fileId: string, token: string) {
     return JSON.parse(data);
 }
 
+// 获取图片
+async function getFigmaImage(key: string, token: string) {
+    const url = `https://api.figma.com/v1/images/${key}`;
+    const option = {
+        headers: {
+            "X-Figma-Token": token,
+        }
+    };
+    const data = await util.request(url, option);
+    return JSON.parse(data);
+}
+
 export {
     convert,
     nodeToDom,
     util,
-    loadFigmaFile
+    loadFigmaFile,
+    getFigmaImage
 }
 
 export default convert;

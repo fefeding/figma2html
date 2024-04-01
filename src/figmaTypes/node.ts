@@ -1,5 +1,5 @@
 
-import type { Node, DomNode, NodeConverter } from './types';
+import type { Node, DomNode, NodeConverter, NodeToDomOption } from './types';
 import BaseConverter from './baseNode';
 import DocumentConverter from './document';
 import PageConverter from './page';
@@ -53,32 +53,32 @@ export async function convert(node: Node, parentNode?: Node): Promise<DomNode> {
 }
 
 // 把figma数据转为dom对象
-export function nodeToDom(node) {
+export async function nodeToDom(node: DomNode, option?: NodeToDomOption) {
     switch(node.type) {
         case 'document': {
-            return renderDocument(node);
+            return await renderDocument(node, option);
         }
         case 'page': {
-            return renderPage(node);
+            return await renderPage(node, option);
         }
         default: {
-            return renderElement(node);
+            return await renderElement(node, option);
         }
     }
 }
 
-function renderDocument(node) {
-    const doc = renderElement(node);
+async function renderDocument(node: DomNode, option?: NodeToDomOption) {
+    const doc = await renderElement(node, option);
     return doc;
 }
 
-function renderPage(node) {
-    const page = renderElement(node);
+async function renderPage(node: DomNode, option?: NodeToDomOption) {
+    const page = await renderElement(node, option);
     page.style.minHeight = node.bounds.height + 'px';
     return page;
 }
 
-function renderElement(node) {
+async function renderElement(node: DomNode, option?: NodeToDomOption) {
     const dom = document.createElement(node.type);
     if(node.style) {
         Object.assign(dom.style, node.style);
@@ -90,9 +90,13 @@ function renderElement(node) {
     if(node.name) dom.setAttribute('data-name', node.name);
     if(node.id) dom.setAttribute('data-id', node.id);
 
+    if(node.type === 'img' && option && option.getImage) {
+        //const imgData = await option.getImage(node.)
+    }
+
     if(node.children) {
         for(const child of node.children) {
-            const c = nodeToDom(child);
+            const c = await nodeToDom(child);
             dom.appendChild(c);
         }
     }

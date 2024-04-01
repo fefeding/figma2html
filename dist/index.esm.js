@@ -1177,29 +1177,29 @@ async function convert(node, parentNode) {
     return dom;
 }
 // 把figma数据转为dom对象
-function nodeToDom(node) {
+async function nodeToDom(node, option) {
     switch (node.type) {
         case 'document': {
-            return renderDocument(node);
+            return await renderDocument(node, option);
         }
         case 'page': {
-            return renderPage(node);
+            return await renderPage(node, option);
         }
         default: {
-            return renderElement(node);
+            return await renderElement(node, option);
         }
     }
 }
-function renderDocument(node) {
-    const doc = renderElement(node);
+async function renderDocument(node, option) {
+    const doc = await renderElement(node, option);
     return doc;
 }
-function renderPage(node) {
-    const page = renderElement(node);
+async function renderPage(node, option) {
+    const page = await renderElement(node, option);
     page.style.minHeight = node.bounds.height + 'px';
     return page;
 }
-function renderElement(node) {
+async function renderElement(node, option) {
     const dom = document.createElement(node.type);
     if (node.style) {
         Object.assign(dom.style, node.style);
@@ -1211,9 +1211,10 @@ function renderElement(node) {
         dom.setAttribute('data-name', node.name);
     if (node.id)
         dom.setAttribute('data-id', node.id);
+    if (node.type === 'img' && option && option.getImage) ;
     if (node.children) {
         for (const child of node.children) {
-            const c = nodeToDom(child);
+            const c = await nodeToDom(child);
             dom.appendChild(c);
         }
     }
@@ -1235,6 +1236,17 @@ async function loadFigmaFile(fileId, token) {
     const data = await dist.util.request(url, option);
     return JSON.parse(data);
 }
+// 获取图片
+async function getFigmaImage(key, token) {
+    const url = `https://api.figma.com/v1/images/${key}`;
+    const option = {
+        headers: {
+            "X-Figma-Token": token,
+        }
+    };
+    const data = await dist.util.request(url, option);
+    return JSON.parse(data);
+}
 
 var util$1 = dist.util;
-export { convert, convert as default, loadFigmaFile, nodeToDom, util$1 as util };
+export { convert, convert as default, getFigmaImage, loadFigmaFile, nodeToDom, util$1 as util };

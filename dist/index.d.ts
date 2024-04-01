@@ -7,5 +7,6 @@ import { convert, nodeToDom } from './figmaTypes/node';
  * @param token
  */
 declare function loadFigmaFile(fileId: string, token: string): Promise<any>;
-export { convert, nodeToDom, util, loadFigmaFile };
+declare function getFigmaImage(key: string, token: string): Promise<any>;
+export { convert, nodeToDom, util, loadFigmaFile, getFigmaImage };
 export default convert;

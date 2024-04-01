@@ -861,6 +861,10 @@ export declare type DomNode = {
     figmaData?: Node;
 }
 
+export declare type NodeToDomOption = {
+    getImage: (key: string) => Promise<any>;
+}
+
 export interface NodeConverter<NType extends NodeType = NodeType> {
     convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node) => Promise<DomNode>
 }
