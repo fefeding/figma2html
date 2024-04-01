@@ -1,9 +1,9 @@
 
-import { Node, DomNode, NodeTypes, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, EffectType } from './types';
+import { Node, DomNode, NodeTypes, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, EffectType, ConvertNodeOption } from './types';
 import { util } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
-    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node) {
+    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
         dom.style = dom.style || {} as CSSStyleDeclaration;
 
         // 位置
@@ -46,14 +46,14 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             if(node[padding]) dom.style[padding] = util.toPX(node[padding]);
         }
         
-        this.convertStyle(node, dom);
-        this.convertFills(node, dom);// 解析fills
-        this.convertEffects(node, dom);// 滤镜
+        this.convertStyle(node, dom, option);
+        this.convertFills(node, dom, option);// 解析fills
+        this.convertEffects(node, dom, option);// 滤镜
         return dom;
     }
 
     // 转换style
-    convertStyle(node:  Node<NType>, dom: DomNode) {
+    convertStyle(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
         if(!node.style) return dom;
 
         if (node.style.fontFamily) dom.style.fontFamily = node.style.fontFamily;
@@ -73,7 +73,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 转换滤镜
-    convertEffects(node:  Node<NType>, dom: DomNode) {
+    convertEffects(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
         if(node.effects) {
             for(const effect of node.effects) {
                 if(!effect.visible === false) continue;
@@ -95,7 +95,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 处理填充
-    convertFills(node:  Node<NType>, dom: DomNode) {
+    convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
         if(node.fills) {
             for(const fill of node.fills) {
                 if(fill.visible === false) continue;
@@ -117,7 +117,12 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     }
                     // 图片
                     case PaintType.IMAGE: {
-                        dom.style.backgroundImage = fill.imageRef;
+                        if(option && option.images) {
+                            const img = option.images[fill.imageRef];
+                            if(img) dom.style.backgroundImage = `url(${img})`;
+                            dom.backgroundImageUrl = img || fill.imageRef;
+                        }
+                        
                         switch(fill.scaleMode) {
                             case PaintSolidScaleMode.FILL: {
                                 dom.style.backgroundSize = 'cover';

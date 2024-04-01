@@ -848,6 +848,10 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
 
 };
 
+export declare type ConvertNodeOption = {
+    images?: {[key: string]: string} 
+}
+
 export declare type DomNode = {
     id: string;
     name: string;
@@ -857,7 +861,7 @@ export declare type DomNode = {
     absoluteBoundingBox?: Rectangle;
     text?: string;
     children: DomNode[];
-
+    backgroundImageUrl?: string;// figma图片id
     figmaData?: Node;
 }
 
@@ -866,5 +870,5 @@ export declare type NodeToDomOption = {
 }
 
 export interface NodeConverter<NType extends NodeType = NodeType> {
-    convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node) => Promise<DomNode>
+    convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node, option?: ConvertNodeOption) => Promise<DomNode>
 }

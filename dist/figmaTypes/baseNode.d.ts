@@ -1,9 +1,9 @@
-import { Node, DomNode, NodeType, NodeConverter, Paint, Vector, ColorStop } from './types';
+import { Node, DomNode, NodeType, NodeConverter, Paint, Vector, ColorStop, ConvertNodeOption } from './types';
 export declare class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
-    convert(node: Node<NType>, dom: DomNode, parentNode?: Node): Promise<DomNode>;
-    convertStyle(node: Node<NType>, dom: DomNode): DomNode;
-    convertEffects(node: Node<NType>, dom: DomNode): DomNode;
-    convertFills(node: Node<NType>, dom: DomNode): DomNode;
+    convert(node: Node<NType>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption): Promise<DomNode>;
+    convertStyle(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): DomNode;
+    convertEffects(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): DomNode;
+    convertFills(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): DomNode;
     convertLinearGradient(gradient: Paint): string;
     convertRadialGradient(gradient: Paint): string;
     getRadialGradientPosition(gradientHandlePositions: Vector[]): string;

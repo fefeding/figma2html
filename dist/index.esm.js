@@ -894,7 +894,7 @@ var LineTypes;
 })(LineTypes || (LineTypes = {}));
 
 class BaseConverter {
-    async convert(node, dom, parentNode) {
+    async convert(node, dom, parentNode, option) {
         dom.style = dom.style || {};
         // 位置
         dom.bounds = {
@@ -933,13 +933,13 @@ class BaseConverter {
             if (node[padding])
                 dom.style[padding] = dist.util.toPX(node[padding]);
         }
-        this.convertStyle(node, dom);
-        this.convertFills(node, dom); // 解析fills
-        this.convertEffects(node, dom); // 滤镜
+        this.convertStyle(node, dom, option);
+        this.convertFills(node, dom, option); // 解析fills
+        this.convertEffects(node, dom, option); // 滤镜
         return dom;
     }
     // 转换style
-    convertStyle(node, dom) {
+    convertStyle(node, dom, option) {
         if (!node.style)
             return dom;
         if (node.style.fontFamily)
@@ -961,7 +961,7 @@ class BaseConverter {
         return dom;
     }
     // 转换滤镜
-    convertEffects(node, dom) {
+    convertEffects(node, dom, option) {
         if (node.effects) {
             for (const effect of node.effects) {
                 if (!effect.visible === false)
@@ -983,7 +983,7 @@ class BaseConverter {
         return dom;
     }
     // 处理填充
-    convertFills(node, dom) {
+    convertFills(node, dom, option) {
         if (node.fills) {
             for (const fill of node.fills) {
                 if (fill.visible === false)
@@ -1005,7 +1005,12 @@ class BaseConverter {
                     }
                     // 图片
                     case PaintType.IMAGE: {
-                        dom.style.backgroundImage = fill.imageRef;
+                        if (option && option.images) {
+                            const img = option.images[fill.imageRef];
+                            if (img)
+                                dom.style.backgroundImage = `url(${img})`;
+                            dom.backgroundImageUrl = img || fill.imageRef;
+                        }
                         switch (fill.scaleMode) {
                             case PaintSolidScaleMode.FILL: {
                                 dom.style.backgroundSize = 'cover';
@@ -1083,7 +1088,7 @@ class BaseConverter {
 }
 
 class DocumentConverter extends BaseConverter {
-    async convert(node, dom, parentNode) {
+    async convert(node, dom, parentNode, option) {
         dom.type = 'div';
         dom.style.position = '';
         return dom;
@@ -1091,17 +1096,17 @@ class DocumentConverter extends BaseConverter {
 }
 
 class PageConverter extends BaseConverter {
-    async convert(node, dom, parentNode) {
+    async convert(node, dom, parentNode, option) {
         dom.type = 'page';
         dom.style.position = '';
-        return super.convert(node, dom, parentNode);
+        return super.convert(node, dom, parentNode, option);
     }
 }
 
 class FRAMEConverter extends BaseConverter {
-    async convert(node, dom, parentNode) {
+    async convert(node, dom, parentNode, option) {
         //dom.style.position = '';
-        return super.convert(node, dom, parentNode);
+        return super.convert(node, dom, parentNode, option);
     }
 }
 
@@ -1144,10 +1149,10 @@ const ConverterMaps = {
     'CANVAS': new PageConverter(),
 };
 // 转node为html结构对象
-async function convert(node, parentNode) {
+async function convert(node, parentNode, option) {
     // 如果是根，则返回document
     if (node.document) {
-        const docDom = await convert(node.document, node);
+        const docDom = await convert(node.document, node, option);
         return docDom;
     }
     const dom = {
@@ -1164,10 +1169,10 @@ async function convert(node, parentNode) {
     };
     const converter = ConverterMaps[node.type] || ConverterMaps.BASE;
     if (converter)
-        await converter.convert(node, dom, parentNode);
+        await converter.convert(node, dom, parentNode, option);
     if (node.children && node.children.length) {
         for (const child of node.children) {
-            const c = await convert(child, node);
+            const c = await convert(child, node, option);
             if (node.type === 'CANVAS') {
                 c.style.overflow = 'hidden';
             }
@@ -1180,22 +1185,22 @@ async function convert(node, parentNode) {
 async function nodeToDom(node, option) {
     switch (node.type) {
         case 'document': {
-            return await renderDocument(node, option);
+            return await renderDocument(node);
         }
         case 'page': {
-            return await renderPage(node, option);
+            return await renderPage(node);
         }
         default: {
-            return await renderElement(node, option);
+            return await renderElement(node);
         }
     }
 }
 async function renderDocument(node, option) {
-    const doc = await renderElement(node, option);
+    const doc = await renderElement(node);
     return doc;
 }
 async function renderPage(node, option) {
-    const page = await renderElement(node, option);
+    const page = await renderElement(node);
     page.style.minHeight = node.bounds.height + 'px';
     return page;
 }
@@ -1211,7 +1216,6 @@ async function renderElement(node, option) {
         dom.setAttribute('data-name', node.name);
     if (node.id)
         dom.setAttribute('data-id', node.id);
-    if (node.type === 'img' && option && option.getImage) ;
     if (node.children) {
         for (const child of node.children) {
             const c = await nodeToDom(child);
@@ -1236,17 +1240,34 @@ async function loadFigmaFile(fileId, token) {
     const data = await dist.util.request(url, option);
     return JSON.parse(data);
 }
-// 获取图片
-async function getFigmaImage(key, token) {
-    const url = `https://api.figma.com/v1/images/${key}`;
+// 获取文件所有图片
+async function getFigmaFileImages(fileId, token) {
+    const url = `https://api.figma.com/v1/files/${fileId}/images`;
     const option = {
         headers: {
             "X-Figma-Token": token,
         }
     };
     const data = await dist.util.request(url, option);
-    return JSON.parse(data);
+    const images = JSON.parse(data);
+    if (images.meta && images.meta.images)
+        return images.meta.images;
+    return {};
+}
+// 获取图片
+async function getFigmaImage(key, token, ids) {
+    const url = `https://api.figma.com/v1/images/${key}?ids=${encodeURIComponent(ids)}`;
+    const option = {
+        headers: {
+            "X-Figma-Token": token,
+        }
+    };
+    const data = await dist.util.request(url, option);
+    const images = JSON.parse(data);
+    if (images.meta && images.meta.images)
+        return images.meta.images;
+    return images;
 }
 
 var util$1 = dist.util;
-export { convert, convert as default, getFigmaImage, loadFigmaFile, nodeToDom, util$1 as util };
+export { convert, convert as default, getFigmaFileImages, getFigmaImage, loadFigmaFile, nodeToDom, util$1 as util };
