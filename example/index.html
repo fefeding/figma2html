@@ -32,7 +32,7 @@
 	</div>
 </body>
 <script type="module">
-	import { convert, util, loadFigmaFile } from "../dist/index.esm.js";
+	import { convert, nodeToDom, util, loadFigmaFile } from "../dist/index.esm.js";
 	
 	async function loadFigmaTemplate(id) {
 		//const data = await loadFigmaFile(id, 'token');
@@ -49,55 +49,9 @@
 		const container = document.getElementById('container');
 		container.innerHTML = '';
 
-		const node = renderNode(tpl);
+		const node = nodeToDom(tpl);
 		//node.style.overflow = 'hidden';
 		node && container.appendChild(node);
-	}
-
-	function renderNode(node) {
-		switch(node.type) {
-			case 'document': {
-				return renderDocument(node);
-			}
-			case 'page': {
-				return renderPage(node);
-			}
-			default: {
-				return renderElement(node);
-			}
-		}
-	}
-
-	function renderDocument(node) {
-		const doc = renderElement(node);
-		return doc;
-	}
-
-	function renderPage(node) {
-		const page = renderElement(node);
-		page.style.minHeight = node.bounds.height + 'px';
-		return page;
-	}
-
-	function renderElement(node) {
-		const dom = document.createElement(node.type);
-		if(node.style) {
-			Object.assign(dom.style, node.style);
-		}
-		if(node.text) {
-			dom.innerText = node.text;
-		}
-
-		if(node.name) dom.setAttribute('title', node.name);
-		if(node.id) dom.setAttribute('data-id', node.id);
-
-		if(node.children) {
-			for(const child of node.children) {
-				const c = renderNode(child);
-				dom.appendChild(c);
-			}
-		}
-		return dom;
 	}
 
 	renderTemplate();

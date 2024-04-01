@@ -1,6 +1,6 @@
 export type * from './figmaTypes/types';
 import { util } from 'j-design-util';
-import { convert } from './figmaTypes/node';
+import { convert, nodeToDom } from './figmaTypes/node';
 
 /**
  * 获取figma文件
@@ -20,6 +20,7 @@ async function loadFigmaFile(fileId: string, token: string) {
 
 export {
     convert,
+    nodeToDom,
     util,
     loadFigmaFile
 }

@@ -51,3 +51,50 @@ export async function convert(node: Node, parentNode?: Node): Promise<DomNode> {
     }
     return dom;
 }
+
+// 把figma数据转为dom对象
+export function nodeToDom(node) {
+    switch(node.type) {
+        case 'document': {
+            return renderDocument(node);
+        }
+        case 'page': {
+            return renderPage(node);
+        }
+        default: {
+            return renderElement(node);
+        }
+    }
+}
+
+function renderDocument(node) {
+    const doc = renderElement(node);
+    return doc;
+}
+
+function renderPage(node) {
+    const page = renderElement(node);
+    page.style.minHeight = node.bounds.height + 'px';
+    return page;
+}
+
+function renderElement(node) {
+    const dom = document.createElement(node.type);
+    if(node.style) {
+        Object.assign(dom.style, node.style);
+    }
+    if(node.text) {
+        dom.innerText = node.text;
+    }
+
+    if(node.name) dom.setAttribute('title', node.name);
+    if(node.id) dom.setAttribute('data-id', node.id);
+
+    if(node.children) {
+        for(const child of node.children) {
+            const c = nodeToDom(child);
+            dom.appendChild(c);
+        }
+    }
+    return dom;
+}
