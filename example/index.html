@@ -32,7 +32,7 @@
 	</div>
 </body>
 <script type="module">
-	import { convert, nodeToDom, util, loadFigmaFile, getFigmaImage, getFigmaFileImages } from "../dist/index.esm.js";
+	import { convert, nodeToDom, util, loadFigmaFile } from "../dist/index.esm.js";
 	
 	async function loadFigmaTemplate(id) {
 		//const data = await loadFigmaFile(id, 'token');
@@ -44,21 +44,12 @@
 
 	async function renderTemplate() {
 		const data = await loadFigmaTemplate();
-
-		const images = await getFigmaFileImages('key', 'token');
-
-		const tpl = await convert(data, null, {
-			images
-		});
+		const tpl = await convert(data);
 		
-		console.log(tpl);
-
 		const container = document.getElementById('container');
 		container.innerHTML = '';
 
-		const node = await nodeToDom(tpl, {
-			
-		});
+		const node = nodeToDom(tpl);
 		//node.style.overflow = 'hidden';
 		node && container.appendChild(node);
 	}
