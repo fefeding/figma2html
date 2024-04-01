@@ -854,6 +854,7 @@ export declare type DomNode = {
     name: string;
     type: 'div' | 'img' | 'span' | 'document' | 'page' | 'frame';
     style: CSSStyleDeclaration;
+    visible?: boolean;
     bounds?: Rectangle;
     absoluteBoundingBox?: Rectangle;
     text?: string;

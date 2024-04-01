@@ -79,6 +79,7 @@ async function renderPage(node: DomNode, option?: NodeToDomOption) {
 }
 
 async function renderElement(node: DomNode, option?: NodeToDomOption) {
+    
     const dom = document.createElement(node.type);
     if(node.style) {
         Object.assign(dom.style, node.style);
@@ -86,6 +87,8 @@ async function renderElement(node: DomNode, option?: NodeToDomOption) {
     if(node.text) {
         dom.innerText = node.text;
     }
+
+    if(node.visible === false) dom.style.display = 'none';
 
     if(node.name) dom.setAttribute('data-name', node.name);
     if(node.id) dom.setAttribute('data-id', node.id);

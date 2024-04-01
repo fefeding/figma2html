@@ -12,15 +12,19 @@
 		}
 
 		#container {
-			text-align: center;
+			text-align: left;
 			height: 100%;
 			margin: auto;
-			background-color: #eee;
+			background-color: rgb(44, 44, 44);
 			position: relative;
 		}
-
-		#container page>div {
-			display: block;
+		#container page {
+			overflow: auto;
+		}
+		#container page > div {
+			display: inline-block;
+			position: relative;
+			margin: 50px;
 		}
 	</style>
 </head>
@@ -28,12 +32,14 @@
 <body>
 	
 	<div id="container">
-		<h1>加载中...</h1>
+		<h1 style="color: #fff">加载中...</h1>
 	</div>
 </body>
 <script type="module">
 	import { convert, nodeToDom, util, loadFigmaFile, getFigmaImage, getFigmaFileImages } from "../dist/index.esm.js";
 	
+	const urlParams = getUrlParams();
+
 	async function loadFigmaTemplate(id) {
 		//const data = await loadFigmaFile(id, 'token');
 		let data = await util.request('bg.json');
@@ -45,7 +51,7 @@
 	async function renderTemplate() {
 		const data = await loadFigmaTemplate();
 
-		const images = await getFigmaFileImages('key', 'token');
+		const images = await getFigmaFileImages(urlParams.fileid, urlParams.token);
 
 		const tpl = await convert(data, null, {
 			images
@@ -64,6 +70,15 @@
 	}
 
 	renderTemplate();
+
+	function getUrlParams(url=location.href) {
+		const urlParams = new URLSearchParams(url.split('?')[1]);
+		const params = {};
+		for (let param of urlParams.entries()) {
+			params[param[0]] = param[1];
+		}
+		return params;
+	}
 </script>
 
 </html>
