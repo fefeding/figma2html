@@ -1208,7 +1208,7 @@ function renderElement(node) {
         dom.innerText = node.text;
     }
     if (node.name)
-        dom.setAttribute('title', node.name);
+        dom.setAttribute('data-name', node.name);
     if (node.id)
         dom.setAttribute('data-id', node.id);
     if (node.children) {
