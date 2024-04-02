@@ -41,6 +41,11 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             dom.style.borderRadius = util.toPX(node.cornerRadius);
         }
 
+        // 旋转
+        if(node.rotation) {
+            dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
+        }
+
         // padding
         for(const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
             if(node[padding]) dom.style[padding] = util.toPX(node[padding]);
@@ -68,6 +73,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             dom.style.textAlign = node.style.textAlignHorizontal;
         if (node.style.textAlignVertical)
             dom.style.verticalAlign = node.style.textAlignVertical;
+        
 
         return dom;
     }

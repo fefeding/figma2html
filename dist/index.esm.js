@@ -928,6 +928,10 @@ class BaseConverter {
         if (node.cornerRadius) {
             dom.style.borderRadius = dist.util.toPX(node.cornerRadius);
         }
+        // 旋转
+        if (node.rotation) {
+            dom.style.transform = `rotate(${dist.util.toRad(node.rotation)})`;
+        }
         // padding
         for (const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
             if (node[padding])
@@ -1198,7 +1202,9 @@ class TEXTConverter extends BaseConverter {
         dom.type = 'span';
         if (node.characters)
             dom.text = node.characters;
-        return super.convert(node, dom, parentNode, option);
+        const res = await super.convert(node, dom, parentNode, option);
+        res.style.width = 'auto'; // text没必要指定宽度
+        return res;
     }
     // 处理填充, 文本的fill就是字体的颜色
     convertFills(node, dom) {

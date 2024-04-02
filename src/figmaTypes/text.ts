@@ -7,7 +7,9 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
     async convert(node:  Node<'TEXT'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
         dom.type = 'span';
         if(node.characters) dom.text = node.characters;
-        return super.convert(node, dom, parentNode, option);
+        const res = await super.convert(node, dom, parentNode, option);
+        res.style.width = 'auto';// text没必要指定宽度
+        return res;
     }
     // 处理填充, 文本的fill就是字体的颜色
     convertFills(node:  Node<'TEXT'>, dom: DomNode) {

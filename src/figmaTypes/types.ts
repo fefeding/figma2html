@@ -834,6 +834,7 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     backgroundColor?: Color;
     fills?: Paint[];
     strokes?: Paint[];
+    rotation?: number;
     "strokeWeight"?: number;
     "strokeAlign"?: StrokeAlign;
     cornerRadius?: number;
