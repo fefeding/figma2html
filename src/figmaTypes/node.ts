@@ -68,6 +68,12 @@ export async function nodeToDom(node: DomNode, option?: NodeToDomOption) {
         case 'ellipse': {
             return await renderEllipse(node, option);
         }
+        case 'stop':
+            case 'defs':
+            case 'linearGradient':
+                case 'radialGradient': {
+                    return await renderSvgElement(node, option);
+                }
         default: {
             return await renderElement(node, option);
         }
@@ -86,8 +92,7 @@ async function renderPage(node: DomNode, option?: NodeToDomOption) {
 }
 
 async function renderSvg(node: DomNode, option?: NodeToDomOption) {
-    let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); // 创建SVG元素
-    await renderElement(node, option, svg);
+    const svg = await renderSvgElement(node, option);
     
     svg.setAttribute('width', node.bounds.width + '');
     svg.setAttribute('height', node.bounds.height + '');
@@ -96,13 +101,20 @@ async function renderSvg(node: DomNode, option?: NodeToDomOption) {
 }
 
 async function renderEllipse(node: DomNode, option?: NodeToDomOption) {
-    const ellipse = await renderElement(node, option);
-    ellipse.setAttribute('cx', node.bounds.width/2 + '');
-    ellipse.setAttribute('cy', node.bounds.height/2 + '');
-    ellipse.setAttribute('rx', node.bounds.width/2 + '');
-    ellipse.setAttribute('ry', node.bounds.height/2 + '');
-    ellipse.setAttribute('fill', node.style.background || node.style.backgroundColor);
+    const ellipse = await renderSvgElement(node, option);
+    ellipse.setAttribute('cx', '50%');
+    ellipse.setAttribute('cy', '50%');
+    ellipse.setAttribute('rx', '50%');
+    ellipse.setAttribute('ry', '50%');
+    ellipse.setAttribute('fill', node.fill || node.style.background || node.style.backgroundColor);
     return ellipse;
+}
+
+async function renderSvgElement(node: DomNode, option?: NodeToDomOption) {
+    let el = document.createElementNS("http://www.w3.org/2000/svg", node.type); // 创建SVG元素
+    await renderElement(node, option, el);
+   
+    return el;
 }
 
 async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTMLElement|SVGElement) {
@@ -121,7 +133,18 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
     if(node.visible === false) dom.style.display = 'none';
 
     if(node.name) dom.setAttribute('data-name', node.name);
-    if(node.id) dom.setAttribute('data-id', node.id);
+    if(node.id) dom.setAttribute('id', node.id);
+    if(node.cx) dom.setAttribute('cx', node.cx);
+    if(node.cy) dom.setAttribute('cy', node.cy);
+    if(node.r) dom.setAttribute('r', node.r);
+    if(node.fx) dom.setAttribute('fx', node.fx);
+    if(node.fy) dom.setAttribute('fx', node.fy);
+
+    if(node.x1) dom.setAttribute('x1', node.x1);
+    if(node.y1) dom.setAttribute('y1', node.y1);
+    if(node.x2) dom.setAttribute('x2', node.x2);
+    if(node.y2) dom.setAttribute('y2', node.y2);
+    if(node.offset) dom.setAttribute('offset', node.offset);
 
 
     if(node.children) {

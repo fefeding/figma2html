@@ -674,6 +674,15 @@ class BaseConverter {
         this.convertEffects(node, dom, option); // 滤镜
         return dom;
     }
+    // 生成节点对象
+    createDomNode(type) {
+        const dom = {
+            type: type,
+            style: {},
+            children: [],
+        };
+        return dom;
+    }
     // 转换style
     convertStyle(node, dom, option) {
         if (!node.style)
@@ -731,12 +740,12 @@ class BaseConverter {
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.style.background = this.convertLinearGradient(fill);
+                        dom.style.background = this.convertLinearGradient(fill, dom);
                         break;
                     }
                     // 径向性渐变
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.style.background = this.convertRadialGradient(fill);
+                        dom.style.background = this.convertRadialGradient(fill, dom);
                         break;
                     }
                     // 图片
@@ -794,12 +803,12 @@ class BaseConverter {
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.style.borderImageSource = this.convertLinearGradient(stroke);
+                        dom.style.borderImageSource = this.convertLinearGradient(stroke, dom);
                         break;
                     }
                     // 径向性渐变
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.style.borderImageSource = this.convertRadialGradient(stroke);
+                        dom.style.borderImageSource = this.convertRadialGradient(stroke, dom);
                         break;
                     }
                     // 图片
@@ -838,7 +847,7 @@ class BaseConverter {
         return dom;
     }
     // 转换线性渐变
-    convertLinearGradient(gradient) {
+    convertLinearGradient(gradient, dom) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
         // console.log(handlePositions);
@@ -846,7 +855,7 @@ class BaseConverter {
         return linearGradient;
     }
     // 转换径向性渐变
-    convertRadialGradient(gradient) {
+    convertRadialGradient(gradient, dom) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
         // console.log(handlePositions);
@@ -857,7 +866,7 @@ class BaseConverter {
     getRadialGradientPosition(gradientHandlePositions) {
         if (!gradientHandlePositions || !gradientHandlePositions.length)
             return 'center';
-        return `farthest-corner at ${util.toPX(gradientHandlePositions[0].x)} ${util.toPX(gradientHandlePositions[0].y)}`;
+        return `farthest-corner at ${gradientHandlePositions[0].x * 100}% ${gradientHandlePositions[0].y * 100}%`;
     }
     // Helper function to get the gradient direction
     getGradientDirection(gradientHandlePositions) {
@@ -903,7 +912,7 @@ class PageConverter extends BaseConverter {
     }
 }
 
-let FRAMEConverter$2 = class FRAMEConverter extends BaseConverter {
+let FRAMEConverter$1 = class FRAMEConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
         if (parentNode && parentNode.type === 'CANVAS') {
             //dom.style.overflow = 'hidden';
@@ -966,19 +975,11 @@ class TEXTConverter extends BaseConverter {
     }
 }
 
-let FRAMEConverter$1 = class FRAMEConverter extends BaseConverter {
+class ELLIPSEConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
         dom.type = 'svg';
-        let ellipse = {
-            type: 'ellipse',
-            style: {},
-            children: [],
-        };
-        const defs = {
-            type: 'defs',
-            style: {},
-            children: [],
-        };
+        let ellipse = this.createDomNode('ellipse');
+        const defs = this.createDomNode('defs');
         dom.children.push(defs);
         dom.children.push(ellipse);
         // svg外转用定位和大小，其它样式都给子元素
@@ -989,7 +990,6 @@ let FRAMEConverter$1 = class FRAMEConverter extends BaseConverter {
     // 处理填充
     convertFills(node, dom, option) {
         if (node.fills) {
-            dom.children[0];
             const ellipse = dom.children[1];
             for (const fill of node.fills) {
                 if (fill.visible === false)
@@ -1001,12 +1001,12 @@ let FRAMEConverter$1 = class FRAMEConverter extends BaseConverter {
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        ellipse.fill = this.convertLinearGradient(fill);
+                        ellipse.fill = this.convertLinearGradient(fill, dom);
                         break;
                     }
                     // 径向性渐变
                     case PaintType.GRADIENT_RADIAL: {
-                        ellipse.fill = this.convertRadialGradient(fill);
+                        ellipse.fill = this.convertRadialGradient(fill, dom);
                         break;
                     }
                     // 图片
@@ -1028,54 +1028,58 @@ let FRAMEConverter$1 = class FRAMEConverter extends BaseConverter {
         return dom;
     }
     // 转换线性渐变
-    convertLinearGradient(gradient) {
+    convertLinearGradient(gradient, dom) {
+        if (dom.type !== 'svg')
+            return super.convertLinearGradient(gradient, dom);
+        const defs = dom.children[0];
+        const gradientDom = this.createDomNode('linearGradient');
+        gradientDom.id = 'gradient_' + util.uuid();
         const handlePositions = gradient.gradientHandlePositions;
+        if (handlePositions && handlePositions.length > 1) {
+            gradientDom.x1 = (handlePositions[0].x) * 100 + '%';
+            gradientDom.y1 = (handlePositions[0].y) * 100 + '%';
+            gradientDom.x2 = (handlePositions[1].x) * 100 + '%';
+            gradientDom.y2 = (handlePositions[1].y) * 100 + '%';
+        }
         const gradientStops = gradient.gradientStops;
-        // console.log(handlePositions);
-        const linearGradient = `linear-gradient(${this.getGradientDirection(handlePositions)}, ${this.getGradientStops(gradientStops)})`;
-        return linearGradient;
+        const stops = this.getGradientStopDoms(gradientStops);
+        gradientDom.children.push(...stops);
+        defs.children.push(gradientDom);
+        return `url(#${gradientDom.id})`;
     }
     // 转换径向性渐变
-    convertRadialGradient(gradient) {
+    convertRadialGradient(gradient, dom) {
+        if (dom.type !== 'svg')
+            return super.convertRadialGradient(gradient, dom);
+        const defs = dom.children[0];
+        const gradientDom = this.createDomNode('radialGradient');
+        gradientDom.id = 'gradient_' + util.uuid();
         const handlePositions = gradient.gradientHandlePositions;
+        if (handlePositions && handlePositions.length > 2) {
+            gradientDom.fx = (handlePositions[0].x) * 100 + '%';
+            gradientDom.fy = (handlePositions[0].y) * 100 + '%';
+            gradientDom.cx = (handlePositions[1].x) * 100 + '%';
+            gradientDom.cy = (handlePositions[1].y) * 100 + '%';
+            gradientDom.r = (handlePositions[2].x) * 100 + '%';
+        }
         const gradientStops = gradient.gradientStops;
-        // console.log(handlePositions);
-        const radialGradient = `radial-gradient(${this.getRadialGradientPosition(handlePositions)}, ${this.getGradientStops(gradientStops)})`;
-        return radialGradient;
-    }
-    // 径向性位置
-    getRadialGradientPosition(gradientHandlePositions) {
-        if (!gradientHandlePositions || !gradientHandlePositions.length)
-            return 'center';
-        return `farthest-corner at ${util.toPX(gradientHandlePositions[0].x)} ${util.toPX(gradientHandlePositions[0].y)}`;
-    }
-    // Helper function to get the gradient direction
-    getGradientDirection(gradientHandlePositions) {
-        if (gradientHandlePositions.length >= 2) {
-            const start = gradientHandlePositions[0];
-            const end = gradientHandlePositions[1]; // Use the second handle, ignoring the last one
-            // Calculate the angle in radians
-            const angleRadians = Math.atan2(end.y - start.y, end.x - start.x);
-            // Convert radians to degrees and normalize to the range [0, 360)
-            let angleDegrees = (angleRadians * 180) / Math.PI;
-            angleDegrees = (angleDegrees + 360) % 360;
-            // console.log(`${angleDegrees}deg`);
-            return `${angleDegrees}deg`;
-        }
-        else {
-            console.error("Insufficient handle positions for gradient calculation.");
-            return ""; // or any default value
-        }
+        const stops = this.getGradientStopDoms(gradientStops);
+        gradientDom.children.push(...stops);
+        defs.children.push(gradientDom);
+        return `url(#${gradientDom.id})`;
     }
     // Helper function to get the gradient stops
-    getGradientStops(gradientStops) {
-        // Constructing the gradient stops string based on received data
-        const stopsString = gradientStops
-            .map((stop) => util.colorToString(stop.color, 255) + ` ${stop.position * 100}%`)
-            .join(", ");
-        return stopsString;
+    getGradientStopDoms(gradientStops) {
+        const stops = [];
+        for (const s of gradientStops) {
+            const stop = this.createDomNode('stop');
+            stop.offset = `${s.position * 100}%`;
+            stop.style.stopColor = util.colorToString(s.color, 255);
+            stops.push(stop);
+        }
+        return stops;
     }
-};
+}
 
 class FRAMEConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
@@ -1087,7 +1091,7 @@ class FRAMEConverter extends BaseConverter {
     }
 }
 
-const frameConverter = new FRAMEConverter$2();
+const frameConverter = new FRAMEConverter$1();
 const ConverterMaps = {
     'BASE': new BaseConverter(),
     'FRAME': frameConverter,
@@ -1095,7 +1099,7 @@ const ConverterMaps = {
     'TEXT': new TEXTConverter(),
     'DOCUMENT': new DocumentConverter(),
     'CANVAS': new PageConverter(),
-    'ELLIPSE': new FRAMEConverter$1(),
+    'ELLIPSE': new ELLIPSEConverter(),
     'RECTANGLE': new FRAMEConverter(),
 };
 // 转node为html结构对象
@@ -1143,6 +1147,12 @@ async function nodeToDom(node, option) {
         case 'ellipse': {
             return await renderEllipse(node, option);
         }
+        case 'stop':
+        case 'defs':
+        case 'linearGradient':
+        case 'radialGradient': {
+            return await renderSvgElement(node, option);
+        }
         default: {
             return await renderElement(node, option);
         }
@@ -1158,20 +1168,24 @@ async function renderPage(node, option) {
     return page;
 }
 async function renderSvg(node, option) {
-    let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); // 创建SVG元素
-    await renderElement(node, option, svg);
+    const svg = await renderSvgElement(node, option);
     svg.setAttribute('width', node.bounds.width + '');
     svg.setAttribute('height', node.bounds.height + '');
     return svg;
 }
 async function renderEllipse(node, option) {
-    const ellipse = await renderElement(node, option);
-    ellipse.setAttribute('cx', node.bounds.width / 2 + '');
-    ellipse.setAttribute('cy', node.bounds.height / 2 + '');
-    ellipse.setAttribute('rx', node.bounds.width / 2 + '');
-    ellipse.setAttribute('ry', node.bounds.height / 2 + '');
-    ellipse.setAttribute('fill', node.style.background || node.style.backgroundColor);
+    const ellipse = await renderSvgElement(node, option);
+    ellipse.setAttribute('cx', '50%');
+    ellipse.setAttribute('cy', '50%');
+    ellipse.setAttribute('rx', '50%');
+    ellipse.setAttribute('ry', '50%');
+    ellipse.setAttribute('fill', node.fill || node.style.background || node.style.backgroundColor);
     return ellipse;
+}
+async function renderSvgElement(node, option) {
+    let el = document.createElementNS("http://www.w3.org/2000/svg", node.type); // 创建SVG元素
+    await renderElement(node, option, el);
+    return el;
 }
 async function renderElement(node, option, dom) {
     dom = dom || document.createElement(node.type);
@@ -1189,7 +1203,27 @@ async function renderElement(node, option, dom) {
     if (node.name)
         dom.setAttribute('data-name', node.name);
     if (node.id)
-        dom.setAttribute('data-id', node.id);
+        dom.setAttribute('id', node.id);
+    if (node.cx)
+        dom.setAttribute('cx', node.cx);
+    if (node.cy)
+        dom.setAttribute('cy', node.cy);
+    if (node.r)
+        dom.setAttribute('r', node.r);
+    if (node.fx)
+        dom.setAttribute('fx', node.fx);
+    if (node.fy)
+        dom.setAttribute('fx', node.fy);
+    if (node.x1)
+        dom.setAttribute('x1', node.x1);
+    if (node.y1)
+        dom.setAttribute('y1', node.y1);
+    if (node.x2)
+        dom.setAttribute('x2', node.x2);
+    if (node.y2)
+        dom.setAttribute('y2', node.y2);
+    if (node.offset)
+        dom.setAttribute('offset', node.offset);
     if (node.children) {
         for (const child of node.children) {
             if (child.visible === false)

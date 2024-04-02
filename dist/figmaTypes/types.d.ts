@@ -854,10 +854,29 @@ export declare type ConvertNodeOption = {
         [key: string]: string;
     };
 };
+export type DomNodeType = 'div' | 'img' | 'span' | 'document' | 'page' | 'frame' | 'ellipse' | 'svg' | 'defs' | 'linearGradient' | 'radialGradient' | 'stop';
+export declare type SvgLinearGradientDom = {
+    id: string;
+    x1?: string;
+    y1?: string;
+    x2?: string;
+    y2?: string;
+};
+export declare type SvgRadialGradientDom = {
+    id: string;
+    cx?: string;
+    cy?: string;
+    r?: string;
+    fx?: string;
+    fy?: string;
+};
+export declare type SvgGradientStopDom = {
+    offset?: string;
+};
 export declare type DomNode = {
     id: string;
     name: string;
-    type: 'div' | 'img' | 'span' | 'document' | 'page' | 'frame' | 'ellipse' | 'svg' | 'defs' | 'linearGradient' | 'radialGradient';
+    type: DomNodeType;
     style: CSSStyleDeclaration;
     visible?: boolean;
     bounds?: Rectangle;
@@ -868,7 +887,7 @@ export declare type DomNode = {
     backgroundImageUrl?: string;
     fill?: string;
     figmaData?: Node;
-};
+} & SvgLinearGradientDom & SvgRadialGradientDom & SvgGradientStopDom;
 export declare type NodeToDomOption = {
     getImage: (key: string) => Promise<any>;
 };

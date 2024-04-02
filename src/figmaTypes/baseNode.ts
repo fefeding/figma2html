@@ -1,5 +1,5 @@
 
-import { Node, DomNode, NodeTypes, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, EffectType, ConvertNodeOption } from './types';
+import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, EffectType, ConvertNodeOption } from './types';
 import { util } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
@@ -59,6 +59,16 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         return dom;
     }
 
+    // 生成节点对象
+    createDomNode(type: DomNodeType) {
+        const dom = {
+            type: type,
+            style: {} as CSSStyleDeclaration,
+            children: [] as Array<DomNode>,
+        } as DomNode; 
+        return dom;
+    }
+
     // 转换style
     convertStyle(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
         if(!node.style) return dom;
@@ -115,12 +125,12 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.style.background = this.convertLinearGradient(fill);
+                        dom.style.background = this.convertLinearGradient(fill, dom);
                         break;
                     }
                     // 径向性渐变
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.style.background = this.convertRadialGradient(fill);
+                        dom.style.background = this.convertRadialGradient(fill, dom);
                         break;
                     }
                     // 图片
@@ -178,12 +188,12 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.style.borderImageSource = this.convertLinearGradient(stroke);
+                        dom.style.borderImageSource = this.convertLinearGradient(stroke, dom);
                         break;
                     }
                     // 径向性渐变
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.style.borderImageSource = this.convertRadialGradient(stroke);
+                        dom.style.borderImageSource = this.convertRadialGradient(stroke, dom);
                         break;
                     }
                     // 图片
@@ -222,7 +232,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 转换线性渐变
-    convertLinearGradient(gradient: Paint) {
+    convertLinearGradient(gradient: Paint, dom?: DomNode) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
         // console.log(handlePositions);
@@ -233,7 +243,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 转换径向性渐变
-    convertRadialGradient(gradient: Paint) {
+    convertRadialGradient(gradient: Paint, dom?: DomNode) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
         // console.log(handlePositions);
@@ -246,7 +256,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     // 径向性位置
     getRadialGradientPosition(gradientHandlePositions: Vector[]) {
         if(!gradientHandlePositions || !gradientHandlePositions.length) return 'center';
-        return `farthest-corner at ${util.toPX(gradientHandlePositions[0].x)} ${util.toPX(gradientHandlePositions[0].y)}`;
+        return `farthest-corner at ${gradientHandlePositions[0].x*100}% ${gradientHandlePositions[0].y*100}%`;
     }
 
     // Helper function to get the gradient direction
@@ -270,7 +280,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
       }
       
       // Helper function to get the gradient stops
-      getGradientStops(gradientStops: ColorStop[]) {
+      getGradientStops(gradientStops: ColorStop[]): string|Array<DomNode> {
         // Constructing the gradient stops string based on received data
         const stopsString = gradientStops
           .map((stop) => util.colorToString(stop.color, 255) + ` ${stop.position * 100}%`)
