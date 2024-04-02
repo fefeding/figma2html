@@ -64,57 +64,8 @@ export class FRAMEConverter extends BaseConverter<'ELLIPSE'> {
     // 处理边框
     convertStrokes(node:  Node<'ELLIPSE'>, dom: DomNode, option?: ConvertNodeOption) {
         if(node.strokes && node.strokes.length) {
-            const defs = dom.children[0];
             const ellipse = dom.children[1];
-            for(const stroke of node.strokes) {
-                if(stroke.visible === false) continue;
-                if(stroke.color) ellipse.style.borderColor = util.colorToString(stroke.color, 255);
-                switch(stroke.type) {
-                    case PaintType.SOLID: {
-                        ellipse.style.borderStyle = 'solid';
-                        break;
-                    }
-                    // 线性渐变
-                    case PaintType.GRADIENT_LINEAR: {
-                        ellipse.style.borderImageSource = this.convertLinearGradient(stroke);
-                        break;
-                    }
-                    // 径向性渐变
-                    case PaintType.GRADIENT_RADIAL: {
-                        ellipse.style.borderImageSource = this.convertRadialGradient(stroke);
-                        break;
-                    }
-                    // 图片
-                    case PaintType.IMAGE: {
-                        if(option && option.images) {
-                            const img = option.images[stroke.imageRef];
-                            if(img) ellipse.style.borderImage = `url(${img})`;
-                        }
-                        
-                        switch(stroke.scaleMode) {
-                            case PaintSolidScaleMode.FILL: {
-                                ellipse.style.borderImageSlice = 'fill';
-                                break;
-                            }
-                            case PaintSolidScaleMode.FIT: {
-                                ellipse.style.borderImageRepeat = 'space';
-                                break;
-                            }
-                            case PaintSolidScaleMode.STRETCH: {
-                                ellipse.style.borderImageRepeat = 'stretch';
-                                break;
-                            }
-                            // 平铺
-                            case PaintSolidScaleMode.TILE: {
-                                ellipse.style.borderImageRepeat = 'repeat';
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                }                
-            }
-            if(node.strokeWeight) ellipse.style.borderWidth = ellipse.style.borderImageWidth = util.toPX(node.strokeWeight);
+            super.convertStrokes(node, ellipse, option);
         }
         return dom;
     }
