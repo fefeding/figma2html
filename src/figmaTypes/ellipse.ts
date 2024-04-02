@@ -11,48 +11,48 @@ export class FRAMEConverter extends BaseConverter<'ELLIPSE'> {
             style: {} as CSSStyleDeclaration,
             children: [] as Array<DomNode>,
         } as DomNode; 
-        // svg外转用定位和大小，其它样式都给子元素
-        ellipse =  await super.convert(node, ellipse, parentNode, option);
-        dom.style.left = ellipse.style.left;
-        dom.style.top = ellipse.style.top;
-        //dom.style.width = ellipse.style.width;
-        //dom.style.height = ellipse.style.height;
 
-        delete ellipse.style.left;
-        delete ellipse.style.top;
-        delete ellipse.style.width;
-        delete ellipse.style.height;
+        const defs = {
+            type: 'defs',
+            style: {} as CSSStyleDeclaration,
+            children: [] as Array<DomNode>,
+        } as DomNode; 
 
-        dom.bounds = ellipse.bounds;
-
+        dom.children.push(defs);
         dom.children.push(ellipse);
+
+        // svg外转用定位和大小，其它样式都给子元素
+        dom =  await super.convert(node, dom, parentNode, option);
+        ellipse.bounds = dom.bounds;
         return dom;
     }
 
     // 处理填充
     convertFills(node:  Node<'ELLIPSE'>, dom: DomNode, option?: ConvertNodeOption) {
         if(node.fills) {
+            const defs = dom.children[0];
+            const ellipse = dom.children[1];
             for(const fill of node.fills) {
                 if(fill.visible === false) continue;
 
                 switch(fill.type) {
                     case PaintType.SOLID: {
-                        dom.fill = util.colorToString(fill.color, 255);
+                        ellipse.fill = util.colorToString(fill.color, 255);
                         break;
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.fill = this.convertLinearGradient(fill);
+                        ellipse.fill = this.convertLinearGradient(fill);
                         break;
                     }
                     // 径向性渐变
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.fill = this.convertRadialGradient(fill);
+                        ellipse.fill = this.convertRadialGradient(fill);
                         break;
                     }
                     // 图片
                     case PaintType.IMAGE: {
-                        super.convertFills(node, dom, option);
+                        super.convertFills(node, ellipse, option);
                         break;
                     }
                 }
@@ -64,47 +64,49 @@ export class FRAMEConverter extends BaseConverter<'ELLIPSE'> {
     // 处理边框
     convertStrokes(node:  Node<'ELLIPSE'>, dom: DomNode, option?: ConvertNodeOption) {
         if(node.strokes && node.strokes.length) {
+            const defs = dom.children[0];
+            const ellipse = dom.children[1];
             for(const stroke of node.strokes) {
                 if(stroke.visible === false) continue;
-                if(stroke.color) dom.style.borderColor = util.colorToString(stroke.color, 255);
+                if(stroke.color) ellipse.style.borderColor = util.colorToString(stroke.color, 255);
                 switch(stroke.type) {
                     case PaintType.SOLID: {
-                        dom.style.borderStyle = 'solid';
+                        ellipse.style.borderStyle = 'solid';
                         break;
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.style.borderImageSource = this.convertLinearGradient(stroke);
+                        ellipse.style.borderImageSource = this.convertLinearGradient(stroke);
                         break;
                     }
                     // 径向性渐变
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.style.borderImageSource = this.convertRadialGradient(stroke);
+                        ellipse.style.borderImageSource = this.convertRadialGradient(stroke);
                         break;
                     }
                     // 图片
                     case PaintType.IMAGE: {
                         if(option && option.images) {
                             const img = option.images[stroke.imageRef];
-                            if(img) dom.style.borderImage = `url(${img})`;
+                            if(img) ellipse.style.borderImage = `url(${img})`;
                         }
                         
                         switch(stroke.scaleMode) {
                             case PaintSolidScaleMode.FILL: {
-                                dom.style.borderImageSlice = 'fill';
+                                ellipse.style.borderImageSlice = 'fill';
                                 break;
                             }
                             case PaintSolidScaleMode.FIT: {
-                                dom.style.borderImageRepeat = 'space';
+                                ellipse.style.borderImageRepeat = 'space';
                                 break;
                             }
                             case PaintSolidScaleMode.STRETCH: {
-                                dom.style.borderImageRepeat = 'stretch';
+                                ellipse.style.borderImageRepeat = 'stretch';
                                 break;
                             }
                             // 平铺
                             case PaintSolidScaleMode.TILE: {
-                                dom.style.borderImageRepeat = 'repeat';
+                                ellipse.style.borderImageRepeat = 'repeat';
                                 break;
                             }
                         }
@@ -112,7 +114,7 @@ export class FRAMEConverter extends BaseConverter<'ELLIPSE'> {
                     }
                 }                
             }
-            if(node.strokeWeight) dom.style.borderWidth = dom.style.borderImageWidth = util.toPX(node.strokeWeight);
+            if(node.strokeWeight) ellipse.style.borderWidth = ellipse.style.borderImageWidth = util.toPX(node.strokeWeight);
         }
         return dom;
     }

@@ -860,7 +860,7 @@ export declare type ConvertNodeOption = {
 export declare type DomNode = {
     id: string;
     name: string;
-    type: 'div'|'img'|'span'|'document'|'page'|'frame'|'ellipse'|'svg';
+    type: 'div'|'img'|'span'|'document'|'page'|'frame'|'ellipse'|'svg'|'defs'|'linearGradient'|'radialGradient';
     style: CSSStyleDeclaration;
     visible?: boolean;
     bounds?: Rectangle;
