@@ -45,6 +45,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         if(node.rotation) {
             dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
         }
+        if(node.clipsContent === true) dom.style.overflow = 'hidden';
 
         // padding
         for(const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {

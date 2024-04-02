@@ -838,6 +838,7 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     "strokeWeight"?: number;
     "strokeAlign"?: StrokeAlign;
     cornerRadius?: number;
+    clipsContent?: boolean;
     /** default: 0. The padding between the left border of the frame and its children. This property is only applicable for auto-layout frames. */
     paddingLeft?: number;
     /** default: 0. The padding between the right border of the frame and its children. This property is only applicable for auto-layout frames. */
@@ -868,6 +869,7 @@ export declare type DomNode = {
     url?: string;
     children: DomNode[];
     backgroundImageUrl?: string;// figma图片id
+    fill?: string;// svg 填充
     figmaData?: Node;
 }
 

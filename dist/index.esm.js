@@ -1,15 +1,4 @@
-var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
-
-var dist = {};
-
-var types = {};
-
-Object.defineProperty(types, "__esModule", { value: true });
-
-var util = {};
-
-Object.defineProperty(util, "__esModule", { value: true });
-util.default = {
+var util = {
     /**
      * 是否是数字，字符串数字或配身就是number返回true
      * @param v 原字符串或数字
@@ -359,7 +348,6 @@ util.default = {
         option = option || {};
         return new Promise((resolve, reject) => {
             const request = new XMLHttpRequest(); //新建XMLHttpRequest对象
-           
             const params = [];
             if (option.data) {
                 for (const name in option.data) {
@@ -392,265 +380,6 @@ util.default = {
         });
     }
 };
-
-var controller = {};
-
-(function (exports) {
-	var __importDefault = (commonjsGlobal && commonjsGlobal.__importDefault) || function (mod) {
-	    return (mod && mod.__esModule) ? mod : { "default": mod };
-	};
-	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.getChangeData = exports.rotateChange = exports.getRotateEventPosition = exports.Cursors = exports.fullCircleRadius = void 0;
-	const util_1 = __importDefault(util);
-	exports.fullCircleRadius = Math.PI * 2;
-	/**
-	 * 操作杠指针配置
-	 */
-	exports.Cursors = {
-	    data: {
-	        'l': '',
-	        'lt': '',
-	        't': '',
-	        'tr': '',
-	        'r': '',
-	        'rb': '',
-	        'b': '',
-	        'lb': '',
-	        'rotate': '',
-	        'skew': 'pointer'
-	    },
-	    // 根据角度旋转指针
-	    async get(dir, rotation = 0, data = this.data) {
-	        if (dir === 'rotate' || dir === 'skew')
-	            return data[dir] || 'pointer';
-	        if (Math.abs(rotation) > exports.fullCircleRadius)
-	            rotation = rotation % exports.fullCircleRadius;
-	        // 2PI 为一个圆，把角度转为一个圆内的值，以免重复生成图片
-	        const rotationKey = Number(rotation.toFixed(2)); // 精度只取小数2位
-	        const key = rotationKey === 0 ? dir : `${dir}_${rotationKey}`;
-	        let cursor = data[key];
-	        if (!cursor) {
-	            if (dir === 'l' || dir === 'r' || dir === 't' || dir === 'b') {
-	                // 如果没有旋转角度，则把ns转90度即可
-	                if (rotation === 0) {
-	                    if (!data['t'])
-	                        return 'pointer';
-	                    // b t 同指针
-	                    if (dir === 'b') {
-	                        cursor = data[dir] = data['t'];
-	                    }
-	                    else {
-	                        cursor = await util_1.default.rotateImage(data['t'], Math.PI / 2);
-	                        if (!data['l'])
-	                            data['l'] = cursor;
-	                        if (!data['r'])
-	                            data['r'] = cursor;
-	                    }
-	                }
-	                // 如果有旋转角度，则获取标准的再转对应的角度
-	                else {
-	                    const normal = await this.get(dir, 0, data);
-	                    if (!normal || normal === 'pointer')
-	                        return 'pointer';
-	                    cursor = await util_1.default.rotateImage(normal, rotation);
-	                    data[key] = cursor;
-	                }
-	            }
-	            else if (dir === 'tr' || dir === 'lb' || dir === 'lt' || dir === 'rb') {
-	                // 如果没有旋转角度，则把nwse转90度即可
-	                if (rotation === 0) {
-	                    if (!data['lt'])
-	                        return 'pointer';
-	                    // rb lt同一个指针
-	                    if (dir === 'rb') {
-	                        cursor = data[dir] = data['lt'];
-	                    }
-	                    else {
-	                        cursor = await util_1.default.rotateImage(data['lt'], Math.PI / 2);
-	                        if (!data['tr'])
-	                            data['tr'] = cursor;
-	                        if (!data['lb'])
-	                            data['lb'] = cursor;
-	                    }
-	                }
-	                // 如果有旋转角度，则获取标准的再转对应的角度
-	                else {
-	                    const normal = await this.get(dir, 0, data);
-	                    if (!normal || normal === 'pointer')
-	                        return 'pointer';
-	                    cursor = await util_1.default.rotateImage(normal, rotation);
-	                    data[key] = cursor;
-	                }
-	            }
-	        }
-	        return cursor;
-	    }
-	};
-	/**
-	 * 因为旋转后坐标要回原才好计算操作，
-	 * @param offset
-	 * @param oldPosition
-	 * @param newPosition
-	 * @param rotation
-	 * @param center
-	 * @returns
-	 */
-	const getRotateEventPosition = (offset, oldPosition, newPosition, rotation, center) => {
-	    // 先回原坐标，再主算偏移量，这样保证操作更容易理解
-	    if (rotation) {
-	        const [pos1, pos2] = util_1.default.rotatePoints([oldPosition, newPosition], center, -rotation);
-	        offset.x = pos2.x - pos1.x;
-	        offset.y = pos2.y - pos1.y;
-	    }
-	    return offset;
-	};
-	exports.getRotateEventPosition = getRotateEventPosition;
-	/**
-	 *  发生旋转, 计算得到的旋转角度
-	 */
-	const rotateChange = (oldPosition, newPosition, center) => {
-	    // 因为center是相对于编辑器的，所以事件坐标也需要转到编辑器
-	    const cx1 = oldPosition.x - center.x;
-	    const cy1 = oldPosition.y - center.y;
-	    let angle1 = Math.atan(cy1 / cx1);
-	    const cx2 = newPosition.x - center.x;
-	    const cy2 = newPosition.y - center.y;
-	    let angle2 = Math.atan(cy2 / cx2);
-	    if (angle1 >= 0 && angle2 < 0) {
-	        if (cx1 >= 0 && cy1 >= 0 && cx2 <= 0 && cy2 >= 0)
-	            angle2 = Math.PI + angle2;
-	        else if (cx1 <= 0 && cy1 <= 0 && cx2 >= 0 && cy2 <= 0)
-	            angle2 = Math.PI + angle2;
-	        //else if(cx1 <= 0 && cy1 <=0 && cx2 >= 0 && cy2 >= 0) angle2 = Math.PI + angle2;
-	    }
-	    else if (angle1 <= 0 && angle2 >= 0) {
-	        if (cx1 >= 0 && cy1 <= 0 && cx2 < 0)
-	            angle2 = angle2 - Math.PI;
-	        else
-	            angle2 = -angle2;
-	    }
-	    else ;
-	    return angle2 - angle1;
-	};
-	exports.rotateChange = rotateChange;
-	/**
-	 *  根据操作参数，计算位移，大小和旋转角度等
-	 */
-	const getChangeData = (dir, offset, oldPosition, newPosition, center, rotation = 0) => {
-	    // 当前移动对原对象的改变
-	    const args = {
-	        x: 0,
-	        y: 0,
-	        width: 0,
-	        height: 0,
-	        rotation: 0,
-	        skew: {
-	            x: 0,
-	            y: 0
-	        }
-	    };
-	    // 先回原坐标，再主算偏移量，这样保证操作更容易理解
-	    if (rotation) {
-	        offset = (0, exports.getRotateEventPosition)(offset, oldPosition, newPosition, rotation, center);
-	    }
-	    switch (dir) {
-	        case 'l': {
-	            args.x = offset.x;
-	            args.width = -offset.x;
-	            break;
-	        }
-	        case 't': {
-	            args.y = offset.y;
-	            args.height = -offset.y;
-	            break;
-	        }
-	        case 'r': {
-	            args.width = offset.x;
-	            break;
-	        }
-	        case 'b': {
-	            args.height = offset.y;
-	            break;
-	        }
-	        case 'lt': {
-	            args.x = offset.x;
-	            args.width = -offset.x;
-	            args.y = offset.y;
-	            args.height = -offset.y;
-	            break;
-	        }
-	        case 'tr': {
-	            args.width = offset.x;
-	            args.y = offset.y;
-	            args.height = -offset.y;
-	            break;
-	        }
-	        case 'rb': {
-	            args.width = offset.x;
-	            args.height = offset.y;
-	            break;
-	        }
-	        case 'lb': {
-	            args.x = offset.x;
-	            args.width = -offset.x;
-	            args.height = offset.y;
-	            break;
-	        }
-	    }
-	    // 如果中心发生了偏移，则新中心点要移到绕原中心点旋转当前旋转角度的点，才举使图形移动不正常
-	    if (rotation && (args.x || args.y || args.width || args.height)) {
-	        const newCenter = {
-	            x: center.x + args.x + args.width / 2,
-	            y: center.y + args.y + args.height / 2
-	        };
-	        const targetCenter = util_1.default.rotatePoints({ ...newCenter }, center, rotation);
-	        args.x += targetCenter.x - newCenter.x;
-	        args.y += targetCenter.y - newCenter.y;
-	    }
-	    return args;
-	};
-	exports.getChangeData = getChangeData; 
-} (controller));
-
-(function (exports) {
-	var __createBinding = (commonjsGlobal && commonjsGlobal.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-	    if (k2 === undefined) k2 = k;
-	    var desc = Object.getOwnPropertyDescriptor(m, k);
-	    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-	      desc = { enumerable: true, get: function() { return m[k]; } };
-	    }
-	    Object.defineProperty(o, k2, desc);
-	}) : (function(o, m, k, k2) {
-	    if (k2 === undefined) k2 = k;
-	    o[k2] = m[k];
-	}));
-	var __setModuleDefault = (commonjsGlobal && commonjsGlobal.__setModuleDefault) || (Object.create ? (function(o, v) {
-	    Object.defineProperty(o, "default", { enumerable: true, value: v });
-	}) : function(o, v) {
-	    o["default"] = v;
-	});
-	var __exportStar = (commonjsGlobal && commonjsGlobal.__exportStar) || function(m, exports) {
-	    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-	};
-	var __importStar = (commonjsGlobal && commonjsGlobal.__importStar) || function (mod) {
-	    if (mod && mod.__esModule) return mod;
-	    var result = {};
-	    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-	    __setModuleDefault(result, mod);
-	    return result;
-	};
-	var __importDefault = (commonjsGlobal && commonjsGlobal.__importDefault) || function (mod) {
-	    return (mod && mod.__esModule) ? mod : { "default": mod };
-	};
-	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.controller = exports.util = void 0;
-	__exportStar(types, exports);
-	const util_1 = __importDefault(util);
-	exports.util = util_1.default;
-	const controller$1 = __importStar(controller);
-	exports.controller = controller$1;
-	exports.default = util_1.default; 
-} (dist));
 
 /** A string enum with value, describing the end caps of vector paths. */
 var StrokeCap;
@@ -906,8 +635,8 @@ class BaseConverter {
         if (node.absoluteBoundingBox) {
             dom.bounds.width = node.absoluteBoundingBox.width;
             dom.bounds.height = node.absoluteBoundingBox.height;
-            dom.style.width = dist.util.toPX(dom.bounds.width).toString();
-            dom.style.height = dist.util.toPX(dom.bounds.height).toString();
+            dom.style.width = util.toPX(dom.bounds.width).toString();
+            dom.style.height = util.toPX(dom.bounds.height).toString();
             // 相对于父位置
             if (parentNode && parentNode.absoluteBoundingBox) {
                 dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x;
@@ -918,24 +647,26 @@ class BaseConverter {
                 dom.bounds.x = 0;
                 dom.bounds.y = 0;
             }
-            dom.style.left = dist.util.toPX(dom.bounds.x).toString();
-            dom.style.top = dist.util.toPX(dom.bounds.y).toString();
+            dom.style.left = util.toPX(dom.bounds.x).toString();
+            dom.style.top = util.toPX(dom.bounds.y).toString();
             dom.absoluteBoundingBox = node.absoluteBoundingBox;
         }
         // 背景色
         if (node.backgroundColor)
-            dom.style.backgroundColor = dist.util.colorToString(node.backgroundColor, 255);
+            dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
         if (node.cornerRadius) {
-            dom.style.borderRadius = dist.util.toPX(node.cornerRadius);
+            dom.style.borderRadius = util.toPX(node.cornerRadius);
         }
         // 旋转
         if (node.rotation) {
-            dom.style.transform = `rotate(${dist.util.toRad(node.rotation)})`;
+            dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
         }
+        if (node.clipsContent === true)
+            dom.style.overflow = 'hidden';
         // padding
         for (const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
             if (node[padding])
-                dom.style[padding] = dist.util.toPX(node[padding]);
+                dom.style[padding] = util.toPX(node[padding]);
         }
         this.convertStyle(node, dom, option);
         this.convertFills(node, dom, option); // 解析fills
@@ -950,15 +681,15 @@ class BaseConverter {
         if (node.style.fontFamily)
             dom.style.fontFamily = node.style.fontFamily;
         if (node.style.fontSize)
-            dom.style.fontSize = dist.util.toPX(node.style.fontSize);
+            dom.style.fontSize = util.toPX(node.style.fontSize);
         if (node.style.fontWeight)
             dom.style.fontWeight = node.style.fontWeight.toString();
         if (node.style.italic)
             dom.style.fontStyle = 'italic';
         if (node.style.letterSpacing)
-            dom.style.letterSpacing = dist.util.toPX(node.style.letterSpacing);
+            dom.style.letterSpacing = util.toPX(node.style.letterSpacing);
         if (node.style.lineHeightPx)
-            dom.style.lineHeight = dist.util.toPX(node.style.lineHeightPx);
+            dom.style.lineHeight = util.toPX(node.style.lineHeightPx);
         if (node.style.textAlignHorizontal)
             dom.style.textAlign = node.style.textAlignHorizontal;
         if (node.style.textAlignVertical)
@@ -974,12 +705,12 @@ class BaseConverter {
                 switch (effect.type) {
                     case EffectType.DROP_SHADOW:
                     case EffectType.INNER_SHADOW: {
-                        dom.style.filter += ` drop-shadow(${dist.util.toPX(effect.offset.x)} ${dist.util.toPX(effect.offset.y)} ${dist.util.toPX(effect.radius)} ${dist.util.colorToString(effect.color, 255)})`;
+                        dom.style.filter += ` drop-shadow(${util.toPX(effect.offset.x)} ${util.toPX(effect.offset.y)} ${util.toPX(effect.radius)} ${util.colorToString(effect.color, 255)})`;
                         break;
                     }
                     case EffectType.LAYER_BLUR:
                     case EffectType.BACKGROUND_BLUR: {
-                        dom.style.filter += ` blur(${dist.util.toPX(effect.radius)})`;
+                        dom.style.filter += ` blur(${util.toPX(effect.radius)})`;
                         break;
                     }
                 }
@@ -995,7 +726,7 @@ class BaseConverter {
                     continue;
                 switch (fill.type) {
                     case PaintType.SOLID: {
-                        dom.style.backgroundColor = dist.util.colorToString(fill.color, 255);
+                        dom.style.backgroundColor = util.colorToString(fill.color, 255);
                         break;
                     }
                     // 线性渐变
@@ -1055,7 +786,7 @@ class BaseConverter {
                 if (stroke.visible === false)
                     continue;
                 if (stroke.color)
-                    dom.style.borderColor = dist.util.colorToString(stroke.color, 255);
+                    dom.style.borderColor = util.colorToString(stroke.color, 255);
                 switch (stroke.type) {
                     case PaintType.SOLID: {
                         dom.style.borderStyle = 'solid';
@@ -1102,7 +833,7 @@ class BaseConverter {
                 }
             }
             if (node.strokeWeight)
-                dom.style.borderWidth = dom.style.borderImageWidth = dist.util.toPX(node.strokeWeight);
+                dom.style.borderWidth = dom.style.borderImageWidth = util.toPX(node.strokeWeight);
         }
         return dom;
     }
@@ -1126,7 +857,7 @@ class BaseConverter {
     getRadialGradientPosition(gradientHandlePositions) {
         if (!gradientHandlePositions || !gradientHandlePositions.length)
             return 'center';
-        return `farthest-corner at ${dist.util.toPX(gradientHandlePositions[0].x)} ${dist.util.toPX(gradientHandlePositions[0].y)}`;
+        return `farthest-corner at ${util.toPX(gradientHandlePositions[0].x)} ${util.toPX(gradientHandlePositions[0].y)}`;
     }
     // Helper function to get the gradient direction
     getGradientDirection(gradientHandlePositions) {
@@ -1150,7 +881,7 @@ class BaseConverter {
     getGradientStops(gradientStops) {
         // Constructing the gradient stops string based on received data
         const stopsString = gradientStops
-            .map((stop) => dist.util.colorToString(stop.color, 255) + ` ${stop.position * 100}%`)
+            .map((stop) => util.colorToString(stop.color, 255) + ` ${stop.position * 100}%`)
             .join(", ");
         return stopsString;
     }
@@ -1175,7 +906,7 @@ class PageConverter extends BaseConverter {
 let FRAMEConverter$2 = class FRAMEConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
         if (parentNode && parentNode.type === 'CANVAS') {
-            dom.style.overflow = 'hidden';
+            //dom.style.overflow = 'hidden';
             if (parentNode && !parentNode.absoluteBoundingBox) {
                 // 如果是一级节点，则下面的节点都相对于它
                 parentNode.absoluteBoundingBox = {
@@ -1214,7 +945,7 @@ class TEXTConverter extends BaseConverter {
             const fill = node.fills[0];
             switch (fill.type) {
                 case PaintType.SOLID: {
-                    dom.style.color = dist.util.colorToString(fill.color, 255);
+                    dom.style.color = util.colorToString(fill.color, 255);
                     break;
                 }
                 // 线性渐变
@@ -1256,6 +987,143 @@ let FRAMEConverter$1 = class FRAMEConverter extends BaseConverter {
         dom.bounds = ellipse.bounds;
         dom.children.push(ellipse);
         return dom;
+    }
+    // 处理填充
+    convertFills(node, dom, option) {
+        if (node.fills) {
+            for (const fill of node.fills) {
+                if (fill.visible === false)
+                    continue;
+                switch (fill.type) {
+                    case PaintType.SOLID: {
+                        dom.fill = util.colorToString(fill.color, 255);
+                        break;
+                    }
+                    // 线性渐变
+                    case PaintType.GRADIENT_LINEAR: {
+                        dom.fill = this.convertLinearGradient(fill);
+                        break;
+                    }
+                    // 径向性渐变
+                    case PaintType.GRADIENT_RADIAL: {
+                        dom.fill = this.convertRadialGradient(fill);
+                        break;
+                    }
+                    // 图片
+                    case PaintType.IMAGE: {
+                        super.convertFills(node, dom, option);
+                        break;
+                    }
+                }
+            }
+        }
+        return dom;
+    }
+    // 处理边框
+    convertStrokes(node, dom, option) {
+        if (node.strokes && node.strokes.length) {
+            for (const stroke of node.strokes) {
+                if (stroke.visible === false)
+                    continue;
+                if (stroke.color)
+                    dom.style.borderColor = util.colorToString(stroke.color, 255);
+                switch (stroke.type) {
+                    case PaintType.SOLID: {
+                        dom.style.borderStyle = 'solid';
+                        break;
+                    }
+                    // 线性渐变
+                    case PaintType.GRADIENT_LINEAR: {
+                        dom.style.borderImageSource = this.convertLinearGradient(stroke);
+                        break;
+                    }
+                    // 径向性渐变
+                    case PaintType.GRADIENT_RADIAL: {
+                        dom.style.borderImageSource = this.convertRadialGradient(stroke);
+                        break;
+                    }
+                    // 图片
+                    case PaintType.IMAGE: {
+                        if (option && option.images) {
+                            const img = option.images[stroke.imageRef];
+                            if (img)
+                                dom.style.borderImage = `url(${img})`;
+                        }
+                        switch (stroke.scaleMode) {
+                            case PaintSolidScaleMode.FILL: {
+                                dom.style.borderImageSlice = 'fill';
+                                break;
+                            }
+                            case PaintSolidScaleMode.FIT: {
+                                dom.style.borderImageRepeat = 'space';
+                                break;
+                            }
+                            case PaintSolidScaleMode.STRETCH: {
+                                dom.style.borderImageRepeat = 'stretch';
+                                break;
+                            }
+                            // 平铺
+                            case PaintSolidScaleMode.TILE: {
+                                dom.style.borderImageRepeat = 'repeat';
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            if (node.strokeWeight)
+                dom.style.borderWidth = dom.style.borderImageWidth = util.toPX(node.strokeWeight);
+        }
+        return dom;
+    }
+    // 转换线性渐变
+    convertLinearGradient(gradient) {
+        const handlePositions = gradient.gradientHandlePositions;
+        const gradientStops = gradient.gradientStops;
+        // console.log(handlePositions);
+        const linearGradient = `linear-gradient(${this.getGradientDirection(handlePositions)}, ${this.getGradientStops(gradientStops)})`;
+        return linearGradient;
+    }
+    // 转换径向性渐变
+    convertRadialGradient(gradient) {
+        const handlePositions = gradient.gradientHandlePositions;
+        const gradientStops = gradient.gradientStops;
+        // console.log(handlePositions);
+        const radialGradient = `radial-gradient(${this.getRadialGradientPosition(handlePositions)}, ${this.getGradientStops(gradientStops)})`;
+        return radialGradient;
+    }
+    // 径向性位置
+    getRadialGradientPosition(gradientHandlePositions) {
+        if (!gradientHandlePositions || !gradientHandlePositions.length)
+            return 'center';
+        return `farthest-corner at ${util.toPX(gradientHandlePositions[0].x)} ${util.toPX(gradientHandlePositions[0].y)}`;
+    }
+    // Helper function to get the gradient direction
+    getGradientDirection(gradientHandlePositions) {
+        if (gradientHandlePositions.length >= 2) {
+            const start = gradientHandlePositions[0];
+            const end = gradientHandlePositions[1]; // Use the second handle, ignoring the last one
+            // Calculate the angle in radians
+            const angleRadians = Math.atan2(end.y - start.y, end.x - start.x);
+            // Convert radians to degrees and normalize to the range [0, 360)
+            let angleDegrees = (angleRadians * 180) / Math.PI;
+            angleDegrees = (angleDegrees + 360) % 360;
+            // console.log(`${angleDegrees}deg`);
+            return `${angleDegrees}deg`;
+        }
+        else {
+            console.error("Insufficient handle positions for gradient calculation.");
+            return ""; // or any default value
+        }
+    }
+    // Helper function to get the gradient stops
+    getGradientStops(gradientStops) {
+        // Constructing the gradient stops string based on received data
+        const stopsString = gradientStops
+            .map((stop) => util.colorToString(stop.color, 255) + ` ${stop.position * 100}%`)
+            .join(", ");
+        return stopsString;
     }
 };
 
@@ -1395,7 +1263,7 @@ async function loadFigmaFile(fileId, token) {
             "X-Figma-Token": token,
         }
     };
-    const data = await dist.util.request(url, option);
+    const data = await util.request(url, option);
     return JSON.parse(data);
 }
 // 获取文件所有图片
@@ -1406,7 +1274,7 @@ async function getFigmaFileImages(fileId, token) {
             "X-Figma-Token": token,
         }
     };
-    const data = await dist.util.request(url, option);
+    const data = await util.request(url, option);
     const images = JSON.parse(data);
     if (images.meta && images.meta.images)
         return images.meta.images;
@@ -1420,12 +1288,11 @@ async function getFigmaImage(key, token, ids) {
             "X-Figma-Token": token,
         }
     };
-    const data = await dist.util.request(url, option);
+    const data = await util.request(url, option);
     const images = JSON.parse(data);
     if (images.meta && images.meta.images)
         return images.meta.images;
     return images;
 }
 
-var util$1 = dist.util;
-export { convert, convert as default, getFigmaFileImages, getFigmaImage, loadFigmaFile, nodeToDom, util$1 as util };
+export { convert, convert as default, getFigmaFileImages, getFigmaImage, loadFigmaFile, nodeToDom, util };
