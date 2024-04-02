@@ -1153,34 +1153,55 @@ class BaseConverter {
 class DocumentConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
         dom.type = 'div';
-        dom.style.position = '';
-        return dom;
+        dom.style.position = 'relative';
+        return super.convert(node, dom, parentNode, option);
     }
 }
 
 class PageConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
         dom.type = 'page';
-        dom.style.position = '';
+        dom.style.position = 'relative';
         return super.convert(node, dom, parentNode, option);
     }
 }
 
 let FRAMEConverter$2 = class FRAMEConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
+        dom.style.overflow = 'hidden';
         if (parentNode && parentNode.type === 'CANVAS') {
-            dom.style.position = 'relative';
+            if (parentNode && !parentNode.absoluteBoundingBox) {
+                // 如果是一级节点，则下面的节点都相对于它
+                parentNode.absoluteBoundingBox = {
+                    x: 0,
+                    y: 0,
+                    width: 0,
+                    height: 0
+                };
+                // 取最左顶点角
+                if (parentNode.children && parentNode.children.length) {
+                    for (const child of parentNode.children) {
+                        if (child.absoluteBoundingBox) {
+                            parentNode.absoluteBoundingBox.x = Math.min(parentNode.absoluteBoundingBox.x, child.absoluteBoundingBox.x);
+                            parentNode.absoluteBoundingBox.y = Math.min(parentNode.absoluteBoundingBox.y, child.absoluteBoundingBox.y);
+                        }
+                    }
+                }
+            }
         }
         return super.convert(node, dom, parentNode, option);
     }
 };
 
 class TEXTConverter extends BaseConverter {
-    // 处理填充, 文本的fill就是字体的颜色
-    convertFills(node, dom) {
+    async convert(node, dom, parentNode, option) {
         dom.type = 'span';
         if (node.characters)
             dom.text = node.characters;
+        return super.convert(node, dom, parentNode, option);
+    }
+    // 处理填充, 文本的fill就是字体的颜色
+    convertFills(node, dom) {
         if (node.fills && node.fills.length) {
             const fill = node.fills[0];
             switch (fill.type) {
@@ -1190,12 +1211,14 @@ class TEXTConverter extends BaseConverter {
                 }
                 // 线性渐变
                 case PaintType.GRADIENT_LINEAR: {
-                    dom.style.color = this.convertLinearGradient(fill);
+                    dom.style.background = this.convertLinearGradient(fill);
+                    dom.style.backgroundClip = 'text';
                     break;
                 }
                 // 径向性渐变
                 case PaintType.GRADIENT_RADIAL: {
-                    dom.style.color = this.convertRadialGradient(fill);
+                    dom.style.background = this.convertRadialGradient(fill);
+                    dom.style.backgroundClip = 'text';
                     break;
                 }
             }
@@ -1274,9 +1297,6 @@ async function convert(node, parentNode, option) {
     if (node.children && node.children.length) {
         for (const child of node.children) {
             const c = await convert(child, node, option);
-            if (node.type === 'CANVAS') {
-                c.style.overflow = 'hidden';
-            }
             dom.children.push(c);
         }
     }
@@ -1308,7 +1328,7 @@ async function renderDocument(node, option) {
 }
 async function renderPage(node, option) {
     const page = await renderElement(node, option);
-    page.style.minHeight = node.bounds.height + 'px';
+    //page.style.minHeight = node.bounds.height + 'px';
     return page;
 }
 async function renderSvg(node, option) {

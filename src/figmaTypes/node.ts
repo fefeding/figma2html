@@ -39,17 +39,14 @@ export async function convert(node: Node, parentNode?: Node, option?: ConvertNod
         } as CSSStyleDeclaration,
         children: [] as Array<DomNode>,
         figmaData: node,
-    } as DomNode;
+    } as DomNode;    
 
     const converter = ConverterMaps[node.type] || ConverterMaps.BASE;
     if(converter) await converter.convert(node, dom, parentNode, option);
 
     if(node.children && node.children.length) {
         for(const child of node.children) {
-            const c = await convert(child, node, option);
-            if(node.type === 'CANVAS') {
-                c.style.overflow = 'hidden';
-            }
+            const c = await convert(child, node, option);            
             dom.children.push(c);
         }
     }
@@ -84,7 +81,7 @@ async function renderDocument(node: DomNode, option?: NodeToDomOption) {
 
 async function renderPage(node: DomNode, option?: NodeToDomOption) {
     const page = await renderElement(node, option);
-    page.style.minHeight = node.bounds.height + 'px';
+    //page.style.minHeight = node.bounds.height + 'px';
     return page;
 }
 

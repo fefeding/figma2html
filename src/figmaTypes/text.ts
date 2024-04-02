@@ -1,14 +1,17 @@
 
-import { Node, DomNode, PaintType } from './types';
+import { Node, DomNode, PaintType, ConvertNodeOption } from './types';
 import { util } from 'j-design-util';
 import BaseConverter from './baseNode';
 
 export class TEXTConverter extends BaseConverter<'TEXT'> {
-    
-    // 处理填充, 文本的fill就是字体的颜色
-    convertFills(node:  Node<'TEXT'>, dom: DomNode) {
+    async convert(node:  Node<'TEXT'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
         dom.type = 'span';
         if(node.characters) dom.text = node.characters;
+        return super.convert(node, dom, parentNode, option);
+    }
+    // 处理填充, 文本的fill就是字体的颜色
+    convertFills(node:  Node<'TEXT'>, dom: DomNode) {
+        
         if(node.fills && node.fills.length) {
             const fill = node.fills[0];
             switch(fill.type) {
@@ -18,12 +21,14 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
                 }
                 // 线性渐变
                 case PaintType.GRADIENT_LINEAR: {
-                    dom.style.color = this.convertLinearGradient(fill);
+                    dom.style.background = this.convertLinearGradient(fill);
+                    dom.style.backgroundClip = 'text';
                     break;
                 }
                 // 径向性渐变
                 case PaintType.GRADIENT_RADIAL: {
-                    dom.style.color = this.convertRadialGradient(fill);
+                    dom.style.background = this.convertRadialGradient(fill);
+                    dom.style.backgroundClip = 'text';
                     break;
                 }
             }      
