@@ -119,7 +119,14 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     case PaintType.IMAGE: {
                         if(option && option.images) {
                             const img = option.images[fill.imageRef];
-                            if(img) dom.style.backgroundImage = `url(${img})`;
+                            if(img) {
+                                if(dom.type === 'img') {
+                                    dom.url = img;
+                                }
+                                else {
+                                    dom.style.backgroundImage = `url(${img})`;
+                                }
+                            }
                             dom.backgroundImageUrl = img || fill.imageRef;
                         }
                         
@@ -146,6 +153,62 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     }
                 }
             }
+        }
+        return dom;
+    }
+
+    // 处理边框
+    convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
+        if(node.strokes && node.strokes.length) {
+            for(const stroke of node.strokes) {
+                if(stroke.visible === false) continue;
+                dom.style.borderColor = util.colorToString(stroke.color, 255);
+                switch(stroke.type) {
+                    case PaintType.SOLID: {
+                        dom.style.borderStyle = 'solid';
+                        break;
+                    }
+                    // 线性渐变
+                    case PaintType.GRADIENT_LINEAR: {
+                        dom.style.borderImageSource = this.convertLinearGradient(stroke);
+                        break;
+                    }
+                    // 径向性渐变
+                    case PaintType.GRADIENT_RADIAL: {
+                        dom.style.borderImageSource = this.convertRadialGradient(stroke);
+                        break;
+                    }
+                    // 图片
+                    case PaintType.IMAGE: {
+                        if(option && option.images) {
+                            const img = option.images[stroke.imageRef];
+                            if(img) dom.style.borderImage = `url(${img})`;
+                        }
+                        
+                        switch(stroke.scaleMode) {
+                            case PaintSolidScaleMode.FILL: {
+                                dom.style.borderImageSlice = 'fill';
+                                break;
+                            }
+                            case PaintSolidScaleMode.FIT: {
+                                dom.style.borderImageRepeat = 'space';
+                                break;
+                            }
+                            case PaintSolidScaleMode.STRETCH: {
+                                dom.style.borderImageRepeat = 'stretch';
+                                break;
+                            }
+                            // 平铺
+                            case PaintSolidScaleMode.TILE: {
+                                dom.style.borderImageRepeat = 'repeat';
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }                
+            }
+            if(node.strokeWeight) dom.style.borderWidth = dom.style.borderImageWidth = util.toPX(node.strokeWeight);
         }
         return dom;
     }

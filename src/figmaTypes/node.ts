@@ -5,6 +5,8 @@ import DocumentConverter from './document';
 import PageConverter from './page';
 import FrameConverter from './frame';
 import TextConverter from './text';
+import EllipseConverter from './ellipse';
+import RectangleConverter from './rectangle';
 
 const frameConverter = new FrameConverter();
 const ConverterMaps = {
@@ -14,6 +16,8 @@ const ConverterMaps = {
     'TEXT': new TextConverter(),
     'DOCUMENT': new DocumentConverter(),
     'CANVAS': new PageConverter(),
+    'ELLIPSE': new EllipseConverter(),
+    'RECTANGLE': new RectangleConverter(),
 } as { [key: string]: NodeConverter};
 
 // 转node为html结构对象
@@ -61,6 +65,12 @@ export async function nodeToDom(node: DomNode, option?: NodeToDomOption) {
         case 'page': {
             return await renderPage(node, option);
         }
+        case 'svg': {
+            return await renderSvg(node, option);
+        }
+        case 'ellipse': {
+            return await renderEllipse(node, option);
+        }
         default: {
             return await renderElement(node, option);
         }
@@ -78,15 +88,38 @@ async function renderPage(node: DomNode, option?: NodeToDomOption) {
     return page;
 }
 
-async function renderElement(node: DomNode, option?: NodeToDomOption) {
+async function renderSvg(node: DomNode, option?: NodeToDomOption) {
+    let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); // 创建SVG元素
+    await renderElement(node, option, svg);
     
-    const dom = document.createElement(node.type);
+    svg.setAttribute('width', node.bounds.width + '');
+    svg.setAttribute('height', node.bounds.height + '');
+
+    return svg;
+}
+
+async function renderEllipse(node: DomNode, option?: NodeToDomOption) {
+    const ellipse = await renderElement(node, option);
+    ellipse.setAttribute('cx', node.bounds.width/2 + '');
+    ellipse.setAttribute('cy', node.bounds.height/2 + '');
+    ellipse.setAttribute('rx', node.bounds.width/2 + '');
+    ellipse.setAttribute('ry', node.bounds.height/2 + '');
+    ellipse.setAttribute('fill', node.style.background || node.style.backgroundColor);
+    return ellipse;
+}
+
+async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTMLElement|SVGElement) {
+    
+    dom = dom || document.createElement(node.type);
     if(node.style) {
         Object.assign(dom.style, node.style);
     }
     if(node.text) {
-        dom.innerText = node.text;
+        dom.textContent = node.text;
     }
+
+    // @ts-ignore
+    if(node.type === 'img' && node.url) dom.src = node.url;
 
     if(node.visible === false) dom.style.display = 'none';
 

@@ -4,6 +4,7 @@ export declare class BaseConverter<NType extends NodeType = NodeType> implements
     convertStyle(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): DomNode;
     convertEffects(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): DomNode;
     convertFills(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): DomNode;
+    convertStrokes(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): DomNode;
     convertLinearGradient(gradient: Paint): string;
     convertRadialGradient(gradient: Paint): string;
     getRadialGradientPosition(gradientHandlePositions: Vector[]): string;

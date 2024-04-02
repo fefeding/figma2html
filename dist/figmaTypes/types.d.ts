@@ -831,6 +831,9 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     absoluteBoundingBox?: Rectangle;
     backgroundColor?: Color;
     fills?: Paint[];
+    strokes?: Paint[];
+    "strokeWeight"?: number;
+    "strokeAlign"?: StrokeAlign;
     cornerRadius?: number;
     /** default: 0. The padding between the left border of the frame and its children. This property is only applicable for auto-layout frames. */
     paddingLeft?: number;
@@ -852,12 +855,13 @@ export declare type ConvertNodeOption = {
 export declare type DomNode = {
     id: string;
     name: string;
-    type: 'div' | 'img' | 'span' | 'document' | 'page' | 'frame';
+    type: 'div' | 'img' | 'span' | 'document' | 'page' | 'frame' | 'ellipse' | 'svg';
     style: CSSStyleDeclaration;
     visible?: boolean;
     bounds?: Rectangle;
     absoluteBoundingBox?: Rectangle;
     text?: string;
+    url?: string;
     children: DomNode[];
     backgroundImageUrl?: string;
     figmaData?: Node;

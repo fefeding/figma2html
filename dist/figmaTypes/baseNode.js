@@ -4,15 +4,37 @@ exports.BaseConverter = void 0;
 const types_1 = require("./types");
 const j_design_util_1 = require("j-design-util");
 class BaseConverter {
-    async convert(node, dom) {
+    async convert(node, dom, parentNode, option) {
         dom.style = dom.style || {};
-        console.log(node.absoluteBoundingBox);
+        // 位置
+        dom.bounds = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+        };
         if (node.absoluteBoundingBox) {
-            dom.style.width = j_design_util_1.util.toPX(node.absoluteBoundingBox.width).toString();
-            dom.style.height = j_design_util_1.util.toPX(node.absoluteBoundingBox.height).toString();
-            dom.style.left = j_design_util_1.util.toPX(node.absoluteBoundingBox.x).toString();
-            dom.style.top = j_design_util_1.util.toPX(node.absoluteBoundingBox.y).toString();
+            dom.bounds.width = node.absoluteBoundingBox.width;
+            dom.bounds.height = node.absoluteBoundingBox.height;
+            dom.style.width = j_design_util_1.util.toPX(dom.bounds.width).toString();
+            dom.style.height = j_design_util_1.util.toPX(dom.bounds.height).toString();
+            // 相对于父位置
+            if (parentNode && parentNode.absoluteBoundingBox) {
+                dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x;
+                dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y;
+            }
+            // 没有父元素，就认为约对定位为0
+            else {
+                dom.bounds.x = 0;
+                dom.bounds.y = 0;
+            }
+            dom.style.left = j_design_util_1.util.toPX(dom.bounds.x).toString();
+            dom.style.top = j_design_util_1.util.toPX(dom.bounds.y).toString();
+            dom.absoluteBoundingBox = node.absoluteBoundingBox;
         }
+        // 背景色
+        if (node.backgroundColor)
+            dom.style.backgroundColor = j_design_util_1.util.colorToString(node.backgroundColor, 255);
         if (node.cornerRadius) {
             dom.style.borderRadius = j_design_util_1.util.toPX(node.cornerRadius);
         }
@@ -21,13 +43,13 @@ class BaseConverter {
             if (node[padding])
                 dom.style[padding] = j_design_util_1.util.toPX(node[padding]);
         }
-        this.convertStyle(node, dom);
-        this.convertFills(node, dom); // 解析fills
-        this.convertEffects(node, dom); // 滤镜
+        this.convertStyle(node, dom, option);
+        this.convertFills(node, dom, option); // 解析fills
+        this.convertEffects(node, dom, option); // 滤镜
         return dom;
     }
     // 转换style
-    convertStyle(node, dom) {
+    convertStyle(node, dom, option) {
         if (!node.style)
             return dom;
         if (node.style.fontFamily)
@@ -49,7 +71,7 @@ class BaseConverter {
         return dom;
     }
     // 转换滤镜
-    convertEffects(node, dom) {
+    convertEffects(node, dom, option) {
         if (node.effects) {
             for (const effect of node.effects) {
                 if (!effect.visible === false)
@@ -71,7 +93,7 @@ class BaseConverter {
         return dom;
     }
     // 处理填充
-    convertFills(node, dom) {
+    convertFills(node, dom, option) {
         if (node.fills) {
             for (const fill of node.fills) {
                 if (fill.visible === false)
@@ -93,7 +115,18 @@ class BaseConverter {
                     }
                     // 图片
                     case types_1.PaintType.IMAGE: {
-                        dom.style.backgroundImage = fill.imageRef;
+                        if (option && option.images) {
+                            const img = option.images[fill.imageRef];
+                            if (img) {
+                                if (dom.type === 'img') {
+                                    dom.url = img;
+                                }
+                                else {
+                                    dom.style.backgroundImage = `url(${img})`;
+                                }
+                            }
+                            dom.backgroundImageUrl = img || fill.imageRef;
+                        }
                         switch (fill.scaleMode) {
                             case types_1.PaintSolidScaleMode.FILL: {
                                 dom.style.backgroundSize = 'cover';
@@ -117,6 +150,63 @@ class BaseConverter {
                     }
                 }
             }
+        }
+        return dom;
+    }
+    // 处理边框
+    convertStrokes(node, dom, option) {
+        if (node.strokes && node.strokes.length) {
+            for (const stroke of node.strokes) {
+                if (stroke.visible === false)
+                    continue;
+                dom.style.borderColor = j_design_util_1.util.colorToString(stroke.color, 255);
+                switch (stroke.type) {
+                    case types_1.PaintType.SOLID: {
+                        dom.style.borderStyle = 'solid';
+                        break;
+                    }
+                    // 线性渐变
+                    case types_1.PaintType.GRADIENT_LINEAR: {
+                        dom.style.borderImageSource = this.convertLinearGradient(stroke);
+                        break;
+                    }
+                    // 径向性渐变
+                    case types_1.PaintType.GRADIENT_RADIAL: {
+                        dom.style.borderImageSource = this.convertRadialGradient(stroke);
+                        break;
+                    }
+                    // 图片
+                    case types_1.PaintType.IMAGE: {
+                        if (option && option.images) {
+                            const img = option.images[stroke.imageRef];
+                            if (img)
+                                dom.style.borderImage = `url(${img})`;
+                        }
+                        switch (stroke.scaleMode) {
+                            case types_1.PaintSolidScaleMode.FILL: {
+                                dom.style.borderImageSlice = 'fill';
+                                break;
+                            }
+                            case types_1.PaintSolidScaleMode.FIT: {
+                                dom.style.borderImageRepeat = 'space';
+                                break;
+                            }
+                            case types_1.PaintSolidScaleMode.STRETCH: {
+                                dom.style.borderImageRepeat = 'stretch';
+                                break;
+                            }
+                            // 平铺
+                            case types_1.PaintSolidScaleMode.TILE: {
+                                dom.style.borderImageRepeat = 'repeat';
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            if (node.strokeWeight)
+                dom.style.borderWidth = dom.style.borderImageWidth = j_design_util_1.util.toPX(node.strokeWeight);
         }
         return dom;
     }

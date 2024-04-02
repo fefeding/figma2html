@@ -1007,8 +1007,14 @@ class BaseConverter {
                     case PaintType.IMAGE: {
                         if (option && option.images) {
                             const img = option.images[fill.imageRef];
-                            if (img)
-                                dom.style.backgroundImage = `url(${img})`;
+                            if (img) {
+                                if (dom.type === 'img') {
+                                    dom.url = img;
+                                }
+                                else {
+                                    dom.style.backgroundImage = `url(${img})`;
+                                }
+                            }
                             dom.backgroundImageUrl = img || fill.imageRef;
                         }
                         switch (fill.scaleMode) {
@@ -1034,6 +1040,63 @@ class BaseConverter {
                     }
                 }
             }
+        }
+        return dom;
+    }
+    // 处理边框
+    convertStrokes(node, dom, option) {
+        if (node.strokes && node.strokes.length) {
+            for (const stroke of node.strokes) {
+                if (stroke.visible === false)
+                    continue;
+                dom.style.borderColor = dist.util.colorToString(stroke.color, 255);
+                switch (stroke.type) {
+                    case PaintType.SOLID: {
+                        dom.style.borderStyle = 'solid';
+                        break;
+                    }
+                    // 线性渐变
+                    case PaintType.GRADIENT_LINEAR: {
+                        dom.style.borderImageSource = this.convertLinearGradient(stroke);
+                        break;
+                    }
+                    // 径向性渐变
+                    case PaintType.GRADIENT_RADIAL: {
+                        dom.style.borderImageSource = this.convertRadialGradient(stroke);
+                        break;
+                    }
+                    // 图片
+                    case PaintType.IMAGE: {
+                        if (option && option.images) {
+                            const img = option.images[stroke.imageRef];
+                            if (img)
+                                dom.style.borderImage = `url(${img})`;
+                        }
+                        switch (stroke.scaleMode) {
+                            case PaintSolidScaleMode.FILL: {
+                                dom.style.borderImageSlice = 'fill';
+                                break;
+                            }
+                            case PaintSolidScaleMode.FIT: {
+                                dom.style.borderImageRepeat = 'space';
+                                break;
+                            }
+                            case PaintSolidScaleMode.STRETCH: {
+                                dom.style.borderImageRepeat = 'stretch';
+                                break;
+                            }
+                            // 平铺
+                            case PaintSolidScaleMode.TILE: {
+                                dom.style.borderImageRepeat = 'repeat';
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            if (node.strokeWeight)
+                dom.style.borderWidth = dom.style.borderImageWidth = dist.util.toPX(node.strokeWeight);
         }
         return dom;
     }
@@ -1103,14 +1166,14 @@ class PageConverter extends BaseConverter {
     }
 }
 
-class FRAMEConverter extends BaseConverter {
+let FRAMEConverter$2 = class FRAMEConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
         if (parentNode && parentNode.type === 'CANVAS') {
             dom.style.position = 'relative';
         }
         return super.convert(node, dom, parentNode, option);
     }
-}
+};
 
 class TEXTConverter extends BaseConverter {
     // 处理填充, 文本的fill就是字体的颜色
@@ -1141,7 +1204,41 @@ class TEXTConverter extends BaseConverter {
     }
 }
 
-const frameConverter = new FRAMEConverter();
+let FRAMEConverter$1 = class FRAMEConverter extends BaseConverter {
+    async convert(node, dom, parentNode, option) {
+        dom.type = 'svg';
+        let ellipse = {
+            type: 'ellipse',
+            style: {},
+            children: [],
+        };
+        // svg外转用定位和大小，其它样式都给子元素
+        ellipse = await super.convert(node, ellipse, parentNode, option);
+        dom.style.left = ellipse.style.left;
+        dom.style.top = ellipse.style.top;
+        //dom.style.width = ellipse.style.width;
+        //dom.style.height = ellipse.style.height;
+        delete ellipse.style.left;
+        delete ellipse.style.top;
+        delete ellipse.style.width;
+        delete ellipse.style.height;
+        dom.bounds = ellipse.bounds;
+        dom.children.push(ellipse);
+        return dom;
+    }
+};
+
+class FRAMEConverter extends BaseConverter {
+    async convert(node, dom, parentNode, option) {
+        // 如果是填充的图5片，则直接用img
+        if (node.fills && node.fills.length && node.fills[0].type === 'IMAGE') {
+            dom.type = 'img';
+        }
+        return super.convert(node, dom, parentNode, option);
+    }
+}
+
+const frameConverter = new FRAMEConverter$2();
 const ConverterMaps = {
     'BASE': new BaseConverter(),
     'FRAME': frameConverter,
@@ -1149,6 +1246,8 @@ const ConverterMaps = {
     'TEXT': new TEXTConverter(),
     'DOCUMENT': new DocumentConverter(),
     'CANVAS': new PageConverter(),
+    'ELLIPSE': new FRAMEConverter$1(),
+    'RECTANGLE': new FRAMEConverter(),
 };
 // 转node为html结构对象
 async function convert(node, parentNode, option) {
@@ -1187,33 +1286,58 @@ async function convert(node, parentNode, option) {
 async function nodeToDom(node, option) {
     switch (node.type) {
         case 'document': {
-            return await renderDocument(node);
+            return await renderDocument(node, option);
         }
         case 'page': {
-            return await renderPage(node);
+            return await renderPage(node, option);
+        }
+        case 'svg': {
+            return await renderSvg(node, option);
+        }
+        case 'ellipse': {
+            return await renderEllipse(node, option);
         }
         default: {
-            return await renderElement(node);
+            return await renderElement(node, option);
         }
     }
 }
 async function renderDocument(node, option) {
-    const doc = await renderElement(node);
+    const doc = await renderElement(node, option);
     return doc;
 }
 async function renderPage(node, option) {
-    const page = await renderElement(node);
+    const page = await renderElement(node, option);
     page.style.minHeight = node.bounds.height + 'px';
     return page;
 }
-async function renderElement(node, option) {
-    const dom = document.createElement(node.type);
+async function renderSvg(node, option) {
+    let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); // 创建SVG元素
+    await renderElement(node, option, svg);
+    svg.setAttribute('width', node.bounds.width + '');
+    svg.setAttribute('height', node.bounds.height + '');
+    return svg;
+}
+async function renderEllipse(node, option) {
+    const ellipse = await renderElement(node, option);
+    ellipse.setAttribute('cx', node.bounds.width / 2 + '');
+    ellipse.setAttribute('cy', node.bounds.height / 2 + '');
+    ellipse.setAttribute('rx', node.bounds.width / 2 + '');
+    ellipse.setAttribute('ry', node.bounds.height / 2 + '');
+    ellipse.setAttribute('fill', node.style.background || node.style.backgroundColor);
+    return ellipse;
+}
+async function renderElement(node, option, dom) {
+    dom = dom || document.createElement(node.type);
     if (node.style) {
         Object.assign(dom.style, node.style);
     }
     if (node.text) {
-        dom.innerText = node.text;
+        dom.textContent = node.text;
     }
+    // @ts-ignore
+    if (node.type === 'img' && node.url)
+        dom.src = node.url;
     if (node.visible === false)
         dom.style.display = 'none';
     if (node.name)
@@ -1222,7 +1346,7 @@ async function renderElement(node, option) {
         dom.setAttribute('data-id', node.id);
     if (node.children) {
         for (const child of node.children) {
-            const c = await nodeToDom(child);
+            const c = await nodeToDom(child, option);
             dom.appendChild(c);
         }
     }
