@@ -80,7 +80,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                 switch(effect.type) {
                     case EffectType.DROP_SHADOW: 
                     case EffectType.INNER_SHADOW: {
-                        dom.style.filter += ` drop-shadow(${util.toPX(effect.offset.x)} ${util.toPX(effect.offset.y)} ${util.toPX(effect.radius)} ${util.colorToString(effect.color)})`;
+                        dom.style.filter += ` drop-shadow(${util.toPX(effect.offset.x)} ${util.toPX(effect.offset.y)} ${util.toPX(effect.radius)} ${util.colorToString(effect.color, 255)})`;
                         break;
                     }
                     case EffectType.LAYER_BLUR:
@@ -265,7 +265,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
       getGradientStops(gradientStops: ColorStop[]) {
         // Constructing the gradient stops string based on received data
         const stopsString = gradientStops
-          .map((stop) => util.colorToString(stop.color) + ` ${stop.position * 100}%`)
+          .map((stop) => util.colorToString(stop.color, 255) + ` ${stop.position * 100}%`)
           .join(", ");
         return stopsString;
       }

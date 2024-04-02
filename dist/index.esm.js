@@ -969,7 +969,7 @@ class BaseConverter {
                 switch (effect.type) {
                     case EffectType.DROP_SHADOW:
                     case EffectType.INNER_SHADOW: {
-                        dom.style.filter += ` drop-shadow(${dist.util.toPX(effect.offset.x)} ${dist.util.toPX(effect.offset.y)} ${dist.util.toPX(effect.radius)} ${dist.util.colorToString(effect.color)})`;
+                        dom.style.filter += ` drop-shadow(${dist.util.toPX(effect.offset.x)} ${dist.util.toPX(effect.offset.y)} ${dist.util.toPX(effect.radius)} ${dist.util.colorToString(effect.color, 255)})`;
                         break;
                     }
                     case EffectType.LAYER_BLUR:
@@ -1144,7 +1144,7 @@ class BaseConverter {
     getGradientStops(gradientStops) {
         // Constructing the gradient stops string based on received data
         const stopsString = gradientStops
-            .map((stop) => dist.util.colorToString(stop.color) + ` ${stop.position * 100}%`)
+            .map((stop) => dist.util.colorToString(stop.color, 255) + ` ${stop.position * 100}%`)
             .join(", ");
         return stopsString;
     }
