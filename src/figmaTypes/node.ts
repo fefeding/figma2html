@@ -126,8 +126,9 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
 
     if(node.children) {
         for(const child of node.children) {
+            if(child.visible === false) continue;
             const c = await nodeToDom(child, option);
-            dom.appendChild(c);
+            c &&　dom.appendChild(c);
         }
     }
     return dom;

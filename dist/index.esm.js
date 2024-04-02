@@ -939,6 +939,7 @@ class BaseConverter {
         }
         this.convertStyle(node, dom, option);
         this.convertFills(node, dom, option); // 解析fills
+        this.convertStrokes(node, dom, option); // 边框
         this.convertEffects(node, dom, option); // 滤镜
         return dom;
     }
@@ -1053,7 +1054,8 @@ class BaseConverter {
             for (const stroke of node.strokes) {
                 if (stroke.visible === false)
                     continue;
-                dom.style.borderColor = dist.util.colorToString(stroke.color, 255);
+                if (stroke.color)
+                    dom.style.borderColor = dist.util.colorToString(stroke.color, 255);
                 switch (stroke.type) {
                     case PaintType.SOLID: {
                         dom.style.borderStyle = 'solid';
@@ -1172,8 +1174,8 @@ class PageConverter extends BaseConverter {
 
 let FRAMEConverter$2 = class FRAMEConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
-        dom.style.overflow = 'hidden';
         if (parentNode && parentNode.type === 'CANVAS') {
+            dom.style.overflow = 'hidden';
             if (parentNode && !parentNode.absoluteBoundingBox) {
                 // 如果是一级节点，则下面的节点都相对于它
                 parentNode.absoluteBoundingBox = {
@@ -1372,8 +1374,10 @@ async function renderElement(node, option, dom) {
         dom.setAttribute('data-id', node.id);
     if (node.children) {
         for (const child of node.children) {
+            if (child.visible === false)
+                continue;
             const c = await nodeToDom(child, option);
-            dom.appendChild(c);
+            c && dom.appendChild(c);
         }
     }
     return dom;

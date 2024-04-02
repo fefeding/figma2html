@@ -53,6 +53,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         
         this.convertStyle(node, dom, option);
         this.convertFills(node, dom, option);// 解析fills
+        this.convertStrokes(node, dom, option);// 边框
         this.convertEffects(node, dom, option);// 滤镜
         return dom;
     }
@@ -168,7 +169,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         if(node.strokes && node.strokes.length) {
             for(const stroke of node.strokes) {
                 if(stroke.visible === false) continue;
-                dom.style.borderColor = util.colorToString(stroke.color, 255);
+                if(stroke.color) dom.style.borderColor = util.colorToString(stroke.color, 255);
                 switch(stroke.type) {
                     case PaintType.SOLID: {
                         dom.style.borderStyle = 'solid';
