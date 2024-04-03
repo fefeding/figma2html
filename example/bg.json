@@ -188,7 +188,7 @@
         "effects": [
           {
             "type": "DROP_SHADOW",
-            "visible": false,
+            "visible": true,
             "color": {
               "r": 1,
               "g": 1,

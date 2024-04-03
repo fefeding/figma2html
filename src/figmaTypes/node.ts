@@ -5,7 +5,7 @@ import DocumentConverter from './document';
 import PageConverter from './page';
 import FrameConverter from './frame';
 import TextConverter from './text';
-import EllipseConverter from './ellipse';
+//import EllipseConverter from './ellipse';
 import RectangleConverter from './rectangle';
 
 const frameConverter = new FrameConverter();
@@ -16,7 +16,7 @@ const ConverterMaps = {
     'TEXT': new TextConverter(),
     'DOCUMENT': new DocumentConverter(),
     'CANVAS': new PageConverter(),
-    'ELLIPSE': new EllipseConverter(),
+    //'ELLIPSE': new EllipseConverter(),
     'RECTANGLE': new RectangleConverter(),
 } as { [key: string]: NodeConverter};
 

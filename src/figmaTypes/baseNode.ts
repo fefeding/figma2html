@@ -267,7 +267,17 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     // 径向性位置
     getRadialGradientPosition(gradientHandlePositions: Vector[]) {
         if(!gradientHandlePositions || !gradientHandlePositions.length) return 'center';
-        return `farthest-corner at ${gradientHandlePositions[0].x*100}% ${gradientHandlePositions[0].y*100}%`;
+        // 大小位置跟起点的距离为渐变宽
+        let dx = gradientHandlePositions[1].x - gradientHandlePositions[0].x;
+        let dy = gradientHandlePositions[1].y - gradientHandlePositions[0].y;
+        const rx = Math.sqrt(dx * dx + dy * dy) * 100;
+
+
+        dx = gradientHandlePositions[2].x - gradientHandlePositions[0].x;
+        dy = gradientHandlePositions[2].y - gradientHandlePositions[0].y;
+        const ry = Math.sqrt(dx * dx + dy * dy) * 100;
+        
+        return `ellipse ${rx}% ${ry}% at ${gradientHandlePositions[0].x*100}% ${gradientHandlePositions[0].y*100}%`;
     }
 
     // Helper function to get the gradient direction
