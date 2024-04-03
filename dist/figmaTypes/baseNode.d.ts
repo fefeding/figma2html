@@ -8,6 +8,7 @@ export declare class BaseConverter<NType extends NodeType = NodeType> implements
     convertStrokes(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): Promise<DomNode>;
     convertLinearGradient(gradient: Paint, dom?: DomNode): string;
     convertRadialGradient(gradient: Paint, dom?: DomNode): string;
+    getGradientSize(gradientHandlePositions: Vector[]): number;
     getRadialGradientPosition(gradientHandlePositions: Vector[]): string;
     getGradientDirection(gradientHandlePositions: Vector[]): string;
     getGradientStops(gradientStops: ColorStop[]): string | Array<DomNode>;

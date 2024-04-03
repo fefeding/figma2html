@@ -149,26 +149,26 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                             }
                             dom.backgroundImageUrl = img || fill.imageRef;
                         }
+                        break;
+                    }
+                }
                         
-                        switch(fill.scaleMode) {
-                            case PaintSolidScaleMode.FILL: {
-                                dom.style.backgroundSize = 'cover';
-                                break;
-                            }
-                            case PaintSolidScaleMode.FIT: {
-                                dom.style.backgroundSize = 'contain';
-                                break;
-                            }
-                            case PaintSolidScaleMode.STRETCH: {
-                                dom.style.backgroundSize = '100% 100%';
-                                break;
-                            }
-                            // 平铺
-                            case PaintSolidScaleMode.TILE: {
-                                dom.style.backgroundRepeat = 'repeat';
-                                break;
-                            }
-                        }
+                switch(fill.scaleMode) {
+                    case PaintSolidScaleMode.FILL: {
+                        dom.style.backgroundSize = 'cover';
+                        break;
+                    }
+                    case PaintSolidScaleMode.FIT: {
+                        dom.style.backgroundSize = 'contain';
+                        break;
+                    }
+                    case PaintSolidScaleMode.STRETCH: {
+                        dom.style.backgroundSize = '100% 100%';
+                        break;
+                    }
+                    // 平铺
+                    case PaintSolidScaleMode.TILE: {
+                        dom.style.backgroundRepeat = 'repeat';
                         break;
                     }
                 }
@@ -264,6 +264,14 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         return radialGradient;
     }
 
+    // 生成渐变尺寸
+    getGradientSize(gradientHandlePositions: Vector[]) {
+        if(!gradientHandlePositions || gradientHandlePositions.length < 2) return 1;
+        // 由于figma的渐变起始和终点是第一个和第二个坐标，但css是用的角度，这里要计算起始偏移和终点偏移，再计算stop的偏移比例，才是真实的css渐变比例
+        const start = {...gradientHandlePositions[0]};
+        const end = {...gradientHandlePositions[1]};
+    }
+
     // 径向性位置
     getRadialGradientPosition(gradientHandlePositions: Vector[]) {
         if(!gradientHandlePositions || !gradientHandlePositions.length) return 'center';
@@ -287,13 +295,14 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
           const end = gradientHandlePositions[1]; // Use the second handle, ignoring the last one
       
           // Calculate the angle in radians
+          // 因为左上角为原点，则y方向应该有起点减去终点，
           const angleRadians = Math.atan2(end.y - start.y, end.x - start.x);
       
           // Convert radians to degrees and normalize to the range [0, 360)
-          let angleDegrees = (angleRadians * 180) / Math.PI;
-          angleDegrees = (angleDegrees + 360) % 360;
+          let angleDegrees = 270 - (angleRadians * 180) / Math.PI;
+          //angleDegrees = (angleDegrees + 360) % 360;
           // console.log(`${angleDegrees}deg`);
-          return `${angleDegrees}deg`;
+          return util.toDeg(angleDegrees);
         } else {
           console.error("Insufficient handle positions for gradient calculation.");
           return ""; // or any default value

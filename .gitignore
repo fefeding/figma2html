@@ -24,3 +24,4 @@ build/package-lock.json
 .vitepress/dist
 .vitepress/cache
 docs/.api
+.vs

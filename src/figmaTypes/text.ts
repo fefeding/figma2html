@@ -45,29 +45,29 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
                         dom.style.backgroundClip = 'text';
                         if(!dom.style.color) dom.style.color = 'transparent';
                     }
-                    
-                    switch(fill.scaleMode) {
-                        case PaintSolidScaleMode.FILL: {
-                            dom.style.backgroundSize = 'cover';
-                            break;
-                        }
-                        case PaintSolidScaleMode.FIT: {
-                            dom.style.backgroundSize = 'contain';
-                            break;
-                        }
-                        case PaintSolidScaleMode.STRETCH: {
-                            dom.style.backgroundSize = '100% 100%';
-                            break;
-                        }
-                        // 平铺
-                        case PaintSolidScaleMode.TILE: {
-                            dom.style.backgroundRepeat = 'repeat';
-                            break;
-                        }
-                    }
                     break;
                 }
-            }      
+            } 
+                    
+            switch(fill.scaleMode) {
+                case PaintSolidScaleMode.FILL: {
+                    dom.style.backgroundSize = 'cover';
+                    break;
+                }
+                case PaintSolidScaleMode.FIT: {
+                    dom.style.backgroundSize = 'contain';
+                    break;
+                }
+                case PaintSolidScaleMode.STRETCH: {
+                    dom.style.backgroundSize = '100% 100%';
+                    break;
+                }
+                // 平铺
+                case PaintSolidScaleMode.TILE: {
+                    dom.style.backgroundRepeat = 'repeat';
+                    break;
+                }
+            }     
         } 
         return dom;     
     }
