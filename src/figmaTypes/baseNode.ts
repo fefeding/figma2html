@@ -246,7 +246,19 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     convertLinearGradient(gradient: Paint, dom?: DomNode) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
-        // console.log(handlePositions);
+        
+        /*const size = this.getGradientSize(handlePositions);
+        if(size) {
+            for(const stop of gradientStops) {
+                const r = size.r * stop.position;
+                const p = {
+                    x: r * size.cos,
+                    y: r * size.sin,
+                };
+                
+            }
+        }*/
+
         const linearGradient = `linear-gradient(${this.getGradientDirection(
           handlePositions
         )}, ${this.getGradientStops(gradientStops)})`;
@@ -257,7 +269,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     convertRadialGradient(gradient: Paint, dom?: DomNode) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
-        // console.log(handlePositions);
+        
         const radialGradient = `radial-gradient(${this.getRadialGradientPosition(
           handlePositions
         )}, ${this.getGradientStops(gradientStops)})`;
@@ -266,10 +278,23 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
 
     // 生成渐变尺寸
     getGradientSize(gradientHandlePositions: Vector[]) {
-        if(!gradientHandlePositions || gradientHandlePositions.length < 2) return 1;
+        if(!gradientHandlePositions || gradientHandlePositions.length < 2) return null;
         // 由于figma的渐变起始和终点是第一个和第二个坐标，但css是用的角度，这里要计算起始偏移和终点偏移，再计算stop的偏移比例，才是真实的css渐变比例
         const start = {...gradientHandlePositions[0]};
         const end = {...gradientHandlePositions[1]};
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+
+        const r = Math.sqrt(dx*dx + dy*dy);
+        const cos = dx / r;
+        const sin = dy / r;
+        return {
+            start,
+            end,
+            r,
+            cos,
+            sin
+        };
     }
 
     // 径向性位置
@@ -295,14 +320,13 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
           const end = gradientHandlePositions[1]; // Use the second handle, ignoring the last one
       
           // Calculate the angle in radians
-          // 因为左上角为原点，则y方向应该有起点减去终点，
-          const angleRadians = Math.atan2(end.y - start.y, end.x - start.x);
+          const angleRadians = Math.atan2(end.y - start.y, end.x - start.x) + Math.PI;
       
           // Convert radians to degrees and normalize to the range [0, 360)
-          let angleDegrees = 270 - (angleRadians * 180) / Math.PI;
+          //let angleDegrees = (angleRadians * 180) / Math.PI;
           //angleDegrees = (angleDegrees + 360) % 360;
           // console.log(`${angleDegrees}deg`);
-          return util.toDeg(angleDegrees);
+          return util.toRad(angleRadians);
         } else {
           console.error("Insufficient handle positions for gradient calculation.");
           return ""; // or any default value
