@@ -1,5 +1,5 @@
 
-import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, EffectType, ConvertNodeOption } from './types';
+import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, EffectType, ConvertNodeOption, StrokeAlign } from './types';
 import { util } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
@@ -52,10 +52,10 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             if(node[padding]) dom.style[padding] = util.toPX(node[padding]);
         }
         
-        this.convertStyle(node, dom, option);
-        this.convertFills(node, dom, option);// 解析fills
-        this.convertStrokes(node, dom, option);// 边框
-        this.convertEffects(node, dom, option);// 滤镜
+        await this.convertStyle(node, dom, option);
+        await this.convertFills(node, dom, option);// 解析fills
+        await this.convertStrokes(node, dom, option);// 边框
+        await this.convertEffects(node, dom, option);// 滤镜
         return dom;
     }
 
@@ -70,7 +70,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 转换style
-    convertStyle(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
+    async convertStyle(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
         if(!node.style) return dom;
 
         if (node.style.fontFamily) dom.style.fontFamily = node.style.fontFamily;
@@ -91,10 +91,11 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 转换滤镜
-    convertEffects(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
-        if(node.effects) {
+    async convertEffects(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
+        if(!node.isMaskOutline && node.effects) {
+            dom.style.filter = dom.style.filter || '';
             for(const effect of node.effects) {
-                if(!effect.visible === false) continue;
+                if(effect.visible === false) continue;
                 switch(effect.type) {
                     case EffectType.DROP_SHADOW: 
                     case EffectType.INNER_SHADOW: {
@@ -113,8 +114,9 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 处理填充
-    convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
-        if(node.fills) {
+    async convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
+        // isMaskOutline 如果为true则忽略填充样式
+        if(!node.isMaskOutline && node.fills) {
             for(const fill of node.fills) {
                 if(fill.visible === false) continue;
 
@@ -135,8 +137,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     }
                     // 图片
                     case PaintType.IMAGE: {
-                        if(option && option.images) {
-                            const img = option.images[fill.imageRef];
+                        if(option && option.getImage) {
+                            const img = await option.getImage(fill.imageRef);
                             if(img) {
                                 if(dom.type === 'img') {
                                     dom.url = img;
@@ -176,14 +178,17 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 处理边框
-    convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
+    async convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
         if(node.strokes && node.strokes.length) {
+            
             for(const stroke of node.strokes) {
                 if(stroke.visible === false) continue;
-                if(stroke.color) dom.style.borderColor = util.colorToString(stroke.color, 255);
+                if(stroke.color) {
+                    dom.style.outlineColor = util.colorToString(stroke.color, 255);
+                }
                 switch(stroke.type) {
                     case PaintType.SOLID: {
-                        dom.style.borderStyle = 'solid';
+                        dom.style.outlineStyle = 'solid';
                         break;
                     }
                     // 线性渐变
@@ -198,9 +203,9 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     }
                     // 图片
                     case PaintType.IMAGE: {
-                        if(option && option.images) {
-                            const img = option.images[stroke.imageRef];
-                            if(img) dom.style.borderImage = `url(${img})`;
+                        if(option && option.getImage) {
+                            const img = await option.getImage(stroke.imageRef);
+                            if(img) dom.style.borderImageSource = `url(${img})`;
                         }
                         
                         switch(stroke.scaleMode) {
@@ -226,7 +231,13 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     }
                 }                
             }
-            if(node.strokeWeight) dom.style.borderWidth = dom.style.borderImageWidth = util.toPX(node.strokeWeight);
+            if(node.strokeWeight) {
+                if(dom.style.outlineColor) dom.style.outlineWidth = util.toPX(node.strokeWeight);
+                if(dom.style.borderImageSource) dom.style.borderImageWidth = util.toPX(node.strokeWeight);
+            }
+            if(node.strokeDashes && node.strokeDashes.length) {
+                dom.style.outlineStyle = 'dashed';
+            }
         }
         return dom;
     }

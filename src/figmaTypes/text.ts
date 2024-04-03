@@ -11,8 +11,9 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
         res.style.width = 'auto';// text没必要指定宽度
         return res;
     }
+    
     // 处理填充, 文本的fill就是字体的颜色
-    convertFills(node:  Node<'TEXT'>, dom: DomNode) {
+    async convertFills(node:  Node<'TEXT'>, dom: DomNode) {
         
         if(node.fills && node.fills.length) {
             const fill = node.fills[0];

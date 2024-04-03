@@ -46,6 +46,7 @@ export async function convert(node: Node, parentNode?: Node, option?: ConvertNod
 
     if(node.children && node.children.length) {
         for(const child of node.children) {
+            //if(child.isMask) continue;
             const c = await convert(child, node, option);            
             dom.children.push(c);
         }
@@ -138,7 +139,7 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
     if(node.cy) dom.setAttribute('cy', node.cy);
     if(node.r) dom.setAttribute('r', node.r);
     if(node.fx) dom.setAttribute('fx', node.fx);
-    if(node.fy) dom.setAttribute('fx', node.fy);
+    if(node.fy) dom.setAttribute('fy', node.fy);
 
     if(node.x1) dom.setAttribute('x1', node.x1);
     if(node.y1) dom.setAttribute('y1', node.y1);

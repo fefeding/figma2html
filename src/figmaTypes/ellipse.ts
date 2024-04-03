@@ -4,7 +4,7 @@ import { util } from 'j-design-util';
 import BaseConverter from './baseNode';
 
 export class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
-    async convert(node:  Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
+    /*async convert(node:  Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
         dom.type = 'svg';
         let ellipse = this.createDomNode('ellipse');
 
@@ -20,7 +20,7 @@ export class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
     }
 
     // 处理填充
-    convertFills(node:  Node<'ELLIPSE'>, dom: DomNode, option?: ConvertNodeOption) {
+    async convertFills(node:  Node<'ELLIPSE'>, dom: DomNode, option?: ConvertNodeOption) {
         if(node.fills) {
             const ellipse = dom.children[1];
             for(const fill of node.fills) {
@@ -43,7 +43,7 @@ export class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
                     }
                     // 图片
                     case PaintType.IMAGE: {
-                        super.convertFills(node, ellipse, option);
+                        await super.convertFills(node, ellipse, option);
                         break;
                     }
                 }
@@ -53,10 +53,10 @@ export class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
     }
 
     // 处理边框
-    convertStrokes(node:  Node<'ELLIPSE'>, dom: DomNode, option?: ConvertNodeOption) {
+    async convertStrokes(node:  Node<'ELLIPSE'>, dom: DomNode, option?: ConvertNodeOption) {
         if(node.strokes && node.strokes.length) {
             const ellipse = dom.children[1];
-            super.convertStrokes(node, ellipse, option);
+            await super.convertStrokes(node, ellipse, option);
         }
         return dom;
     }
@@ -93,12 +93,18 @@ export class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
         gradientDom.id = 'gradient_' + util.uuid();
 
         const handlePositions = gradient.gradientHandlePositions;
+
+        // 该字段包含三个矢量，每个矢量都是归一化对象空间中的一个位置（归一化对象空间是如果对象的边界框的左上角是（0，0），右下角是（1,1））。第一个位置对应于渐变的开始（为了计算渐变停止，值为0），第二个位置是渐变的结束（值为1），第三个手柄位置决定渐变的宽度。
         if(handlePositions && handlePositions.length > 2) {
-            gradientDom.fx = (handlePositions[0].x) * 100 + '%';
-            gradientDom.fy = (handlePositions[0].y) * 100 + '%';
-            gradientDom.cx = (handlePositions[1].x) * 100 + '%';
-            gradientDom.cy = (handlePositions[1].y) * 100 + '%';
-            gradientDom.r = (handlePositions[2].x) * 100 + '%';
+            gradientDom.fx = Math.round(handlePositions[0].x * 100) + '%';
+            gradientDom.fy = Math.round(handlePositions[0].y * 100) + '%';
+            gradientDom.cx = gradientDom.fx
+            gradientDom.cy = gradientDom.fy
+            // 大小位置跟起点的距离为渐变宽
+            const dx = handlePositions[1].x - handlePositions[0].x;
+            const dy = handlePositions[1].y - handlePositions[0].y;
+            const r = Math.sqrt(dx * dx + dy * dy);
+            gradientDom.r = Math.round(r * 100) + '%';
         }
         const gradientStops = gradient.gradientStops;
         const stops = this.getGradientStopDoms(gradientStops);
@@ -113,12 +119,12 @@ export class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
         const stops = [] as Array<DomNode>;
         for(const s of gradientStops) {
             const stop = this.createDomNode('stop');
-            stop.offset = `${s.position * 100}%`;
+            stop.offset = `${Math.round(s.position * 100)}%`;
             stop.style.stopColor = util.colorToString(s.color, 255);
             stops.push(stop);
         }
         return stops;
-      }
+      }*/
 }
 
 export default ELLIPSEConverter;

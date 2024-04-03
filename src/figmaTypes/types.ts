@@ -834,9 +834,12 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     backgroundColor?: Color;
     fills?: Paint[];
     strokes?: Paint[];
+    isMask?: boolean;
+    isMaskOutline?: boolean;
     rotation?: number;
     "strokeWeight"?: number;
     "strokeAlign"?: StrokeAlign;
+    strokeDashes?: Vector[];
     cornerRadius?: number;
     clipsContent?: boolean;
     /** default: 0. The padding between the left border of the frame and its children. This property is only applicable for auto-layout frames. */
@@ -854,7 +857,8 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
 };
 
 export declare type ConvertNodeOption = {
-    images?: {[key: string]: string} 
+    images?: {[key: string]: string} ;
+    getImage?: (key: string)=>Promise<string>;
 }
 
 export type DomNodeType = 'div'|'img'|'span'|'document'|'page'|'frame'|'ellipse'|'svg'|'defs'|'linearGradient'|'radialGradient'|'stop';

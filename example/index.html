@@ -40,8 +40,8 @@
 	const urlParams = getUrlParams();
 
 	async function loadFigmaTemplate(id) {
-		let data = await loadFigmaFile(id, urlParams.token);
-		//let data = await util.request('bg.json');
+		//let data = await loadFigmaFile(id, urlParams.token);
+		let data = await util.request('bg.json');
 		if(typeof data === 'string') data = JSON.parse(data);
 		console.log(data);
 		return data;
@@ -50,10 +50,24 @@
 	async function renderTemplate() {
 		const data = await loadFigmaTemplate(urlParams.fileid);
 
-		const images = await getFigmaFileImages(urlParams.fileid, urlParams.token);
+		//const images = await getFigmaFileImages(urlParams.fileid, urlParams.token);
+		const images = {
+			
+			'ce7a72a3375cd9f1f1196e499f27fce499f64f6b': 'images/375cd9f1f1196e499f27fce499f64f6b.jfif',
+			'066f1dbe3fa79150eb85af7aa8d84c4fb93c2656': 'images/3fa79150eb85af7aa8d84c4fb93c2656.png',
+			'681639260d4c7ba2a1141e00afd1cf328a237b78': 'images/0d4c7ba2a1141e00afd1cf328a237b78.png',
+			'42409ea32d2206061a526ac212c277a709e5668f': 'images/2d2206061a526ac212c277a709e5668f.png',
+			'a4d67f22efe7629835636620194e61aac5cc7098': 'images/efe7629835636620194e61aac5cc7098.png',
+		};
 
+		// 转换模板，并动态获取图片地址
 		const tpl = await convert(data, null, {
-			images
+			images,
+			async getImage(key) {
+				console.log('get image', key);
+				if(images[key]) return images[key];
+				return '';// 待实现动态获取图片地址
+			}
 		});
 		
 		console.log(tpl);
