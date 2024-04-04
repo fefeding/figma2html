@@ -320,13 +320,13 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
           const end = gradientHandlePositions[1]; // Use the second handle, ignoring the last one
       
           // Calculate the angle in radians
-          const angleRadians = Math.atan2(end.y - start.y, end.x - start.x) + Math.PI;
-      
+          const angleRadians = util.getPointCoordRotation(start, end) + Math.PI/2;
+          
           // Convert radians to degrees and normalize to the range [0, 360)
           //let angleDegrees = (angleRadians * 180) / Math.PI;
           //angleDegrees = (angleDegrees + 360) % 360;
           // console.log(`${angleDegrees}deg`);
-          return util.toRad(angleRadians);
+          return util.toDeg(util.radToDeg(angleRadians));
         } else {
           console.error("Insufficient handle positions for gradient calculation.");
           return ""; // or any default value

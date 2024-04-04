@@ -308,6 +308,15 @@ var util = {
         return (time + rnd).toString();
     },
     /**
+     * 获取二点在标准坐标系中的的弧度, 返回值为 0 ~ Math.PI*2
+     * @param start
+     * @param end
+     */
+    getPointCoordRotation(start, end) {
+        const r = Math.atan2(end.y - start.y, end.x - start.x);
+        return r < 0 ? Math.PI * 2 + r : r;
+    },
+    /**
      * 把图片旋转一定角度，返回base64
      * @param url
      * @param rotation
@@ -920,12 +929,12 @@ class BaseConverter {
             const start = gradientHandlePositions[0];
             const end = gradientHandlePositions[1]; // Use the second handle, ignoring the last one
             // Calculate the angle in radians
-            const angleRadians = Math.atan2(end.y - start.y, end.x - start.x) + Math.PI;
+            const angleRadians = util.getPointCoordRotation(start, end) + Math.PI / 2;
             // Convert radians to degrees and normalize to the range [0, 360)
             //let angleDegrees = (angleRadians * 180) / Math.PI;
             //angleDegrees = (angleDegrees + 360) % 360;
             // console.log(`${angleDegrees}deg`);
-            return util.toRad(angleRadians);
+            return util.toDeg(util.radToDeg(angleRadians));
         }
         else {
             console.error("Insufficient handle positions for gradient calculation.");

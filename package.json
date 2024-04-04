@@ -46,7 +46,7 @@
     "vitest": "^1.2.2"
   },
   "dependencies": {
-    "j-design-util": "^1.0.27"
+    "j-design-util": "^1.0.28"
   },
   "author": "fefeding",
   "license": "MIT"
