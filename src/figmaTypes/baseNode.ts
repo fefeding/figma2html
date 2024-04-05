@@ -256,6 +256,19 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     y: r * size.sin,
                 };
                 
+                const start = {
+                    x: 0,
+                    y: 0
+                };
+
+                if(size.start.x < size.end.x) {
+                    const dy = size.start.y - start.x * size.atan;
+                }
+                if(size.start.y > size.end.y) {
+                    
+                }
+
+                stop.position = Math.sqrt(p.x * p.x + p.y * p.y);
             }
         }*/
 
@@ -293,7 +306,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             end,
             r,
             cos,
-            sin
+            sin,
+            atan: dy / dx
         };
     }
 
@@ -320,12 +334,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
           const end = gradientHandlePositions[1]; // Use the second handle, ignoring the last one
       
           // Calculate the angle in radians
-          const angleRadians = util.getPointCoordRotation(start, end) + Math.PI/2;
+          const angleRadians = Math.PI/2 - util.getPointCoordRotation(start, end);
           
-          // Convert radians to degrees and normalize to the range [0, 360)
-          //let angleDegrees = (angleRadians * 180) / Math.PI;
-          //angleDegrees = (angleDegrees + 360) % 360;
-          // console.log(`${angleDegrees}deg`);
           return util.toDeg(util.radToDeg(angleRadians));
         } else {
           console.error("Insufficient handle positions for gradient calculation.");
