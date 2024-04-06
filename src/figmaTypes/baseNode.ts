@@ -247,30 +247,36 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
         
-        /*const size = this.getGradientSize(handlePositions);
+        /**
+         * 需要计算figma线性渐变位置百分比，因为把图形X和Y都标准化成0-1.所以我们可以认为它就是一个正方形，在figma上编缉的渐变2个点表示stops变化区域，需要计算这2点区域映射到图形的stop比
+         */
+        const size = this.getGradientSize(handlePositions);
         if(size) {
             for(const stop of gradientStops) {
                 const r = size.r * stop.position;
                 const p = {
-                    x: r * size.cos,
-                    y: r * size.sin,
+                    x: r * size.cos + size.start.x,
+                    y: r * size.sin + size.start.y,
                 };
-                
-                const start = {
-                    x: 0,
-                    y: 0
-                };
+                const dx = p.x - size.startInShape.x;
+                const dy = p.y - size.startInShape.y;
 
-                if(size.start.x < size.end.x) {
-                    const dy = size.start.y - start.x * size.atan;
+                stop.position = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+                // 如果交点在当前右边，则偏移量为负数
+                if(size.startInShape.x === 0) {
+                    if(p.x < 0 || p.y < 0) stop.position = -stop.position;
                 }
-                if(size.start.y > size.end.y) {
-                    
+                else if(size.startInShape.x === 1) {
+                    if(p.x > 1 || p.y > 1)  stop.position = -stop.position;
                 }
-
-                stop.position = Math.sqrt(p.x * p.x + p.y * p.y);
+                else if(size.startInShape.y === 0) {
+                    if(p.y < 0 || p.x < 0) stop.position = -stop.position;
+                }
+                else if(size.startInShape.y === 1) {
+                    if(p.y > 1 || p.x > 1) stop.position = -stop.position;
+                }
             }
-        }*/
+        }
 
         const linearGradient = `linear-gradient(${this.getGradientDirection(
           handlePositions
@@ -301,13 +307,65 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         const r = Math.sqrt(dx*dx + dy*dy);
         const cos = dx / r;
         const sin = dy / r;
+        const tan = dy / dx;
+
+        // 计算渐变二点延长级起始点边与图形边的交点
+        const startInShape = {
+            x: 0,
+            y: 0
+        };
+
+        // X轴方向是向右的
+        if(dx > 0) {
+            // 如果二个点的X轴距离大于Y轴距离，则表示连线或延长级与左边线相交
+            // 交点X为0，用atan计算Y即可
+            if(dx > Math.abs(dy)) {
+                const dy = tan * start.x;
+                startInShape.y = start.y - dy;
+            }
+            // 向右上角，且与底边相交
+            else if(dy < 0) {
+                startInShape.y = 1;
+                const dx = (1 - start.y) / tan;
+                startInShape.x = start.x - dx;
+            }
+            // 向右下角，跟顶边相交
+            else {
+                const dx = start.y / tan;
+                startInShape.x = start.x - dx;
+            }
+        }
+        // X轴向左方向
+        else if(dx < 0) {
+            // 如果二个点的X轴距离大于Y轴距离，则表示连线或延长级与右边线相交
+            // 交点X为1，用atan计算Y即可
+            if(dx > Math.abs(dy)) {
+                startInShape.x = 1;
+                const dy = tan * (1-start.x);
+                startInShape.y = start.y - dy;
+            }
+            // 向左上角，且与底边相交
+            else if(dy < 0) {
+                startInShape.y = 1;
+                const dx = (1 - start.y) / tan;
+                startInShape.x = start.x + dx;
+            }
+            // 向左下角，跟顶边相交
+            else {
+                const dx = start.y / tan;
+                startInShape.x = start.x - dx;
+            }
+        }
+        else {
+            startInShape.x = start.x;
+        }
         return {
             start,
             end,
             r,
+            startInShape,
             cos,
             sin,
-            atan: dy / dx
         };
     }
 
@@ -335,7 +393,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
       
           // Calculate the angle in radians
           const angleRadians = Math.PI/2 - util.getPointCoordRotation(start, end);
-          
+         
           return util.toDeg(util.radToDeg(angleRadians));
         } else {
           console.error("Insufficient handle positions for gradient calculation.");

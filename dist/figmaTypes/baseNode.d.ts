@@ -18,9 +18,12 @@ export declare class BaseConverter<NType extends NodeType = NodeType> implements
             y: number;
         };
         r: number;
+        startInShape: {
+            x: number;
+            y: number;
+        };
         cos: number;
         sin: number;
-        atan: number;
     };
     getRadialGradientPosition(gradientHandlePositions: Vector[]): string;
     getGradientDirection(gradientHandlePositions: Vector[]): string;
