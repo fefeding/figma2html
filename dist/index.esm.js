@@ -994,8 +994,6 @@ class BaseConverter {
         if (dx > 0) {
             // 如果二个点的X轴距离大于Y轴距离，则表示连线或延长级与左边线相交
             if (dx > Math.abs(dy)) {
-                // 与Y轴的交点
-                m * start.x;
                 // 向右上角，则起点为左下角
                 if (dy < 0) {
                     startInShape.y = 1;
@@ -1041,6 +1039,10 @@ class BaseConverter {
             cos,
             sin,
             getProjectionOnLine(point) {
+                if (this.start.x === this.end.x)
+                    return { x: this.start.x, y: point.y };
+                if (this.start.y === this.end.y)
+                    return { x: point.x, y: this.start.y };
                 // 新直线b，斜率不变m
                 const b = this.startInShape.y - this.m * this.startInShape.x;
                 const xPrime = (point.y - b + (point.x / this.m)) / (this.m + (1 / this.m));

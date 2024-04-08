@@ -363,8 +363,6 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         if(dx > 0) {
             // 如果二个点的X轴距离大于Y轴距离，则表示连线或延长级与左边线相交
             if(dx > Math.abs(dy)) {
-                // 与Y轴的交点
-                const dy2 = m * start.x;
                 // 向右上角，则起点为左下角
                 if(dy < 0) {
                     startInShape.y = 1;
@@ -413,6 +411,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             cos,
             sin,
             getProjectionOnLine(point: Point): Point {
+                if(this.start.x === this.end.x) return {x: this.start.x, y: point.y};
+                if(this.start.y === this.end.y) return {x: point.x, y: this.start.y};
                 // 新直线b，斜率不变m
                 const b = this.startInShape.y - this.m * this.startInShape.x;
                 
