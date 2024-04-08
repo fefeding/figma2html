@@ -252,6 +252,37 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
          */
         const size = this.getGradientSize(handlePositions);
         if(size) {
+            /*console.log(size);
+            const startProjection = size.getProjectionOnLine(size.start);
+            const startDom = this.createDomNode('div');
+            startDom.style.top = startProjection.y*100 + '%';
+            startDom.style.left = startProjection.x*100 + '%';
+            startDom.style.position = 'absolute';
+            startDom.style.backgroundColor = 'red';
+            startDom.style.width = startDom.style.height = '3px';
+
+            const startDom2 = this.createDomNode('div');
+            startDom2.style.top = size.start.y*100 + '%';
+            startDom2.style.left = size.start.x*100 + '%';
+            startDom2.style.position = 'absolute';
+            startDom2.style.backgroundColor = 'red';
+            startDom2.style.width = startDom2.style.height = '3px';
+
+            const endProjection = size.getProjectionOnLine(size.end);
+            const endDom = this.createDomNode('div');
+            endDom.style.top = endProjection.y*100 + '%';
+            endDom.style.left = endProjection.x*100 + '%';
+            endDom.style.backgroundColor = 'blue';
+            endDom.style.position = 'absolute';
+            endDom.style.width = endDom.style.height = '3px';
+            const endDom2 = this.createDomNode('div');
+            endDom2.style.top = size.end.y*100 + '%';
+            endDom2.style.left = size.end.x*100 + '%';
+            endDom2.style.backgroundColor = 'blue';
+            endDom2.style.position = 'absolute';
+            endDom2.style.width = endDom2.style.height = '3px';
+            dom.children.push(startDom,startDom2, endDom,endDom2);*/
+
             // 线性渐变，需要把颜色偏移量对应到figma线段比例中，并且需要位移到顶点再计算颜色偏移比例
             for(const stop of gradientStops) {
                 const r = size.r * stop.position;
@@ -260,6 +291,14 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     y: r * size.sin + size.start.y,
                 };
                 const projection = size.getProjectionOnLine(p); // 得到平移后线上的投影点
+                /*const stopDom = this.createDomNode('div');
+                stopDom.style.top = projection.y*100 + '%';
+                stopDom.style.left = projection.x*100 + '%';
+                stopDom.style.backgroundColor = 'yellow';
+                stopDom.style.position = 'absolute';
+                stopDom.style.width = stopDom.style.height = '3px';
+                dom.children.push(stopDom);*/
+
                 const dx = projection.x - size.startInShape.x;
                 const dy = projection.y - size.startInShape.y;
 
@@ -316,9 +355,6 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             x: 0,
             y: 0
         };
-        // 平移线到顶点方向的偏移量
-        let offsetX = 0;
-        let offsetY = 0;
 
         // X轴方向是向右的
         if(dx > 0) {
@@ -326,30 +362,18 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             if(dx > Math.abs(dy)) {
                 // 与Y轴的交点
                 const dy2 = m * start.x;
-                const y = start.y - dy2;
                 // 向右上角，则起点为左下角
                 if(dy < 0) {
                     startInShape.y = 1;
-                    offsetX = offsetY = (1 - y)/2;// 向下移到左下角
-                }
-                else {
-                    offsetX = y / 2;
-                    offsetY = -offsetX;
                 }
             }
             // 向右上角，且与底边相交
             else if(dy < 0) {
                 startInShape.y = 1;
-                const dx2 = (1 - start.y) / m;
-                const x = start.x - dx2;
-                offsetX = offsetY = -x / 2;                 
             }
             // 向右下角，跟顶边相交
             else {
-                const dx2 = m === 0? start.x: start.y / m;
-                const x = start.x - dx2;
-                offsetX = -x/2;
-                offsetY = -offsetX;
+                
             }
         }
         // X轴向左方向
@@ -357,40 +381,22 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             // 如果二个点的X轴距离大于Y轴距离，则表示连线或延长级与右边线相交
             if(dx > Math.abs(dy)) {
                 startInShape.x = 1;
-                const dy2 = m * (1-start.x);
-                const y = start.y - dy2;
-                if(dy > 0) {
-                    offsetX = offsetY = -y/2;
-                }
-                else {
+                if(dy <= 0) {
                     startInShape.y = 1;
-                    offsetY = (1-y)/2;
-                    offsetX = -offsetY;
                 }
             }
             // 向左上角，且与底边相交
             else if(dy < 0) {
                 startInShape.x = 1;
                 startInShape.y = 1;
-                const dx2 = (1 - start.y) / m;
-                const x = start.x + dx2;
-                offsetX = (1-x)/2;
-                offsetY = -offsetX;
             }
             // 向左下角，跟顶边相交
             else {
                 startInShape.x = 1;
-                const dx2 = m === 0? (start.x-1): start.y / m;
-                const x = start.x - dx2;
-                offsetX = offsetY = (1-x)/2;
             }
         }
         else {
-            if(dy > 0) {
-                offsetX = -start.x;
-            }
-            else {
-                offsetX = -start.x;
+            if(dy <= 0) {
                 startInShape.y = 1;
             }
         }
@@ -403,8 +409,6 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             startInShape,
             cos,
             sin,
-            offsetX,
-            offsetY,
             getProjectionOnLine(point: Point): Point {
                 // 新直线b，斜率不变m
                 const b = this.startInShape.y - this.m * this.startInShape.x;
@@ -441,7 +445,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
       
           // Calculate the angle in radians
           const angleRadians = Math.PI/2 - util.getPointCoordRotation(start, end);
-         
+          //const angleRadians = Math.PI/2 - Math.atan2(end.y - start.y, end.x - start.x);
+
           return util.toDeg(util.radToDeg(angleRadians));
         } else {
           console.error("Insufficient handle positions for gradient calculation.");

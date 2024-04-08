@@ -8,7 +8,7 @@ const baseNode_1 = __importDefault(require("./baseNode"));
 class PageConverter extends baseNode_1.default {
     async convert(node, dom, parentNode, option) {
         dom.type = 'page';
-        dom.style.position = '';
+        dom.style.position = 'relative';
         return super.convert(node, dom, parentNode, option);
     }
 }

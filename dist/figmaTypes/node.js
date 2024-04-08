@@ -9,7 +9,7 @@ const document_1 = __importDefault(require("./document"));
 const page_1 = __importDefault(require("./page"));
 const frame_1 = __importDefault(require("./frame"));
 const text_1 = __importDefault(require("./text"));
-const ellipse_1 = __importDefault(require("./ellipse"));
+//import EllipseConverter from './ellipse';
 const rectangle_1 = __importDefault(require("./rectangle"));
 const frameConverter = new frame_1.default();
 const ConverterMaps = {
@@ -19,7 +19,7 @@ const ConverterMaps = {
     'TEXT': new text_1.default(),
     'DOCUMENT': new document_1.default(),
     'CANVAS': new page_1.default(),
-    'ELLIPSE': new ellipse_1.default(),
+    //'ELLIPSE': new EllipseConverter(),
     'RECTANGLE': new rectangle_1.default(),
 };
 // 转node为html结构对象
@@ -46,10 +46,8 @@ async function convert(node, parentNode, option) {
         await converter.convert(node, dom, parentNode, option);
     if (node.children && node.children.length) {
         for (const child of node.children) {
+            //if(child.isMask) continue;
             const c = await convert(child, node, option);
-            if (node.type === 'CANVAS') {
-                c.style.overflow = 'hidden';
-            }
             dom.children.push(c);
         }
     }
@@ -71,6 +69,12 @@ async function nodeToDom(node, option) {
         case 'ellipse': {
             return await renderEllipse(node, option);
         }
+        case 'stop':
+        case 'defs':
+        case 'linearGradient':
+        case 'radialGradient': {
+            return await renderSvgElement(node, option);
+        }
         default: {
             return await renderElement(node, option);
         }
@@ -83,24 +87,28 @@ async function renderDocument(node, option) {
 }
 async function renderPage(node, option) {
     const page = await renderElement(node, option);
-    page.style.minHeight = node.bounds.height + 'px';
+    //page.style.minHeight = node.bounds.height + 'px';
     return page;
 }
 async function renderSvg(node, option) {
-    let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); // 创建SVG元素
-    await renderElement(node, option, svg);
+    const svg = await renderSvgElement(node, option);
     svg.setAttribute('width', node.bounds.width + '');
     svg.setAttribute('height', node.bounds.height + '');
     return svg;
 }
 async function renderEllipse(node, option) {
-    const ellipse = await renderElement(node, option);
-    ellipse.setAttribute('cx', node.bounds.width / 2 + '');
-    ellipse.setAttribute('cy', node.bounds.height / 2 + '');
-    ellipse.setAttribute('rx', node.bounds.width / 2 + '');
-    ellipse.setAttribute('ry', node.bounds.height / 2 + '');
-    ellipse.setAttribute('fill', node.style.background || node.style.backgroundColor);
+    const ellipse = await renderSvgElement(node, option);
+    ellipse.setAttribute('cx', '50%');
+    ellipse.setAttribute('cy', '50%');
+    ellipse.setAttribute('rx', '50%');
+    ellipse.setAttribute('ry', '50%');
+    ellipse.setAttribute('fill', node.fill || node.style.background || node.style.backgroundColor);
     return ellipse;
+}
+async function renderSvgElement(node, option) {
+    let el = document.createElementNS("http://www.w3.org/2000/svg", node.type); // 创建SVG元素
+    await renderElement(node, option, el);
+    return el;
 }
 async function renderElement(node, option, dom) {
     dom = dom || document.createElement(node.type);
@@ -118,11 +126,33 @@ async function renderElement(node, option, dom) {
     if (node.name)
         dom.setAttribute('data-name', node.name);
     if (node.id)
-        dom.setAttribute('data-id', node.id);
+        dom.setAttribute('id', node.id);
+    if (node.cx)
+        dom.setAttribute('cx', node.cx);
+    if (node.cy)
+        dom.setAttribute('cy', node.cy);
+    if (node.r)
+        dom.setAttribute('r', node.r);
+    if (node.fx)
+        dom.setAttribute('fx', node.fx);
+    if (node.fy)
+        dom.setAttribute('fy', node.fy);
+    if (node.x1)
+        dom.setAttribute('x1', node.x1);
+    if (node.y1)
+        dom.setAttribute('y1', node.y1);
+    if (node.x2)
+        dom.setAttribute('x2', node.x2);
+    if (node.y2)
+        dom.setAttribute('y2', node.y2);
+    if (node.offset)
+        dom.setAttribute('offset', node.offset);
     if (node.children) {
         for (const child of node.children) {
+            if (child.visible === false)
+                continue;
             const c = await nodeToDom(child, option);
-            dom.appendChild(c);
+            c && dom.appendChild(c);
         }
     }
     return dom;

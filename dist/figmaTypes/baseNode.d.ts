@@ -26,8 +26,6 @@ export declare class BaseConverter<NType extends NodeType = NodeType> implements
         };
         cos: number;
         sin: number;
-        offsetX: number;
-        offsetY: number;
         getProjectionOnLine(point: Point): Point;
     };
     getRadialGradientPosition(gradientHandlePositions: Vector[]): string;

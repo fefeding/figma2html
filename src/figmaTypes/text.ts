@@ -24,14 +24,14 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
                 }
                 // 线性渐变
                 case PaintType.GRADIENT_LINEAR: {
-                    dom.style.background = this.convertLinearGradient(fill);
+                    dom.style.background = this.convertLinearGradient(fill, dom);
                     dom.style.backgroundClip = 'text';
                     if(!dom.style.color) dom.style.color = 'transparent';
                     break;
                 }
                 // 径向性渐变
                 case PaintType.GRADIENT_RADIAL: {
-                    dom.style.background = this.convertRadialGradient(fill);
+                    dom.style.background = this.convertRadialGradient(fill, dom);
                     dom.style.backgroundClip = 'text';
                     if(!dom.style.color) dom.style.color = 'transparent';
                     break;
