@@ -892,30 +892,31 @@ class BaseConverter {
          */
         const size = this.getGradientSize(handlePositions);
         if (size) {
+            // 线性渐变，需要把颜色偏移量对应到figma线段比例中，并且需要位移到顶点再计算颜色偏移比例
             for (const stop of gradientStops) {
                 const r = size.r * stop.position;
                 const p = {
-                    x: r * size.cos + size.start.x,
-                    y: r * size.sin + size.start.y,
+                    x: r * size.cos + size.start.x + size.offsetX,
+                    y: r * size.sin + size.start.y + size.offsetY,
                 };
                 const dx = p.x - size.startInShape.x;
                 const dy = p.y - size.startInShape.y;
                 stop.position = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
                 // 如果交点在当前右边，则偏移量为负数
-                if (size.startInShape.x === 0) {
+                if (size.startInShape.x === 0 && size.startInShape.y === 0) {
                     if (p.x < 0 || p.y < 0)
                         stop.position = -stop.position;
                 }
-                else if (size.startInShape.x === 1) {
-                    if (p.x > 1 || p.y > 1)
+                else if (size.startInShape.x === 1 && size.startInShape.y === 0) {
+                    if (p.x > 1 || p.y < 0)
                         stop.position = -stop.position;
                 }
-                else if (size.startInShape.y === 0) {
-                    if (p.y < 0 || p.x < 0)
-                        stop.position = -stop.position;
-                }
-                else if (size.startInShape.y === 1) {
+                else if (size.startInShape.x === 1 && size.startInShape.y === 1) {
                     if (p.y > 1 || p.x > 1)
+                        stop.position = -stop.position;
+                }
+                else if (size.startInShape.x === 0 && size.startInShape.y === 1) {
+                    if (p.x < 0 || p.y > 1)
                         stop.position = -stop.position;
                 }
             }
@@ -948,24 +949,40 @@ class BaseConverter {
             x: 0,
             y: 0
         };
+        // 平移线到顶点方向的偏移量
+        let offsetX = 0;
+        let offsetY = 0;
         // X轴方向是向右的
         if (dx > 0) {
             // 如果二个点的X轴距离大于Y轴距离，则表示连线或延长级与左边线相交
             // 交点X为0，用atan计算Y即可
             if (dx > Math.abs(dy)) {
-                const dy = tan * start.x;
-                startInShape.y = start.y - dy;
+                // 与Y轴的交点
+                const dy2 = tan * start.x;
+                const y = start.y - dy2;
+                // 向右上角，则起点为左下角
+                if (dy < 0) {
+                    startInShape.y = 1;
+                    offsetX = offsetY = (1 - y) / 2; // 向下移到左下角
+                }
+                else {
+                    offsetX = y / 2;
+                    offsetY = -offsetX;
+                }
             }
             // 向右上角，且与底边相交
             else if (dy < 0) {
                 startInShape.y = 1;
-                const dx = (1 - start.y) / tan;
-                startInShape.x = start.x - dx;
+                const dx2 = (1 - start.y) / tan;
+                const x = start.x - dx2;
+                offsetX = offsetY = -x / 2;
             }
             // 向右下角，跟顶边相交
             else {
-                const dx = start.y / tan;
-                startInShape.x = start.x - dx;
+                const dx2 = tan === 0 ? start.x : start.y / tan;
+                const x = start.x - dx2;
+                offsetX = -x / 2;
+                offsetY = -offsetX;
             }
         }
         // X轴向左方向
@@ -974,23 +991,42 @@ class BaseConverter {
             // 交点X为1，用atan计算Y即可
             if (dx > Math.abs(dy)) {
                 startInShape.x = 1;
-                const dy = tan * (1 - start.x);
-                startInShape.y = start.y - dy;
+                const dy2 = tan * (1 - start.x);
+                const y = start.y - dy2;
+                if (dy > 0) {
+                    offsetX = offsetY = -y / 2;
+                }
+                else {
+                    startInShape.y = 1;
+                    offsetY = (1 - y) / 2;
+                    offsetX = -offsetY;
+                }
             }
             // 向左上角，且与底边相交
             else if (dy < 0) {
+                startInShape.x = 1;
                 startInShape.y = 1;
-                const dx = (1 - start.y) / tan;
-                startInShape.x = start.x + dx;
+                const dx2 = (1 - start.y) / tan;
+                const x = start.x + dx2;
+                offsetX = (1 - x) / 2;
+                offsetY = -offsetX;
             }
             // 向左下角，跟顶边相交
             else {
-                const dx = start.y / tan;
-                startInShape.x = start.x - dx;
+                startInShape.x = 1;
+                const dx2 = tan === 0 ? (start.x - 1) : start.y / tan;
+                const x = start.x - dx2;
+                offsetX = offsetY = (1 - x) / 2;
             }
         }
         else {
-            startInShape.x = start.x;
+            if (dy > 0) {
+                offsetX = -start.x;
+            }
+            else {
+                offsetX = -start.x;
+                startInShape.y = 1;
+            }
         }
         return {
             start,
@@ -999,6 +1035,8 @@ class BaseConverter {
             startInShape,
             cos,
             sin,
+            offsetX,
+            offsetY
         };
     }
     // 径向性位置
