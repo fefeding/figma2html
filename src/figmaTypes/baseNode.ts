@@ -1,5 +1,5 @@
 
-import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, EffectType, ConvertNodeOption, StrokeAlign } from './types';
+import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint } from './types';
 import { util, type Point } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
@@ -14,20 +14,20 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             height: 0,
         };
         if(node.absoluteBoundingBox) {
-            dom.bounds.width = node.absoluteBoundingBox.width;
-            dom.bounds.height = node.absoluteBoundingBox.height;
+            dom.data.width = dom.bounds.width = node.absoluteBoundingBox.width;
+            dom.data.height = dom.bounds.height = node.absoluteBoundingBox.height;
 
             dom.style.width = util.toPX(dom.bounds.width).toString();
             dom.style.height = util.toPX(dom.bounds.height).toString();
             // 相对于父位置
             if(parentNode && parentNode.absoluteBoundingBox) {
-                dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x; 
-                dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y; 
+                dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x; 
+                dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y; 
             }
             // 没有父元素，就认为约对定位为0
             else {
-                dom.bounds.x = 0;
-                dom.bounds.y = 0;
+                dom.data.left = dom.bounds.x = 0;
+                dom.data.top = dom.bounds.y = 0;
             }
             dom.style.left = util.toPX(dom.bounds.x).toString();
             dom.style.top = util.toPX(dom.bounds.y).toString();
@@ -43,6 +43,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
 
         // 旋转
         if(node.rotation) {
+            dom.data.rotation = node.rotation;
             dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
         }
         if(node.clipsContent === true) dom.style.overflow = 'hidden';
@@ -60,11 +61,13 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 生成节点对象
-    createDomNode(type: DomNodeType) {
+    createDomNode(type: DomNodeType, option?: DomNode) {
         const dom = {
-            type: type,
+            data: {} as IJElementData,
             style: {} as CSSStyleDeclaration,
             children: [] as Array<DomNode>,
+            ...option,
+            type: type,
         } as DomNode; 
         return dom;
     }

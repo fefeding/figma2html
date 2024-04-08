@@ -6,7 +6,7 @@ import BaseConverter from './baseNode';
 export class TEXTConverter extends BaseConverter<'TEXT'> {
     async convert(node:  Node<'TEXT'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
         dom.type = 'span';
-        if(node.characters) dom.text = node.characters;
+        if(node.characters) dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);
         res.style.width = 'auto';// text没必要指定宽度
         return res;

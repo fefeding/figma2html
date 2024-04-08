@@ -29,18 +29,19 @@ async function convert(node, parentNode, option) {
         const docDom = await convert(node.document, node, option);
         return docDom;
     }
-    const dom = {
+    const dom = ConverterMaps.BASE.createDomNode('div', {
         id: node.id,
         name: node.name,
-        visible: node.visible === false ? false : true,
         type: 'div',
+        visible: node.visible === false ? false : true,
+        data: {},
         style: {
             // 默认采用绝对定位
             position: 'absolute',
         },
         children: [],
         figmaData: node,
-    };
+    });
     const converter = ConverterMaps[node.type] || ConverterMaps.BASE;
     if (converter)
         await converter.convert(node, dom, parentNode, option);

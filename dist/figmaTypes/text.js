@@ -11,7 +11,7 @@ class TEXTConverter extends baseNode_1.default {
     async convert(node, dom, parentNode, option) {
         dom.type = 'span';
         if (node.characters)
-            dom.text = node.characters;
+            dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);
         res.style.width = 'auto'; // text没必要指定宽度
         return res;

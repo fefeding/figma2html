@@ -884,11 +884,41 @@ export declare type SvgGradientStopDom = {
     offset?: string;
 }
 
+/**
+ * 图形元素的数据接口
+ * @public
+ */
+export interface IJElementData {
+    top?: string|number;
+
+    left?: string|number;
+
+    width?: string|number;
+
+    height?: string|number;
+
+    // 旋转弧度
+    rotation?: number;
+    // 旋转角度
+
+    angle?: number;
+
+    visible?: boolean;
+
+    zIndex?: number;
+
+    src?: string;
+
+    text?: string;
+}
+
+
 export declare type DomNode = {
     id: string;
     name: string;
     type: DomNodeType;
     style: CSSStyleDeclaration;
+    data: IJElementData;
     visible?: boolean;
     bounds?: Rectangle;
     absoluteBoundingBox?: Rectangle;
@@ -905,5 +935,7 @@ export declare type NodeToDomOption = {
 }
 
 export interface NodeConverter<NType extends NodeType = NodeType> {
-    convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node, option?: ConvertNodeOption) => Promise<DomNode>
+    // 生成节点对象
+    createDomNode(type: DomNodeType, option?: DomNode): DomNode;
+    convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node, option?: ConvertNodeOption) => Promise<DomNode>;
 }

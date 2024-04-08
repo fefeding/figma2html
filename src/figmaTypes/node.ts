@@ -1,5 +1,5 @@
 
-import type { Node, DomNode, NodeConverter, NodeToDomOption, ConvertNodeOption } from './types';
+import type { Node, DomNode, NodeConverter, NodeToDomOption, ConvertNodeOption, IJElementData } from './types';
 import BaseConverter from './baseNode';
 import DocumentConverter from './document';
 import PageConverter from './page';
@@ -28,18 +28,19 @@ export async function convert(node: Node, parentNode?: Node, option?: ConvertNod
         return docDom;
     }
    
-    const dom = {
+    const dom = ConverterMaps.BASE.createDomNode('div', {
         id: node.id,
         name: node.name,
-        visible: node.visible === false? false: true,
         type: 'div',
+        visible: node.visible === false? false: true,
+        data: {} as IJElementData,
         style: {
             // 默认采用绝对定位
             position: 'absolute',
         } as CSSStyleDeclaration,
         children: [] as Array<DomNode>,
         figmaData: node,
-    } as DomNode;    
+    });    
 
     const converter = ConverterMaps[node.type] || ConverterMaps.BASE;
     if(converter) await converter.convert(node, dom, parentNode, option);

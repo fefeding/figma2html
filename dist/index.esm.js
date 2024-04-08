@@ -660,19 +660,19 @@ class BaseConverter {
             height: 0,
         };
         if (node.absoluteBoundingBox) {
-            dom.bounds.width = node.absoluteBoundingBox.width;
-            dom.bounds.height = node.absoluteBoundingBox.height;
+            dom.data.width = dom.bounds.width = node.absoluteBoundingBox.width;
+            dom.data.height = dom.bounds.height = node.absoluteBoundingBox.height;
             dom.style.width = util.toPX(dom.bounds.width).toString();
             dom.style.height = util.toPX(dom.bounds.height).toString();
             // 相对于父位置
             if (parentNode && parentNode.absoluteBoundingBox) {
-                dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x;
-                dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y;
+                dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y;
             }
             // 没有父元素，就认为约对定位为0
             else {
-                dom.bounds.x = 0;
-                dom.bounds.y = 0;
+                dom.data.left = dom.bounds.x = 0;
+                dom.data.top = dom.bounds.y = 0;
             }
             dom.style.left = util.toPX(dom.bounds.x).toString();
             dom.style.top = util.toPX(dom.bounds.y).toString();
@@ -686,6 +686,7 @@ class BaseConverter {
         }
         // 旋转
         if (node.rotation) {
+            dom.data.rotation = node.rotation;
             dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
         }
         if (node.clipsContent === true)
@@ -702,11 +703,13 @@ class BaseConverter {
         return dom;
     }
     // 生成节点对象
-    createDomNode(type) {
+    createDomNode(type, option) {
         const dom = {
-            type: type,
+            data: {},
             style: {},
             children: [],
+            ...option,
+            type: type,
         };
         return dom;
     }
@@ -1131,7 +1134,7 @@ class TEXTConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
         dom.type = 'span';
         if (node.characters)
-            dom.text = node.characters;
+            dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);
         res.style.width = 'auto'; // text没必要指定宽度
         return res;
@@ -1226,18 +1229,19 @@ async function convert(node, parentNode, option) {
         const docDom = await convert(node.document, node, option);
         return docDom;
     }
-    const dom = {
+    const dom = ConverterMaps.BASE.createDomNode('div', {
         id: node.id,
         name: node.name,
-        visible: node.visible === false ? false : true,
         type: 'div',
+        visible: node.visible === false ? false : true,
+        data: {},
         style: {
             // 默认采用绝对定位
             position: 'absolute',
         },
         children: [],
         figmaData: node,
-    };
+    });
     const converter = ConverterMaps[node.type] || ConverterMaps.BASE;
     if (converter)
         await converter.convert(node, dom, parentNode, option);
