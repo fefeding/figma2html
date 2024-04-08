@@ -18,6 +18,7 @@ export declare class BaseConverter<NType extends NodeType = NodeType> implements
             y: number;
         };
         r: number;
+        m: number;
         startInShape: {
             x: number;
             y: number;

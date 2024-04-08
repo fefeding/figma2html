@@ -308,7 +308,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         const r = Math.sqrt(dx*dx + dy*dy);
         const cos = dx / r;
         const sin = dy / r;
-        const tan = dy / dx;
+        const m = dy / dx;
 
         // 计算渐变二点延长级起始点边与图形边的交点
         const startInShape = {
@@ -322,10 +322,9 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         // X轴方向是向右的
         if(dx > 0) {
             // 如果二个点的X轴距离大于Y轴距离，则表示连线或延长级与左边线相交
-            // 交点X为0，用atan计算Y即可
             if(dx > Math.abs(dy)) {
                 // 与Y轴的交点
-                const dy2 = tan * start.x;
+                const dy2 = m * start.x;
                 const y = start.y - dy2;
                 // 向右上角，则起点为左下角
                 if(dy < 0) {
@@ -340,13 +339,13 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             // 向右上角，且与底边相交
             else if(dy < 0) {
                 startInShape.y = 1;
-                const dx2 = (1 - start.y) / tan;
+                const dx2 = (1 - start.y) / m;
                 const x = start.x - dx2;
                 offsetX = offsetY = -x / 2;                 
             }
             // 向右下角，跟顶边相交
             else {
-                const dx2 = tan === 0? start.x: start.y / tan;
+                const dx2 = m === 0? start.x: start.y / m;
                 const x = start.x - dx2;
                 offsetX = -x/2;
                 offsetY = -offsetX;
@@ -355,10 +354,9 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         // X轴向左方向
         else if(dx < 0) {
             // 如果二个点的X轴距离大于Y轴距离，则表示连线或延长级与右边线相交
-            // 交点X为1，用atan计算Y即可
             if(dx > Math.abs(dy)) {
                 startInShape.x = 1;
-                const dy2 = tan * (1-start.x);
+                const dy2 = m * (1-start.x);
                 const y = start.y - dy2;
                 if(dy > 0) {
                     offsetX = offsetY = -y/2;
@@ -373,7 +371,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             else if(dy < 0) {
                 startInShape.x = 1;
                 startInShape.y = 1;
-                const dx2 = (1 - start.y) / tan;
+                const dx2 = (1 - start.y) / m;
                 const x = start.x + dx2;
                 offsetX = (1-x)/2;
                 offsetY = -offsetX;
@@ -381,7 +379,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             // 向左下角，跟顶边相交
             else {
                 startInShape.x = 1;
-                const dx2 = tan === 0? (start.x-1): start.y / tan;
+                const dx2 = m === 0? (start.x-1): start.y / m;
                 const x = start.x - dx2;
                 offsetX = offsetY = (1-x)/2;
             }
@@ -399,6 +397,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             start,
             end,
             r,
+            m,
             startInShape,
             cos,
             sin,
