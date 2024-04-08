@@ -1,6 +1,6 @@
 
 import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, EffectType, ConvertNodeOption, StrokeAlign } from './types';
-import { util } from 'j-design-util';
+import { util, type Point } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
     async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
@@ -256,11 +256,12 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             for(const stop of gradientStops) {
                 const r = size.r * stop.position;
                 const p = {
-                    x: r * size.cos + size.start.x + size.offsetX,
-                    y: r * size.sin + size.start.y + size.offsetY,
+                    x: r * size.cos + size.start.x,
+                    y: r * size.sin + size.start.y,
                 };
-                const dx = p.x - size.startInShape.x;
-                const dy = p.y - size.startInShape.y;
+                const projection = size.getProjectionOnLine(p); // 得到平移后线上的投影点
+                const dx = projection.x - size.startInShape.x;
+                const dy = projection.y - size.startInShape.y;
 
                 stop.position = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
                 // 如果交点在当前右边，则偏移量为负数
@@ -394,188 +395,6 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             }
         }
 
-        /**
-         * 要让一条给定斜率 
-�
-m 的直线经过点 
-(
-�
-0
-,
-�
-0
-)
-(x 
-0
-​
- ,y 
-0
-​
- )，我们可以使用点斜式直线方程。点斜式方程的形式是 
-�
-−
-�
-1
-=
-�
-(
-�
-−
-�
-1
-)
-y−y 
-1
-​
- =m(x−x 
-1
-​
- )，其中 
-�
-m 是直线的斜率，而 
-(
-�
-1
-,
-�
-1
-)
-(x 
-1
-​
- ,y 
-1
-​
- ) 是直线上的任意一点。在这个情况下，我们将使用 
-(
-�
-0
-,
-�
-0
-)
-(x 
-0
-​
- ,y 
-0
-​
- ) 作为这个点。
-
-所以，给定斜率 
-�
-m 和经过的点 
-(
-�
-0
-,
-�
-0
-)
-(x 
-0
-​
- ,y 
-0
-​
- )，直线方程为：
-
-�
-−
-�
-0
-=
-�
-(
-�
-−
-�
-0
-)
-y−y 
-0
-​
- =m(x−x 
-0
-​
- )
-
-这个方程可以重新排列成：
-
-�
-=
-�
-�
-−
-�
-�
-0
-+
-�
-0
-y=mx−mx 
-0
-​
- +y 
-0
-​
- 
-
-这样，我们就得到了斜率为 
-�
-m 并且经过点 
-(
-�
-0
-,
-�
-0
-)
-(x 
-0
-​
- ,y 
-0
-​
- ) 的直线方程。
-
-以下是用TypeScript实现的代码：
-
-typescript
-Copy code
-function getLineEquation(m: number, x0: number, y0: number): string {
-    // 计算截距 b = y0 - m*x0
-    const b = y0 - m * x0;
-    
-    // 返回直线方程的字符串形式
-    return `y = ${m}x + ${b}`;
-}
-
-// 示例
-const m = 2; // 斜率
-const x0 = 3; // 经过点的x坐标
-const y0 = 4; // 经过点的y坐标
-
-const equation = getLineEquation(m, x0, y0);
-console.log(equation);
-这段代码定义了一个函数 getLineEquation，它接收斜率 m 和点 
-(
-�
-0
-,
-�
-0
-)
-(x 
-0
-​
- ,y 
-0
-​
- ) 作为输入，然后返回经过该点且斜率为 
-�
-m 的直线方程的字符串表示。在实际应用中，你可以根据需要将这个方程用于计算或者直接显示。
-         */
         return {
             start,
             end,
@@ -586,7 +405,15 @@ m 的直线方程的字符串表示。在实际应用中，你可以根据需要
             sin,
             offsetX,
             offsetY,
-
+            getProjectionOnLine(point: Point): Point {
+                // 新直线b，斜率不变m
+                const b = this.startInShape.y - this.m * this.startInShape.x;
+                
+                const xPrime = (point.y - b + (point.x/this.m)) / (this.m + (1/this.m));
+                const yPrime = m * xPrime + b;
+                
+                return { x: xPrime, y: yPrime };
+            }
         };
     }
 

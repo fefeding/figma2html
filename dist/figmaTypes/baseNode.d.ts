@@ -1,4 +1,5 @@
 import { Node, DomNode, DomNodeType, NodeType, NodeConverter, Paint, Vector, ColorStop, ConvertNodeOption } from './types';
+import { type Point } from 'j-design-util';
 export declare class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
     convert(node: Node<NType>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption): Promise<DomNode>;
     createDomNode(type: DomNodeType): DomNode;
@@ -27,6 +28,7 @@ export declare class BaseConverter<NType extends NodeType = NodeType> implements
         sin: number;
         offsetX: number;
         offsetY: number;
+        getProjectionOnLine(point: Point): Point;
     };
     getRadialGradientPosition(gradientHandlePositions: Vector[]): string;
     getGradientDirection(gradientHandlePositions: Vector[]): string;

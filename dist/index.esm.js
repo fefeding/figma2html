@@ -896,11 +896,12 @@ class BaseConverter {
             for (const stop of gradientStops) {
                 const r = size.r * stop.position;
                 const p = {
-                    x: r * size.cos + size.start.x + size.offsetX,
-                    y: r * size.sin + size.start.y + size.offsetY,
+                    x: r * size.cos + size.start.x,
+                    y: r * size.sin + size.start.y,
                 };
-                const dx = p.x - size.startInShape.x;
-                const dy = p.y - size.startInShape.y;
+                const projection = size.getProjectionOnLine(p); // 得到平移后线上的投影点
+                const dx = projection.x - size.startInShape.x;
+                const dy = projection.y - size.startInShape.y;
                 stop.position = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
                 // 如果交点在当前右边，则偏移量为负数
                 if (size.startInShape.x === 0 && size.startInShape.y === 0) {
@@ -1035,7 +1036,14 @@ class BaseConverter {
             cos,
             sin,
             offsetX,
-            offsetY
+            offsetY,
+            getProjectionOnLine(point) {
+                // 新直线b，斜率不变m
+                const b = this.startInShape.y - this.m * this.startInShape.x;
+                const xPrime = (point.y - b + (point.x / this.m)) / (this.m + (1 / this.m));
+                const yPrime = m * xPrime + b;
+                return { x: xPrime, y: yPrime };
+            }
         };
     }
     // 径向性位置
