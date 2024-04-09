@@ -816,6 +816,20 @@ class BaseConverter {
                         break;
                     }
                 }
+                if (dom && fill.imageTransform) {
+                    if (!dom.transform)
+                        dom.transform = {};
+                    const [[a, c, e], [b, d, f]] = fill.imageTransform;
+                    // 计算旋转角度和正弦值
+                    const rotation = Math.atan2(b, a);
+                    const scaleX = Math.sqrt(a * a + b * b);
+                    const scaleY = Math.sqrt(c * c + d * d);
+                    dom.transform.translateX = e * 100 + '%';
+                    dom.transform.translateY = f * 100 + '%';
+                    dom.transform.rotateZ = rotation;
+                    dom.transform.scaleX = scaleX;
+                    dom.transform.scaleY = scaleY;
+                }
             }
         }
         return dom;
