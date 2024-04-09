@@ -8,7 +8,10 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
         dom.type = 'span';
         if(node.characters) dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);
-        res.style.width = 'auto';// text没必要指定宽度
+        
+        res.data.width = res.absoluteBoundingBox.width * 1.1;
+        res.style.width = util.toPX(res.data.width);// text没必要指定宽度
+
         return res;
     }
     
