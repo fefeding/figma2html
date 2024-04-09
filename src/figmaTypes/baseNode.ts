@@ -14,11 +14,9 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             height: 0,
         };
         if(node.absoluteBoundingBox) {
-            dom.data.width = dom.bounds.width = node.absoluteBoundingBox.width;
-            dom.data.height = dom.bounds.height = node.absoluteBoundingBox.height;
+            dom.bounds.width = node.absoluteBoundingBox.width;
+            dom.bounds.height = node.absoluteBoundingBox.height;
 
-            dom.style.width = util.toPX(dom.bounds.width).toString();
-            dom.style.height = util.toPX(dom.bounds.height).toString();
             // 相对于父位置
             if(parentNode && parentNode.absoluteBoundingBox) {
                 dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x; 
@@ -41,6 +39,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             dom.style.borderRadius = util.toPX(node.cornerRadius);
         }
 
+        if(node.opacity) dom.style.opacity = node.opacity.toString();
+
         // 旋转
         if(node.rotation) {
             dom.data.rotation = node.rotation;
@@ -50,8 +50,19 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
 
         // padding
         for(const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
-            if(node[padding]) dom.style[padding] = util.toPX(node[padding]);
+            const v = node[padding];
+            if(v) {
+                dom.style[padding] = util.toPX(v);
+                if(['paddingLeft', 'paddingRight'].includes(padding)) dom.bounds.width -= v;
+                else dom.bounds.height -= v;
+            }
         }
+
+        dom.data.width = dom.bounds.width;
+        dom.data.height = dom.bounds.height;
+
+        dom.style.width = util.toPX(dom.bounds.width).toString();
+        dom.style.height = util.toPX(dom.bounds.height).toString();
         
         await this.convertStyle(node, dom, option);
         await this.convertFills(node, dom, option);// 解析fills

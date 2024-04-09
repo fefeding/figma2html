@@ -6,7 +6,7 @@ export class FRAMEConverter extends BaseConverter<'FRAME'> {
     async convert(node:  Node<'FRAME'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
         
         if(parentNode && parentNode.type === 'CANVAS') {
-            //dom.style.overflow = 'hidden';
+            dom.style.overflow = 'hidden';
             if(parentNode && !parentNode.absoluteBoundingBox) {
                 // 如果是一级节点，则下面的节点都相对于它
                 parentNode.absoluteBoundingBox = {

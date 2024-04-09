@@ -835,6 +835,7 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     isMask?: boolean;
     isMaskOutline?: boolean;
     rotation?: number;
+    opacity?: number;
     "strokeWeight"?: number;
     "strokeAlign"?: StrokeAlign;
     strokeDashes?: Vector[];

@@ -660,10 +660,8 @@ class BaseConverter {
             height: 0,
         };
         if (node.absoluteBoundingBox) {
-            dom.data.width = dom.bounds.width = node.absoluteBoundingBox.width;
-            dom.data.height = dom.bounds.height = node.absoluteBoundingBox.height;
-            dom.style.width = util.toPX(dom.bounds.width).toString();
-            dom.style.height = util.toPX(dom.bounds.height).toString();
+            dom.bounds.width = node.absoluteBoundingBox.width;
+            dom.bounds.height = node.absoluteBoundingBox.height;
             // 相对于父位置
             if (parentNode && parentNode.absoluteBoundingBox) {
                 dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x;
@@ -684,6 +682,8 @@ class BaseConverter {
         if (node.cornerRadius) {
             dom.style.borderRadius = util.toPX(node.cornerRadius);
         }
+        if (node.opacity)
+            dom.style.opacity = node.opacity.toString();
         // 旋转
         if (node.rotation) {
             dom.data.rotation = node.rotation;
@@ -693,9 +693,19 @@ class BaseConverter {
             dom.style.overflow = 'hidden';
         // padding
         for (const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
-            if (node[padding])
-                dom.style[padding] = util.toPX(node[padding]);
+            const v = node[padding];
+            if (v) {
+                dom.style[padding] = util.toPX(v);
+                if (['paddingLeft', 'paddingRight'].includes(padding))
+                    dom.bounds.width -= v;
+                else
+                    dom.bounds.height -= v;
+            }
         }
+        dom.data.width = dom.bounds.width;
+        dom.data.height = dom.bounds.height;
+        dom.style.width = util.toPX(dom.bounds.width).toString();
+        dom.style.height = util.toPX(dom.bounds.height).toString();
         await this.convertStyle(node, dom, option);
         await this.convertFills(node, dom, option); // 解析fills
         await this.convertStrokes(node, dom, option); // 边框
@@ -1124,7 +1134,7 @@ class PageConverter extends BaseConverter {
 let FRAMEConverter$1 = class FRAMEConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
         if (parentNode && parentNode.type === 'CANVAS') {
-            //dom.style.overflow = 'hidden';
+            dom.style.overflow = 'hidden';
             if (parentNode && !parentNode.absoluteBoundingBox) {
                 // 如果是一级节点，则下面的节点都相对于它
                 parentNode.absoluteBoundingBox = {
@@ -1154,7 +1164,7 @@ class TEXTConverter extends BaseConverter {
         if (node.characters)
             dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);
-        dom.data.width = dom.absoluteBoundingBox.width * 1.1;
+        dom.data.width = dom.absoluteBoundingBox.width * 1.01;
         dom.style.width = util.toPX(dom.data.width); // text没必要指定宽度
         await this.convertCharacterStyleOverrides(node, res, option); // 处理分字样式
         return res;

@@ -9,7 +9,7 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
         if(node.characters) dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);       
         
-        dom.data.width = dom.absoluteBoundingBox.width * 1.1;
+        dom.data.width = dom.absoluteBoundingBox.width * 1.01;
         dom.style.width = util.toPX(dom.data.width);// text没必要指定宽度
 
         await this.convertCharacterStyleOverrides(node, res, option);// 处理分字样式
