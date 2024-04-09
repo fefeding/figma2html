@@ -702,14 +702,14 @@ class BaseConverter {
                     dom.bounds.height -= v;
             }
         }
-        dom.data.width = dom.bounds.width;
-        dom.data.height = dom.bounds.height;
-        dom.style.width = util.toPX(dom.bounds.width).toString();
-        dom.style.height = util.toPX(dom.bounds.height).toString();
         await this.convertStyle(node, dom, option);
         await this.convertFills(node, dom, option); // 解析fills
         await this.convertStrokes(node, dom, option); // 边框
         await this.convertEffects(node, dom, option); // 滤镜
+        dom.data.width = dom.bounds.width;
+        dom.data.height = dom.bounds.height;
+        dom.style.width = util.toPX(dom.bounds.width).toString();
+        dom.style.height = util.toPX(dom.bounds.height).toString();
         return dom;
     }
     // 生成节点对象
@@ -737,8 +737,9 @@ class BaseConverter {
             dom.style.fontWeight = style.fontWeight.toString();
         if (style.italic)
             dom.style.fontStyle = 'italic';
-        if (style.letterSpacing)
+        if (style.letterSpacing) {
             dom.style.letterSpacing = util.toPX(style.letterSpacing);
+        }
         if (style.lineHeightPx)
             dom.style.lineHeight = util.toPX(style.lineHeightPx);
         if (style.textAlignHorizontal)
@@ -1164,8 +1165,12 @@ class TEXTConverter extends BaseConverter {
         if (node.characters)
             dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);
-        dom.data.width = dom.absoluteBoundingBox.width * 1.01;
-        dom.style.width = util.toPX(dom.data.width); // text没必要指定宽度
+        if (dom.style.letterSpacing) {
+            const v = util.toNumber(dom.style.letterSpacing);
+            dom.bounds.width += v / 2 * dom.text.length;
+        }
+        dom.data.width = 'auto'; //dom.bounds.width;
+        dom.style.width = 'auto'; //util.toPX(dom.data.width);// text没必要指定宽度
         await this.convertCharacterStyleOverrides(node, res, option); // 处理分字样式
         return res;
     }
