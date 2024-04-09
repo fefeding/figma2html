@@ -1,5 +1,5 @@
 
-import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint } from './types';
+import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint, TypeStyle } from './types';
 import { util, type Point } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
@@ -73,21 +73,23 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 转换style
-    async convertStyle(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
-        if(!node.style) return dom;
+    async convertStyle(node:  Node<NType>|TypeStyle, dom: DomNode, option?: ConvertNodeOption) {
+        // @ts-ignore
+        const style: TypeStyle = node.style || node;
+        if(!style) return dom;
 
-        if (node.style.fontFamily) dom.style.fontFamily = node.style.fontFamily;
-        if (node.style.fontSize) dom.style.fontSize = util.toPX(node.style.fontSize);
-        if (node.style.fontWeight) dom.style.fontWeight = node.style.fontWeight.toString();
-        if(node.style.italic) dom.style.fontStyle = 'italic';
-        if (node.style.letterSpacing)
-            dom.style.letterSpacing = util.toPX(node.style.letterSpacing);
-        if (node.style.lineHeightPx)
-            dom.style.lineHeight = util.toPX(node.style.lineHeightPx);
-        if (node.style.textAlignHorizontal)
-            dom.style.textAlign = node.style.textAlignHorizontal;
-        if (node.style.textAlignVertical)
-            dom.style.verticalAlign = node.style.textAlignVertical;
+        if (style.fontFamily) dom.style.fontFamily = style.fontFamily;
+        if (style.fontSize) dom.style.fontSize = util.toPX(style.fontSize);
+        if (style.fontWeight) dom.style.fontWeight = style.fontWeight.toString();
+        if(style.italic) dom.style.fontStyle = 'italic';
+        if (style.letterSpacing)
+            dom.style.letterSpacing = util.toPX(style.letterSpacing);
+        if (style.lineHeightPx)
+            dom.style.lineHeight = util.toPX(style.lineHeightPx);
+        if (style.textAlignHorizontal)
+            dom.style.textAlign = style.textAlignHorizontal;
+        if (style.textAlignVertical)
+            dom.style.verticalAlign = style.textAlignVertical;
         
 
         return dom;

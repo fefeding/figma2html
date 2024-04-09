@@ -715,24 +715,26 @@ class BaseConverter {
     }
     // 转换style
     async convertStyle(node, dom, option) {
-        if (!node.style)
+        // @ts-ignore
+        const style = node.style || node;
+        if (!style)
             return dom;
-        if (node.style.fontFamily)
-            dom.style.fontFamily = node.style.fontFamily;
-        if (node.style.fontSize)
-            dom.style.fontSize = util.toPX(node.style.fontSize);
-        if (node.style.fontWeight)
-            dom.style.fontWeight = node.style.fontWeight.toString();
-        if (node.style.italic)
+        if (style.fontFamily)
+            dom.style.fontFamily = style.fontFamily;
+        if (style.fontSize)
+            dom.style.fontSize = util.toPX(style.fontSize);
+        if (style.fontWeight)
+            dom.style.fontWeight = style.fontWeight.toString();
+        if (style.italic)
             dom.style.fontStyle = 'italic';
-        if (node.style.letterSpacing)
-            dom.style.letterSpacing = util.toPX(node.style.letterSpacing);
-        if (node.style.lineHeightPx)
-            dom.style.lineHeight = util.toPX(node.style.lineHeightPx);
-        if (node.style.textAlignHorizontal)
-            dom.style.textAlign = node.style.textAlignHorizontal;
-        if (node.style.textAlignVertical)
-            dom.style.verticalAlign = node.style.textAlignVertical;
+        if (style.letterSpacing)
+            dom.style.letterSpacing = util.toPX(style.letterSpacing);
+        if (style.lineHeightPx)
+            dom.style.lineHeight = util.toPX(style.lineHeightPx);
+        if (style.textAlignHorizontal)
+            dom.style.textAlign = style.textAlignHorizontal;
+        if (style.textAlignVertical)
+            dom.style.verticalAlign = style.textAlignVertical;
         return dom;
     }
     // 转换滤镜
@@ -1152,12 +1154,43 @@ class TEXTConverter extends BaseConverter {
         if (node.characters)
             dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);
-        res.data.width = res.absoluteBoundingBox.width * 1.1;
-        res.style.width = util.toPX(res.data.width); // text没必要指定宽度
+        dom.data.width = dom.absoluteBoundingBox.width * 1.1;
+        dom.style.width = util.toPX(dom.data.width); // text没必要指定宽度
+        await this.convertCharacterStyleOverrides(node, res, option); // 处理分字样式
         return res;
+    }
+    // 解析字体多样式
+    async convertCharacterStyleOverrides(node, dom, option) {
+        if (node.characterStyleOverrides && node.characterStyleOverrides.length && node.styleOverrideTable) {
+            const text = dom.text || '';
+            let index = 0;
+            for (; index < node.characterStyleOverrides.length; index++) {
+                const s = node.characterStyleOverrides[index];
+                const f = text[index];
+                if (!s || !f)
+                    continue;
+                const fDom = this.createDomNode('span');
+                fDom.text = f;
+                const style = node.styleOverrideTable[s];
+                if (style) {
+                    await this.convertFills(style, fDom, option);
+                    await this.convertStyle(style, fDom, option);
+                }
+                dom.children.push(fDom);
+            }
+            // 还有未处理完的，则加到后面
+            if (text.length > index) {
+                const fDom = this.createDomNode('span');
+                fDom.text = text.substring(index);
+                dom.children.push(fDom);
+            }
+            dom.text = '';
+            dom.type = 'div';
+        }
     }
     // 处理填充, 文本的fill就是字体的颜色
     async convertFills(node, dom, option) {
+        // @ts-ignore
         if (!node.isMaskOutline && node.fills && node.fills.length) {
             const fill = node.fills[0];
             switch (fill.type) {
