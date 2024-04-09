@@ -885,6 +885,67 @@ export declare type SvgGradientStopDom = {
 }
 
 /**
+ * 样式转换接口，用于描述元素在空间中的定位、旋转和缩放。
+ * @public
+ */
+export interface IStyleTransform {
+    /**
+     * 沿 X 轴平移的值
+     */
+    translateX?: string|number;
+
+    /**
+     * 沿 Y 轴平移的值
+     */
+    translateY?: string|number;
+
+    /**
+     * 沿 Z 轴平移的值
+     */
+    translateZ?: string|number;
+
+    /**
+     * 绕 X 轴旋转的值
+     */
+    rotateX?: number;
+
+    /**
+     * 绕 Y 轴旋转的值
+     */
+    rotateY?: number;
+
+    /**
+     * 绕 Z 轴旋转的值
+     */
+    rotateZ?: number;
+
+    /**
+     * 沿 X 轴的缩放值
+     */
+    scaleX?: number;
+
+    /**
+     * 沿 Y 轴的缩放值
+     */
+    scaleY?: number;
+
+    /**
+     * 沿 Z 轴的缩放值
+     */
+    scaleZ?: number;
+
+    /**
+     * 沿 X 轴的倾斜值
+     */
+    skewX?: number;
+
+    /**
+     * 沿 Y 轴的倾斜值
+     */
+    skewY?: number;
+}
+
+/**
  * 图形元素的数据接口
  * @public
  */
@@ -919,6 +980,7 @@ export declare type DomNode = {
     type: DomNodeType;
     style: CSSStyleDeclaration;
     data: IJElementData;
+    transform?: IStyleTransform;
     visible?: boolean;
     bounds?: Rectangle;
     absoluteBoundingBox?: Rectangle;
