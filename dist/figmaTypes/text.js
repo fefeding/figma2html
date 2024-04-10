@@ -18,7 +18,7 @@ class TEXTConverter extends baseNode_1.default {
             const v = util.toNumber(dom.style.letterSpacing);
             dom.bounds.width += v * dom.text.length;
         }*/
-        dom.data.width = dom.bounds.width;
+        dom.data.width = 'auto'; //dom.bounds.width;
         dom.style.minWidth = j_design_util_1.util.toPX(dom.data.width);
         dom.style.width = 'auto'; //// text没必要指定宽度
         await this.convertCharacterStyleOverrides(node, res, option); // 处理分字样式
