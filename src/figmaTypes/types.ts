@@ -419,6 +419,14 @@ export declare type ColorStop = {
     /** Color attached to corresponding position */
     color: Color;
 };
+export declare type ArcData = {
+    // Start of the sweep in radians
+    startingAngle: number;
+    // End of the sweep in radians
+    endingAngle: number;
+    // Inner radius value between 0 and 1
+    innerRadius: number;
+}
 /** Metadata for character formatting */
 export declare type TypeStyle = {
     /** Font family of text (standard name) */
@@ -712,6 +720,8 @@ export interface VECTOR {
     styles?: StylesMap;
     /** default: AUTO */
     layoutPositioning: 'AUTO' | 'ABSOLUTE';
+    // Start and end angles of the ellipse measured clockwise from the x axis, plus the inner radius for donuts
+    arcData?: ArcData;
 }
 /** A group that has a boolean operation applied to it */
 export declare type BOOLEAN = VECTOR & {
@@ -846,6 +856,7 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     "strokeAlign"?: StrokeAlign;
     strokeDashes?: Vector[];
     cornerRadius?: number;
+    rectangleCornerRadii?: [number, number, number, number];
     clipsContent?: boolean;
     /** Horizontal and vertical layout constraints for node */
     constraints?: LayoutConstraint;

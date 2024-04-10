@@ -682,6 +682,9 @@ class BaseConverter {
         if (node.cornerRadius) {
             dom.style.borderRadius = util.toPX(node.cornerRadius);
         }
+        else if (node.rectangleCornerRadii) {
+            dom.style.borderRadius = node.rectangleCornerRadii.map(p => util.toPX(p)).join(' ');
+        }
         if (node.opacity)
             dom.style.opacity = node.opacity.toString();
         if (node.constraints) {

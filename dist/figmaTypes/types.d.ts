@@ -419,6 +419,11 @@ export declare type ColorStop = {
     /** Color attached to corresponding position */
     color: Color;
 };
+export declare type ArcData = {
+    startingAngle: number;
+    endingAngle: number;
+    innerRadius: number;
+};
 /** Metadata for character formatting */
 export declare type TypeStyle = {
     /** Font family of text (standard name) */
@@ -711,6 +716,7 @@ export interface VECTOR {
     styles?: StylesMap;
     /** default: AUTO */
     layoutPositioning: 'AUTO' | 'ABSOLUTE';
+    arcData?: ArcData;
 }
 /** A group that has a boolean operation applied to it */
 export declare type BOOLEAN = VECTOR & {
@@ -842,6 +848,7 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     "strokeAlign"?: StrokeAlign;
     strokeDashes?: Vector[];
     cornerRadius?: number;
+    rectangleCornerRadii?: [number, number, number, number];
     clipsContent?: boolean;
     /** Horizontal and vertical layout constraints for node */
     constraints?: LayoutConstraint;
