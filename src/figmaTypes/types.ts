@@ -843,6 +843,8 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     strokeDashes?: Vector[];
     cornerRadius?: number;
     clipsContent?: boolean;
+    /** Horizontal and vertical layout constraints for node */
+    constraints?: LayoutConstraint;
     /** default: 0. The padding between the left border of the frame and its children. This property is only applicable for auto-layout frames. */
     paddingLeft?: number;
     /** default: 0. The padding between the right border of the frame and its children. This property is only applicable for auto-layout frames. */

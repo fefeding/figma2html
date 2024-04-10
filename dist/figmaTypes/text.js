@@ -13,11 +13,49 @@ class TEXTConverter extends baseNode_1.default {
         if (node.characters)
             dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);
-        res.style.width = 'auto'; // text没必要指定宽度
+        /*dom.style.letterSpacing = dom.style.letterSpacing || '2px';
+        if(dom.style.letterSpacing) {
+            const v = util.toNumber(dom.style.letterSpacing);
+            dom.bounds.width += v * dom.text.length;
+        }*/
+        dom.data.width = dom.bounds.width;
+        dom.style.minWidth = j_design_util_1.util.toPX(dom.data.width);
+        dom.style.width = 'auto'; //// text没必要指定宽度
+        await this.convertCharacterStyleOverrides(node, res, option); // 处理分字样式
         return res;
+    }
+    // 解析字体多样式
+    async convertCharacterStyleOverrides(node, dom, option) {
+        if (node.characterStyleOverrides && node.characterStyleOverrides.length && node.styleOverrideTable) {
+            const text = dom.text || '';
+            let index = 0;
+            for (; index < node.characterStyleOverrides.length; index++) {
+                const s = node.characterStyleOverrides[index];
+                const f = text[index];
+                if (!s || !f)
+                    continue;
+                const fDom = this.createDomNode('span');
+                fDom.text = f;
+                const style = node.styleOverrideTable[s];
+                if (style) {
+                    await this.convertFills(style, fDom, option);
+                    await this.convertStyle(style, fDom, option);
+                }
+                dom.children.push(fDom);
+            }
+            // 还有未处理完的，则加到后面
+            if (text.length > index) {
+                const fDom = this.createDomNode('span');
+                fDom.text = text.substring(index);
+                dom.children.push(fDom);
+            }
+            dom.text = '';
+            dom.type = 'div';
+        }
     }
     // 处理填充, 文本的fill就是字体的颜色
     async convertFills(node, dom, option) {
+        // @ts-ignore
         if (!node.isMaskOutline && node.fills && node.fills.length) {
             const fill = node.fills[0];
             switch (fill.type) {

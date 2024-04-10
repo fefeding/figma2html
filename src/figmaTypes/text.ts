@@ -7,15 +7,17 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
     async convert(node:  Node<'TEXT'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
         dom.type = 'span';
         if(node.characters) dom.text = dom.data.text = node.characters;
-        const res = await super.convert(node, dom, parentNode, option);       
-        
+        const res = await super.convert(node, dom, parentNode, option);    
+
+        /*dom.style.letterSpacing = dom.style.letterSpacing || '2px';
         if(dom.style.letterSpacing) {
             const v = util.toNumber(dom.style.letterSpacing);
-            dom.bounds.width += v/2 * dom.text.length;
-        }
+            dom.bounds.width += v * dom.text.length;
+        }*/
 
-        dom.data.width = 'auto';//dom.bounds.width;
-        dom.style.width = 'auto';//util.toPX(dom.data.width);// text没必要指定宽度
+        dom.data.width = dom.bounds.width;
+        dom.style.minWidth = util.toPX(dom.data.width);
+        dom.style.width = 'auto';//// text没必要指定宽度
 
         await this.convertCharacterStyleOverrides(node, res, option);// 处理分字样式
         return res;

@@ -8,7 +8,7 @@ const baseNode_1 = __importDefault(require("./baseNode"));
 class FRAMEConverter extends baseNode_1.default {
     async convert(node, dom, parentNode, option) {
         if (parentNode && parentNode.type === 'CANVAS') {
-            //dom.style.overflow = 'hidden';
+            dom.style.overflow = 'hidden';
             if (parentNode && !parentNode.absoluteBoundingBox) {
                 // 如果是一级节点，则下面的节点都相对于它
                 parentNode.absoluteBoundingBox = {

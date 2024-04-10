@@ -40,6 +40,14 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         }
 
         if(node.opacity) dom.style.opacity = node.opacity.toString();
+        if(node.constraints) {
+            if(node.constraints.vertical) {
+                dom.style.verticalAlign = {'CENTER': 'middle', 'TOP_BOTTOM': 'super', 'SCALE': 'center'}[node.constraints.vertical];
+            }
+            if(node.constraints.horizontal) {
+                dom.style.textAlign = {'SCALE': 'center', 'LEFT_RIGHT': 'justify-all'}[node.constraints.vertical];
+            }
+        }
 
         // 旋转
         if(node.rotation) {

@@ -684,6 +684,14 @@ class BaseConverter {
         }
         if (node.opacity)
             dom.style.opacity = node.opacity.toString();
+        if (node.constraints) {
+            if (node.constraints.vertical) {
+                dom.style.verticalAlign = { 'CENTER': 'middle', 'TOP_BOTTOM': 'super', 'SCALE': 'center' }[node.constraints.vertical];
+            }
+            if (node.constraints.horizontal) {
+                dom.style.textAlign = { 'SCALE': 'center', 'LEFT_RIGHT': 'justify-all' }[node.constraints.vertical];
+            }
+        }
         // 旋转
         if (node.rotation) {
             dom.data.rotation = node.rotation;
@@ -1165,12 +1173,14 @@ class TEXTConverter extends BaseConverter {
         if (node.characters)
             dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);
-        if (dom.style.letterSpacing) {
+        /*dom.style.letterSpacing = dom.style.letterSpacing || '2px';
+        if(dom.style.letterSpacing) {
             const v = util.toNumber(dom.style.letterSpacing);
-            dom.bounds.width += v / 2 * dom.text.length;
-        }
-        dom.data.width = 'auto'; //dom.bounds.width;
-        dom.style.width = 'auto'; //util.toPX(dom.data.width);// text没必要指定宽度
+            dom.bounds.width += v * dom.text.length;
+        }*/
+        dom.data.width = dom.bounds.width;
+        dom.style.minWidth = util.toPX(dom.data.width);
+        dom.style.width = 'auto'; //// text没必要指定宽度
         await this.convertCharacterStyleOverrides(node, res, option); // 处理分字样式
         return res;
     }

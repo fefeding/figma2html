@@ -14,10 +14,8 @@ class BaseConverter {
             height: 0,
         };
         if (node.absoluteBoundingBox) {
-            dom.data.width = dom.bounds.width = node.absoluteBoundingBox.width;
-            dom.data.height = dom.bounds.height = node.absoluteBoundingBox.height;
-            dom.style.width = j_design_util_1.util.toPX(dom.bounds.width).toString();
-            dom.style.height = j_design_util_1.util.toPX(dom.bounds.height).toString();
+            dom.bounds.width = node.absoluteBoundingBox.width;
+            dom.bounds.height = node.absoluteBoundingBox.height;
             // 相对于父位置
             if (parentNode && parentNode.absoluteBoundingBox) {
                 dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x;
@@ -38,6 +36,16 @@ class BaseConverter {
         if (node.cornerRadius) {
             dom.style.borderRadius = j_design_util_1.util.toPX(node.cornerRadius);
         }
+        if (node.opacity)
+            dom.style.opacity = node.opacity.toString();
+        if (node.constraints) {
+            if (node.constraints.vertical) {
+                dom.style.verticalAlign = { 'CENTER': 'middle', 'TOP_BOTTOM': 'super', 'SCALE': 'center' }[node.constraints.vertical];
+            }
+            if (node.constraints.horizontal) {
+                dom.style.textAlign = { 'SCALE': 'center', 'LEFT_RIGHT': 'justify-all' }[node.constraints.vertical];
+            }
+        }
         // 旋转
         if (node.rotation) {
             dom.data.rotation = node.rotation;
@@ -47,13 +55,23 @@ class BaseConverter {
             dom.style.overflow = 'hidden';
         // padding
         for (const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
-            if (node[padding])
-                dom.style[padding] = j_design_util_1.util.toPX(node[padding]);
+            const v = node[padding];
+            if (v) {
+                dom.style[padding] = j_design_util_1.util.toPX(v);
+                if (['paddingLeft', 'paddingRight'].includes(padding))
+                    dom.bounds.width -= v;
+                else
+                    dom.bounds.height -= v;
+            }
         }
         await this.convertStyle(node, dom, option);
         await this.convertFills(node, dom, option); // 解析fills
         await this.convertStrokes(node, dom, option); // 边框
         await this.convertEffects(node, dom, option); // 滤镜
+        dom.data.width = dom.bounds.width;
+        dom.data.height = dom.bounds.height;
+        dom.style.width = j_design_util_1.util.toPX(dom.bounds.width).toString();
+        dom.style.height = j_design_util_1.util.toPX(dom.bounds.height).toString();
         return dom;
     }
     // 生成节点对象
@@ -69,24 +87,27 @@ class BaseConverter {
     }
     // 转换style
     async convertStyle(node, dom, option) {
-        if (!node.style)
+        // @ts-ignore
+        const style = node.style || node;
+        if (!style)
             return dom;
-        if (node.style.fontFamily)
-            dom.style.fontFamily = node.style.fontFamily;
-        if (node.style.fontSize)
-            dom.style.fontSize = j_design_util_1.util.toPX(node.style.fontSize);
-        if (node.style.fontWeight)
-            dom.style.fontWeight = node.style.fontWeight.toString();
-        if (node.style.italic)
+        if (style.fontFamily)
+            dom.style.fontFamily = style.fontFamily;
+        if (style.fontSize)
+            dom.style.fontSize = j_design_util_1.util.toPX(style.fontSize);
+        if (style.fontWeight)
+            dom.style.fontWeight = style.fontWeight.toString();
+        if (style.italic)
             dom.style.fontStyle = 'italic';
-        if (node.style.letterSpacing)
-            dom.style.letterSpacing = j_design_util_1.util.toPX(node.style.letterSpacing);
-        if (node.style.lineHeightPx)
-            dom.style.lineHeight = j_design_util_1.util.toPX(node.style.lineHeightPx);
-        if (node.style.textAlignHorizontal)
-            dom.style.textAlign = node.style.textAlignHorizontal;
-        if (node.style.textAlignVertical)
-            dom.style.verticalAlign = node.style.textAlignVertical;
+        if (style.letterSpacing) {
+            dom.style.letterSpacing = j_design_util_1.util.toPX(style.letterSpacing);
+        }
+        if (style.lineHeightPx)
+            dom.style.lineHeight = j_design_util_1.util.toPX(style.lineHeightPx);
+        if (style.textAlignHorizontal)
+            dom.style.textAlign = style.textAlignHorizontal;
+        if (style.textAlignVertical)
+            dom.style.verticalAlign = style.textAlignVertical;
         return dom;
     }
     // 转换滤镜
