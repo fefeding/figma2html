@@ -124,6 +124,7 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
     dom = dom || document.createElement(node.type);
     if(node.style) {
         Object.assign(dom.style, node.style);
+        if(node.preserveRatio && node.type === 'img') dom.style.height = 'auto';
     }
     if(node.text) {
         dom.textContent = node.text;
