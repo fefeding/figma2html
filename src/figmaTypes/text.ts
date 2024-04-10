@@ -9,7 +9,7 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
         if(node.characters) dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);    
 
-        dom.style.letterSpacing = dom.style.letterSpacing || '1px';
+        //dom.style.letterSpacing = dom.style.letterSpacing || '1px';
         if(dom.style.letterSpacing) {
             const v = util.toNumber(dom.style.letterSpacing);
             dom.bounds.width += v * (dom.bounds.width/node.style.fontSize);

@@ -984,14 +984,14 @@ class CSSFilters {
         if (filter.name) {
             const existsFilter = this.get(filter.name);
             if (existsFilter) {
-                console.error(`${filter.name}已经存在滤镜集合中，不能重复`);
-                return;
+                console.error(`${filter.displayName || filter.name}已经存在滤镜集合中，不能重复`);
+                return existsFilter;
             }
         }
         if (filter instanceof Filter) {
             this.filters.push(filter);
             this.apply();
-            return;
+            return filter;
         }
         else if (filter.name) {
             return this.add(filter.name, filter.option);
@@ -3619,6 +3619,10 @@ class JImage extends JBaseComponent {
             type: option.type || 'image',
             dataType: option.dataType || JImageData
         });
+        // 如果保持宽高比，则不能拉伸到100%高
+        if (option.preserveRatio) {
+            this.target.style.height = 'auto';
+        }
         // 图像加载完成时触发 'load' 事件
         this.target.dom.onload = (e) => {
             this.emit('load', e);

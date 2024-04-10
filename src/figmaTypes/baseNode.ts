@@ -56,6 +56,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         }
         if(node.clipsContent === true) dom.style.overflow = 'hidden';
 
+        dom.preserveRatio = node.preserveRatio;
+
         // padding
         for(const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
             const v = node[padding];
@@ -199,7 +201,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                         break;
                     }
                 }
-
+/*
                 if(dom && fill.imageTransform) {
                     if(!dom.transform) dom.transform = {};
                     const [[a, c, e], [b, d, f]] = fill.imageTransform;
@@ -212,7 +214,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     dom.transform.rotateZ = rotation;
                     dom.transform.scaleX = scaleX;
                     dom.transform.scaleY = scaleY;
-                }
+                }*/
             }
         }
         return dom;

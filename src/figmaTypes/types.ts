@@ -840,6 +840,8 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     isMaskOutline?: boolean;
     rotation?: number;
     opacity?:number;
+    // 是否保持宽高比
+    preserveRatio?: boolean;
     "strokeWeight"?: number;
     "strokeAlign"?: StrokeAlign;
     strokeDashes?: Vector[];
@@ -987,6 +989,7 @@ export declare type DomNode = {
     data: IJElementData;
     transform?: IStyleTransform;
     visible?: boolean;
+    preserveRatio?: boolean;
     bounds?: Rectangle;
     absoluteBoundingBox?: Rectangle;
     text?: string;
