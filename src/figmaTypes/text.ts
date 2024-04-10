@@ -10,12 +10,32 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
         const res = await super.convert(node, dom, parentNode, option);    
 
         //dom.style.letterSpacing = dom.style.letterSpacing || '1px';
-        if(dom.style.letterSpacing) {
+        /*if(dom.style.letterSpacing) {
             const v = util.toNumber(dom.style.letterSpacing);
             dom.bounds.width += v * (dom.bounds.width/node.style.fontSize);
+        }*/
+        // 如果行高好高度一致,则表示单行文本，可以不指定宽度
+        if(dom.bounds?.height < node.style?.fontSize * 2) {           
+
+            const span = document.createElement('span');
+            Object.assign(span.style, dom.style);
+            span.style.width = 'auto';
+            span.style.position = 'absolute';
+            span.innerText = dom.text;
+            span.style.visibility = 'hidden';
+            document.body.appendChild(span);
+            let w = span.offsetWidth || span.clientWidth;
+            if(dom.style.letterSpacing) {
+                const v = util.toNumber(dom.style.letterSpacing);
+                w += v;
+            }
+            document.body.removeChild(span);
+            dom.data.width = Math.max(w, util.toNumber(dom.data.width));
         }
-        //dom.style.minWidth = util.toPX(dom.data.width);
-        dom.data.width = dom.bounds.width;
+        else {
+            //dom.style.minWidth = util.toPX(dom.data.width);
+            dom.data.width = dom.bounds.width;
+        }
         dom.style.width = util.toPX(dom.bounds.width);
 
         await this.convertCharacterStyleOverrides(node, res, option);// 处理分字样式

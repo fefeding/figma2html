@@ -13,14 +13,33 @@ class TEXTConverter extends baseNode_1.default {
         if (node.characters)
             dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);
-        /*dom.style.letterSpacing = dom.style.letterSpacing || '2px';
-        if(dom.style.letterSpacing) {
+        //dom.style.letterSpacing = dom.style.letterSpacing || '1px';
+        /*if(dom.style.letterSpacing) {
             const v = util.toNumber(dom.style.letterSpacing);
-            dom.bounds.width += v * dom.text.length;
+            dom.bounds.width += v * (dom.bounds.width/node.style.fontSize);
         }*/
-        //dom.style.minWidth = util.toPX(dom.data.width);
-        dom.data.width = 'auto'; //dom.bounds.width;
-        dom.style.width = 'auto'; //// text没必要指定宽度
+        // 如果行高好高度一致,则表示单行文本，可以不指定宽度
+        if (dom.bounds?.height < node.style?.fontSize * 2) {
+            const span = document.createElement('span');
+            Object.assign(span.style, dom.style);
+            span.style.width = 'auto';
+            span.style.position = 'absolute';
+            span.innerText = dom.text;
+            span.style.visibility = 'hidden';
+            document.body.appendChild(span);
+            let w = span.offsetWidth || span.clientWidth;
+            if (dom.style.letterSpacing) {
+                const v = j_design_util_1.util.toNumber(dom.style.letterSpacing);
+                w += v;
+            }
+            document.body.removeChild(span);
+            dom.data.width = Math.max(w, j_design_util_1.util.toNumber(dom.data.width));
+        }
+        else {
+            //dom.style.minWidth = util.toPX(dom.data.width);
+            dom.data.width = dom.bounds.width;
+        }
+        dom.style.width = j_design_util_1.util.toPX(dom.bounds.width);
         await this.convertCharacterStyleOverrides(node, res, option); // 处理分字样式
         return res;
     }
