@@ -18,8 +18,8 @@ class TEXTConverter extends baseNode_1.default {
             const v = util.toNumber(dom.style.letterSpacing);
             dom.bounds.width += v * dom.text.length;
         }*/
+        //dom.style.minWidth = util.toPX(dom.data.width);
         dom.data.width = 'auto'; //dom.bounds.width;
-        dom.style.minWidth = j_design_util_1.util.toPX(dom.data.width);
         dom.style.width = 'auto'; //// text没必要指定宽度
         await this.convertCharacterStyleOverrides(node, res, option); // 处理分字样式
         return res;
@@ -36,6 +36,7 @@ class TEXTConverter extends baseNode_1.default {
                     continue;
                 const fDom = this.createDomNode('span');
                 fDom.text = f;
+                fDom.style.position = 'relative'; // 连续字符不能用绝对定位
                 const style = node.styleOverrideTable[s];
                 if (style) {
                     await this.convertFills(style, fDom, option);
