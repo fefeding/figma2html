@@ -9,15 +9,14 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
         if(node.characters) dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, option);    
 
-        /*dom.style.letterSpacing = dom.style.letterSpacing || '2px';
+        dom.style.letterSpacing = dom.style.letterSpacing || '1px';
         if(dom.style.letterSpacing) {
             const v = util.toNumber(dom.style.letterSpacing);
-            dom.bounds.width += v * dom.text.length;
-        }*/
-
+            dom.bounds.width += v * (dom.bounds.width/node.style.fontSize);
+        }
         //dom.style.minWidth = util.toPX(dom.data.width);
-        dom.data.width = 'auto';//dom.bounds.width;
-        dom.style.width = 'auto';//// text没必要指定宽度
+        dom.data.width = dom.bounds.width;
+        dom.style.width = util.toPX(dom.bounds.width);
 
         await this.convertCharacterStyleOverrides(node, res, option);// 处理分字样式
         return res;

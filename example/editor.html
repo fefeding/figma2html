@@ -1,0 +1,174 @@
+<!doctype html>
+<html>
+
+<head>
+	<meta content="text/html; charset=UTF-8" http-equiv="content-type" />
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<style>
+		html,
+		body {
+			margin: 0;
+			padding: 0;
+			background-color: rgb(44, 44, 44);
+		}
+
+		#container>div {
+			position: relative;
+            overflow: hidden;
+            float: left;
+            margin: 10px;
+            /*width: 400px;
+            height: 600px;*/
+            box-shadow: #ccc 0 0 5px;
+            border: 1px solid #fff;
+		}
+        #container>div:hover {
+            border: 1px solid #ccc;
+        }
+        #template_json {
+            background-color: #000;
+            color: #fff;
+            position: fixed;
+            width: 800px;
+            height: 600px;
+            left: 100px;
+            top: 100px;
+            overflow: scroll;
+            display: none;
+        }
+	</style>
+</head>
+
+<body>
+	<div id="container">
+		<h1 style="color: #fff">加载中...</h1>
+	</div>
+    <div id="template_json">
+        <button id="template_json_close">关闭</button>
+        <div id="template_json_inner"></div>
+    </div>
+</body>
+<script type="module">
+	import { convert, nodeToDom, loadFigmaFile, getFigmaImage, getFigmaFileImages } from "../dist/index.esm.js";
+    import JEditor, { util, CssFilters, JImage } from "./js/j-editor/index.esm.js";
+	
+	const urlParams = getUrlParams();
+
+	async function loadFigmaTemplate(id) {
+		let data;
+		if(urlParams.token && id) {
+			data = await loadFigmaFile(id, urlParams.token);
+		}
+		else {
+			data = await util.request('figma_data.json');
+		}
+		if(typeof data === 'string') data = JSON.parse(data);
+		console.log(data);
+		return data;
+	}
+
+	async function renderTemplate() {
+		const data = await loadFigmaTemplate(urlParams.fileid);
+		let images = {};
+		if(urlParams.fileid && urlParams.token) {
+		    images = await getFigmaFileImages(urlParams.fileid, urlParams.token);
+		}
+		else {
+			images = {
+				'ce7a72a3375cd9f1f1196e499f27fce499f64f6b': 'images/375cd9f1f1196e499f27fce499f64f6b.jfif',
+				'066f1dbe3fa79150eb85af7aa8d84c4fb93c2656': 'images/3fa79150eb85af7aa8d84c4fb93c2656.png',
+				'681639260d4c7ba2a1141e00afd1cf328a237b78': 'images/0d4c7ba2a1141e00afd1cf328a237b78.png',
+				'42409ea32d2206061a526ac212c277a709e5668f': 'images/2d2206061a526ac212c277a709e5668f.png',
+				'a4d67f22efe7629835636620194e61aac5cc7098': 'images/efe7629835636620194e61aac5cc7098.png',
+			};
+		}
+
+		// 转换模板，并动态获取图片地址
+		const tpl = await convert(data, null, {
+			images,
+			async getImage(key) {
+				console.log('get image', key);
+				if(images[key]) return images[key];
+				return '';// 待实现动态获取图片地址
+			}
+		});
+		
+		console.log(tpl);
+        const container = document.getElementById('container');
+        container.innerHTML = '';
+
+		renderItem(tpl, container);
+	}
+
+	renderTemplate();
+
+    // 渲染单页
+    async function renderItem(item, container) {
+        if(item.role === 'editor') item = item.document;
+        if(item.figmaData && item.figmaData.type === 'DOCUMENT') {
+            for(const page of item.children) {
+                for(const tpl of page.children) {
+                    renderItem(tpl, container);
+                }
+            }
+            return;
+        }
+
+        // 如果不是页面，只是一个组件，则完善数据结构
+        if(item.type == 'img' || item.type === 'span') {
+            const child = item;
+            item = {
+                children: [
+                    child
+                ],
+                data: child.data
+            };
+        }
+
+        // 默认支持的字体
+        const fonts = {
+            'Zcool Kuaile Regular': {
+                label: 'Zcool Kuaile Regular',
+                family: 'Zcool Kuaile Regular',
+                url: 'fonts/zcool-kuaile-regular.woff2'
+            }
+        };
+        const opt = {
+            fonts,
+            data: {
+                // 指定把dom缩放到大小，如果同时指定width和height，优先用width缩放
+                //width: 400
+            }
+        };
+        const editor = await JEditor.renderDom(item, opt);// 渲染dom
+        editor.dom.style.position = 'relative';
+
+        const parent = document.createElement('div');
+        parent.appendChild(editor.dom);
+        container.appendChild(parent);
+
+        const json = editor.toJSON();
+        parent.setAttribute('data-json', JSON.stringify(json));
+        parent.ondblclick = function(e) {
+            const json = this.getAttribute('data-json');
+            const jsonContainer = document.getElementById('template_json');
+            document.getElementById('template_json_inner').innerText = json;
+            jsonContainer.style.display = 'inline';
+        };
+    }
+
+	function getUrlParams(url=location.href) {
+		const urlParams = new URLSearchParams(url.split('?')[1]);
+		const params = {};
+		for (let param of urlParams.entries()) {
+			params[param[0]] = param[1];
+		}
+		return params;
+	}
+
+    document.getElementById('template_json_close').onclick = function(){
+        document.getElementById('template_json').style.display = 'none';
+    };
+</script>
+
+</html>
