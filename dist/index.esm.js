@@ -255,6 +255,38 @@ var util = {
         }
     },
     /**
+     * 检测是否支持某字体
+     * @param family 字体名
+     */
+    checkFont(family) {
+        if (!family)
+            return false;
+        const baseFont = 'Arial';
+        if (baseFont.toLowerCase() === family.toLowerCase())
+            return true;
+        const txt = "a";
+        const fontSize = 100;
+        const w = 100, h = 100; // 宽高
+        const cvs = document.createElement('canvas');
+        const ctx = cvs.getContext('2d', {
+            willReadFrequently: true
+        });
+        cvs.width = w;
+        cvs.height = h;
+        ctx.textAlign = "center";
+        ctx.fillStyle = "black";
+        ctx.textBaseline = "middle";
+        const check = function (ctx, family, w, h) {
+            ctx.clearRect(0, 0, w, h);
+            ctx.font = fontSize + "px" + family + ", " + baseFont;
+            ctx.fillText(txt, w / 2, h / 2);
+            const data = ctx.getImageData(0, 0, w, h).data;
+            return [].slice.call(data).filter((p) => p != 0);
+        };
+        const supported = check(ctx, baseFont, w, h).join("") !== check(ctx, family, w, h).join("");
+        return supported;
+    },
+    /**
      * 设置class样式
      * @param dom 节点
      * @param name 样式名
