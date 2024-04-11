@@ -36,6 +36,9 @@ class BaseConverter {
         if (node.cornerRadius) {
             dom.style.borderRadius = j_design_util_1.util.toPX(node.cornerRadius);
         }
+        else if (node.rectangleCornerRadii) {
+            dom.style.borderRadius = node.rectangleCornerRadii.map(p => j_design_util_1.util.toPX(p)).join(' ');
+        }
         if (node.opacity)
             dom.style.opacity = node.opacity.toString();
         if (node.constraints) {
@@ -51,7 +54,8 @@ class BaseConverter {
             dom.data.rotation = node.rotation;
             dom.style.transform = `rotate(${j_design_util_1.util.toRad(node.rotation)})`;
         }
-        if (node.clipsContent === true)
+        // 裁剪超出区域
+        if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true))
             dom.style.overflow = 'hidden';
         dom.preserveRatio = node.preserveRatio;
         // padding

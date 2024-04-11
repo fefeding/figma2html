@@ -4,6 +4,7 @@ import BaseConverter from './baseNode';
 import DocumentConverter from './document';
 import PageConverter from './page';
 import FrameConverter from './frame';
+import GroupConverter from './group';
 import TextConverter from './text';
 import EllipseConverter from './ellipse';
 import RectangleConverter from './rectangle';
@@ -12,7 +13,7 @@ const frameConverter = new FrameConverter();
 const ConverterMaps = {
     'BASE': new BaseConverter(),
     'FRAME': frameConverter,
-    'GROUP': frameConverter,
+    'GROUP': new GroupConverter(),
     'TEXT': new TextConverter(),
     'DOCUMENT': new DocumentConverter(),
     'CANVAS': new PageConverter(),

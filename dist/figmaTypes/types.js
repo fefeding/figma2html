@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LineTypes = exports.PathWindingRule = exports.PaintSolidScaleMode = exports.PaintType = exports.EffectType = exports.AxisSizingMode = exports.LayoutGridAlignment = exports.LayoutGridPattern = exports.LayoutAlign = exports.LayoutConstraintHorizontal = exports.LayoutConstraintVertical = exports.EasingType = exports.BlendMode = exports.ConstrainType = exports.LineHeightUnit = exports.TextAutoResize = exports.TextDecoration = exports.TextCase = exports.BooleanOperationType = exports.ImageType = exports.StrokeJoin = exports.StrokeAlign = exports.StrokeCap = void 0;
+exports.LineTypes = exports.PathWindingRule = exports.PaintSolidScaleMode = exports.PaintType = exports.EffectType = exports.AxisSizingMode = exports.MaskType = exports.LayoutGridAlignment = exports.LayoutGridPattern = exports.LayoutAlign = exports.LayoutConstraintHorizontal = exports.LayoutConstraintVertical = exports.EasingType = exports.BlendMode = exports.ConstrainType = exports.LineHeightUnit = exports.TextAutoResize = exports.TextDecoration = exports.TextCase = exports.BooleanOperationType = exports.ImageType = exports.StrokeJoin = exports.StrokeAlign = exports.StrokeCap = void 0;
 /** A string enum with value, describing the end caps of vector paths. */
 var StrokeCap;
 (function (StrokeCap) {
@@ -199,6 +199,12 @@ var LayoutGridAlignment;
     LayoutGridAlignment["MAX"] = "MAX";
     LayoutGridAlignment["CENTER"] = "CENTER";
 })(LayoutGridAlignment || (exports.LayoutGridAlignment = LayoutGridAlignment = {}));
+var MaskType;
+(function (MaskType) {
+    MaskType["ALPHA"] = "ALPHA";
+    MaskType["VECTOR"] = "VECTOR";
+    MaskType["LUMINANCE"] = "LUMINANCE"; //the luminance value of each pixel of the mask node will be used to determine the opacity of that pixel in the masked result.
+})(MaskType || (exports.MaskType = MaskType = {}));
 var AxisSizingMode;
 (function (AxisSizingMode) {
     AxisSizingMode["FIXED"] = "FIXED";

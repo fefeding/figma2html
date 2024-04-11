@@ -1,9 +1,9 @@
 
-import type { Node, DomNode, ConvertNodeOption } from './types';
+import type { Node, NodeType, DomNode, ConvertNodeOption } from './types';
 import BaseConverter from './baseNode';
 
-export class FRAMEConverter extends BaseConverter<'FRAME'> {
-    async convert(node:  Node<'FRAME'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
+export class FRAMEConverter<NType extends NodeType = 'FRAME'> extends BaseConverter<NType> {
+    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
         
         if(parentNode && parentNode.type === 'CANVAS') {
             dom.style.overflow = 'hidden';

@@ -8,18 +8,19 @@ const baseNode_1 = __importDefault(require("./baseNode"));
 const document_1 = __importDefault(require("./document"));
 const page_1 = __importDefault(require("./page"));
 const frame_1 = __importDefault(require("./frame"));
+const group_1 = __importDefault(require("./group"));
 const text_1 = __importDefault(require("./text"));
-//import EllipseConverter from './ellipse';
+const ellipse_1 = __importDefault(require("./ellipse"));
 const rectangle_1 = __importDefault(require("./rectangle"));
 const frameConverter = new frame_1.default();
 const ConverterMaps = {
     'BASE': new baseNode_1.default(),
     'FRAME': frameConverter,
-    'GROUP': frameConverter,
+    'GROUP': new group_1.default(),
     'TEXT': new text_1.default(),
     'DOCUMENT': new document_1.default(),
     'CANVAS': new page_1.default(),
-    //'ELLIPSE': new EllipseConverter(),
+    'ELLIPSE': new ellipse_1.default(),
     'RECTANGLE': new rectangle_1.default(),
 };
 // 转node为html结构对象
