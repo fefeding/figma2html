@@ -1,5 +1,5 @@
 
-import type { Node, DomNode, ConvertNodeOption } from './types';
+import type { Node, DomNode, ConvertNodeOption } from '../common/types';
 import FRAMEConverter from './frame';
 
 export class GroupConverter extends FRAMEConverter<'GROUP'> {

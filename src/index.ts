@@ -1,4 +1,4 @@
-export type * from './figmaTypes/types';
+export type * from './common/types';
 import { util } from 'j-design-util';
 import { convert, nodeToDom } from './figmaTypes/node';
 

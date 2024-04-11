@@ -1,5 +1,5 @@
 
-import type { Node, NodeType, DomNode, ConvertNodeOption } from './types';
+import type { Node, NodeType, DomNode, ConvertNodeOption } from '../common/types';
 import BaseConverter from './baseNode';
 
 export class FRAMEConverter<NType extends NodeType = 'FRAME'> extends BaseConverter<NType> {

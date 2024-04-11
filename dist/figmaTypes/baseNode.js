@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BaseConverter = void 0;
-const types_1 = require("./types");
+const types_1 = require("../common/types");
 const j_design_util_1 = require("j-design-util");
 class BaseConverter {
     async convert(node, dom, parentNode, option) {

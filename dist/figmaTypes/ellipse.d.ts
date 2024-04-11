@@ -1,4 +1,4 @@
-import { Node, DomNode, ConvertNodeOption, Paint, ColorStop } from './types';
+import { Node, DomNode, ConvertNodeOption, Paint, ColorStop } from '../common/types';
 import BaseConverter from './baseNode';
 export declare class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
     convert(node: Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption): Promise<DomNode>;

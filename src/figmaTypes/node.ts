@@ -1,5 +1,5 @@
 
-import type { Node, DomNode, NodeConverter, NodeToDomOption, ConvertNodeOption, IJElementData } from './types';
+import type { Node, DomNode, NodeConverter, NodeToDomOption, ConvertNodeOption, IJElementData } from '../common/types';
 import BaseConverter from './baseNode';
 import DocumentConverter from './document';
 import PageConverter from './page';

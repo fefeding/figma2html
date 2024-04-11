@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TEXTConverter = void 0;
-const types_1 = require("./types");
+const types_1 = require("../common/types");
 const j_design_util_1 = require("j-design-util");
 const baseNode_1 = __importDefault(require("./baseNode"));
 class TEXTConverter extends baseNode_1.default {

@@ -1,5 +1,5 @@
 
-import { Node, DomNode, ConvertNodeOption, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, } from './types';
+import { Node, DomNode, ConvertNodeOption, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, } from '../common/types';
 import { util } from 'j-design-util';
 import BaseConverter from './baseNode';
 

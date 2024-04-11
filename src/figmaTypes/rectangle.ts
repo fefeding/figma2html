@@ -1,5 +1,5 @@
 
-import type { Node, DomNode, ConvertNodeOption } from './types';
+import type { Node, DomNode, ConvertNodeOption } from '../common/types';
 import BaseConverter from './baseNode';
 
 export class FRAMEConverter extends BaseConverter<'RECTANGLE'> {
