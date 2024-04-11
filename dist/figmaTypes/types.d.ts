@@ -269,6 +269,11 @@ export declare type LayoutGrid = {
     /** Number of columns or rows */
     count: number;
 };
+export declare enum MaskType {
+    ALPHA = "ALPHA",//the mask node's alpha channel will be used to determine the opacity of each pixel in the masked result.
+    VECTOR = "VECTOR",//if the mask node has visible fill paints, every pixel inside the node's fill regions will be fully visible in the masked result. If the mask has visible stroke paints, every pixel inside the node's stroke regions will be fully visible in the masked result.
+    LUMINANCE = "LUMINANCE"
+}
 export declare enum AxisSizingMode {
     FIXED = "FIXED",
     AUTO = "AUTO"
@@ -641,6 +646,7 @@ export interface FRAME {
     effects: Effect[];
     /** default: false Does this node mask sibling nodes in front of it? */
     isMask: boolean;
+    maskType?: MaskType;
     /** default: false Does this mask ignore fill style (like gradients) and effects? */
     isMaskOutline: boolean;
     /** default: AUTO */

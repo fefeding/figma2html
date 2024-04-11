@@ -57,7 +57,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             dom.data.rotation = node.rotation;
             dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
         }
-        if(node.clipsContent === true) dom.style.overflow = 'hidden';
+        // 裁剪超出区域
+        if(node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) dom.style.overflow = 'hidden';
 
         dom.preserveRatio = node.preserveRatio;
 

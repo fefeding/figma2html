@@ -4,7 +4,7 @@ import { util } from 'j-design-util';
 import BaseConverter from './baseNode';
 
 export class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
-    /*async convert(node:  Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
+    async convert(node:  Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
         dom.type = 'svg';
         let ellipse = this.createDomNode('ellipse');
 
@@ -124,7 +124,7 @@ export class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
             stops.push(stop);
         }
         return stops;
-      }*/
+      }
 }
 
 export default ELLIPSEConverter;
