@@ -1,9 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.BaseConverter = void 0;
-const types_1 = require("../common/types");
-const j_design_util_1 = require("j-design-util");
-class BaseConverter {
+import { PaintType, PaintSolidScaleMode, EffectType } from '../common/types';
+import { util } from 'j-design-util';
+export class BaseConverter {
     async convert(node, dom, parentNode, option) {
         dom.style = dom.style || {};
         // 位置
@@ -26,18 +23,18 @@ class BaseConverter {
                 dom.data.left = dom.bounds.x = 0;
                 dom.data.top = dom.bounds.y = 0;
             }
-            dom.style.left = j_design_util_1.util.toPX(dom.bounds.x).toString();
-            dom.style.top = j_design_util_1.util.toPX(dom.bounds.y).toString();
+            dom.style.left = util.toPX(dom.bounds.x).toString();
+            dom.style.top = util.toPX(dom.bounds.y).toString();
             dom.absoluteBoundingBox = node.absoluteBoundingBox;
         }
         // 背景色
         if (node.backgroundColor)
-            dom.style.backgroundColor = j_design_util_1.util.colorToString(node.backgroundColor, 255);
+            dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
         if (node.cornerRadius) {
-            dom.style.borderRadius = j_design_util_1.util.toPX(node.cornerRadius);
+            dom.style.borderRadius = util.toPX(node.cornerRadius);
         }
         else if (node.rectangleCornerRadii) {
-            dom.style.borderRadius = node.rectangleCornerRadii.map(p => j_design_util_1.util.toPX(p)).join(' ');
+            dom.style.borderRadius = node.rectangleCornerRadii.map(p => util.toPX(p)).join(' ');
         }
         if (node.opacity)
             dom.style.opacity = node.opacity.toString();
@@ -52,7 +49,7 @@ class BaseConverter {
         // 旋转
         if (node.rotation) {
             dom.data.rotation = node.rotation;
-            dom.style.transform = `rotate(${j_design_util_1.util.toRad(node.rotation)})`;
+            dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
         }
         // 裁剪超出区域
         if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true))
@@ -62,7 +59,7 @@ class BaseConverter {
         for (const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
             const v = node[padding];
             if (v) {
-                dom.style[padding] = j_design_util_1.util.toPX(v);
+                dom.style[padding] = util.toPX(v);
                 if (['paddingLeft', 'paddingRight'].includes(padding))
                     dom.bounds.width -= v;
                 else
@@ -75,8 +72,8 @@ class BaseConverter {
         await this.convertEffects(node, dom, option); // 滤镜
         dom.data.width = dom.bounds.width;
         dom.data.height = dom.bounds.height;
-        dom.style.width = j_design_util_1.util.toPX(dom.bounds.width).toString();
-        dom.style.height = j_design_util_1.util.toPX(dom.bounds.height).toString();
+        dom.style.width = util.toPX(dom.bounds.width).toString();
+        dom.style.height = util.toPX(dom.bounds.height).toString();
         return dom;
     }
     // 生成节点对象
@@ -99,16 +96,16 @@ class BaseConverter {
         if (style.fontFamily)
             dom.style.fontFamily = style.fontFamily;
         if (style.fontSize)
-            dom.style.fontSize = j_design_util_1.util.toPX(style.fontSize);
+            dom.style.fontSize = util.toPX(style.fontSize);
         if (style.fontWeight)
             dom.style.fontWeight = style.fontWeight.toString();
         if (style.italic)
             dom.style.fontStyle = 'italic';
         if (style.letterSpacing) {
-            dom.style.letterSpacing = j_design_util_1.util.toPX(style.letterSpacing);
+            dom.style.letterSpacing = util.toPX(style.letterSpacing);
         }
         if (style.lineHeightPx)
-            dom.style.lineHeight = j_design_util_1.util.toPX(style.lineHeightPx);
+            dom.style.lineHeight = util.toPX(style.lineHeightPx);
         if (style.textAlignHorizontal)
             dom.style.textAlign = style.textAlignHorizontal;
         if (style.textAlignVertical)
@@ -123,14 +120,14 @@ class BaseConverter {
                 if (effect.visible === false)
                     continue;
                 switch (effect.type) {
-                    case types_1.EffectType.DROP_SHADOW:
-                    case types_1.EffectType.INNER_SHADOW: {
-                        dom.style.filter += ` drop-shadow(${j_design_util_1.util.toPX(effect.offset.x)} ${j_design_util_1.util.toPX(effect.offset.y)} ${j_design_util_1.util.toPX(effect.radius)} ${j_design_util_1.util.colorToString(effect.color, 255)})`;
+                    case EffectType.DROP_SHADOW:
+                    case EffectType.INNER_SHADOW: {
+                        dom.style.filter += ` drop-shadow(${util.toPX(effect.offset.x)} ${util.toPX(effect.offset.y)} ${util.toPX(effect.radius)} ${util.colorToString(effect.color, 255)})`;
                         break;
                     }
-                    case types_1.EffectType.LAYER_BLUR:
-                    case types_1.EffectType.BACKGROUND_BLUR: {
-                        dom.style.filter += ` blur(${j_design_util_1.util.toPX(effect.radius)})`;
+                    case EffectType.LAYER_BLUR:
+                    case EffectType.BACKGROUND_BLUR: {
+                        dom.style.filter += ` blur(${util.toPX(effect.radius)})`;
                         break;
                     }
                 }
@@ -146,22 +143,22 @@ class BaseConverter {
                 if (fill.visible === false)
                     continue;
                 switch (fill.type) {
-                    case types_1.PaintType.SOLID: {
-                        dom.style.backgroundColor = j_design_util_1.util.colorToString(fill.color, 255);
+                    case PaintType.SOLID: {
+                        dom.style.backgroundColor = util.colorToString(fill.color, 255);
                         break;
                     }
                     // 线性渐变
-                    case types_1.PaintType.GRADIENT_LINEAR: {
+                    case PaintType.GRADIENT_LINEAR: {
                         dom.style.background = this.convertLinearGradient(fill, dom);
                         break;
                     }
                     // 径向性渐变
-                    case types_1.PaintType.GRADIENT_RADIAL: {
+                    case PaintType.GRADIENT_RADIAL: {
                         dom.style.background = this.convertRadialGradient(fill, dom);
                         break;
                     }
                     // 图片
-                    case types_1.PaintType.IMAGE: {
+                    case PaintType.IMAGE: {
                         if (option && option.getImage) {
                             const img = await option.getImage(fill.imageRef);
                             if (img) {
@@ -178,20 +175,20 @@ class BaseConverter {
                     }
                 }
                 switch (fill.scaleMode) {
-                    case types_1.PaintSolidScaleMode.FILL: {
+                    case PaintSolidScaleMode.FILL: {
                         dom.style.backgroundSize = 'cover';
                         break;
                     }
-                    case types_1.PaintSolidScaleMode.FIT: {
+                    case PaintSolidScaleMode.FIT: {
                         dom.style.backgroundSize = 'contain';
                         break;
                     }
-                    case types_1.PaintSolidScaleMode.STRETCH: {
+                    case PaintSolidScaleMode.STRETCH: {
                         dom.style.backgroundSize = '100% 100%';
                         break;
                     }
                     // 平铺
-                    case types_1.PaintSolidScaleMode.TILE: {
+                    case PaintSolidScaleMode.TILE: {
                         dom.style.backgroundRepeat = 'repeat';
                         break;
                     }
@@ -221,45 +218,45 @@ class BaseConverter {
                 if (stroke.visible === false)
                     continue;
                 if (stroke.color) {
-                    dom.style.outlineColor = j_design_util_1.util.colorToString(stroke.color, 255);
+                    dom.style.outlineColor = util.colorToString(stroke.color, 255);
                 }
                 switch (stroke.type) {
-                    case types_1.PaintType.SOLID: {
+                    case PaintType.SOLID: {
                         dom.style.outlineStyle = 'solid';
                         break;
                     }
                     // 线性渐变
-                    case types_1.PaintType.GRADIENT_LINEAR: {
+                    case PaintType.GRADIENT_LINEAR: {
                         dom.style.borderImageSource = this.convertLinearGradient(stroke, dom);
                         break;
                     }
                     // 径向性渐变
-                    case types_1.PaintType.GRADIENT_RADIAL: {
+                    case PaintType.GRADIENT_RADIAL: {
                         dom.style.borderImageSource = this.convertRadialGradient(stroke, dom);
                         break;
                     }
                     // 图片
-                    case types_1.PaintType.IMAGE: {
+                    case PaintType.IMAGE: {
                         if (option && option.getImage) {
                             const img = await option.getImage(stroke.imageRef);
                             if (img)
                                 dom.style.borderImageSource = `url(${img})`;
                         }
                         switch (stroke.scaleMode) {
-                            case types_1.PaintSolidScaleMode.FILL: {
+                            case PaintSolidScaleMode.FILL: {
                                 dom.style.borderImageSlice = 'fill';
                                 break;
                             }
-                            case types_1.PaintSolidScaleMode.FIT: {
+                            case PaintSolidScaleMode.FIT: {
                                 dom.style.borderImageRepeat = 'space';
                                 break;
                             }
-                            case types_1.PaintSolidScaleMode.STRETCH: {
+                            case PaintSolidScaleMode.STRETCH: {
                                 dom.style.borderImageRepeat = 'stretch';
                                 break;
                             }
                             // 平铺
-                            case types_1.PaintSolidScaleMode.TILE: {
+                            case PaintSolidScaleMode.TILE: {
                                 dom.style.borderImageRepeat = 'repeat';
                                 break;
                             }
@@ -270,9 +267,9 @@ class BaseConverter {
             }
             if (node.strokeWeight) {
                 if (dom.style.outlineColor)
-                    dom.style.outlineWidth = j_design_util_1.util.toPX(node.strokeWeight);
+                    dom.style.outlineWidth = util.toPX(node.strokeWeight);
                 if (dom.style.borderImageSource)
-                    dom.style.borderImageWidth = j_design_util_1.util.toPX(node.strokeWeight);
+                    dom.style.borderImageWidth = util.toPX(node.strokeWeight);
             }
             if (node.strokeDashes && node.strokeDashes.length) {
                 dom.style.outlineStyle = 'dashed';
@@ -465,9 +462,9 @@ class BaseConverter {
             const start = gradientHandlePositions[0];
             const end = gradientHandlePositions[1]; // Use the second handle, ignoring the last one
             // Calculate the angle in radians
-            const angleRadians = Math.PI / 2 - j_design_util_1.util.getPointCoordRotation(start, end);
+            const angleRadians = Math.PI / 2 - util.getPointCoordRotation(start, end);
             //const angleRadians = Math.PI/2 - Math.atan2(end.y - start.y, end.x - start.x);
-            return j_design_util_1.util.toDeg(j_design_util_1.util.radToDeg(angleRadians));
+            return util.toDeg(util.radToDeg(angleRadians));
         }
         else {
             console.error("Insufficient handle positions for gradient calculation.");
@@ -478,10 +475,9 @@ class BaseConverter {
     getGradientStops(gradientStops) {
         // Constructing the gradient stops string based on received data
         const stopsString = gradientStops
-            .map((stop) => j_design_util_1.util.colorToString(stop.color, 255) + ` ${stop.position * 100}%`)
+            .map((stop) => util.colorToString(stop.color, 255) + ` ${stop.position * 100}%`)
             .join(", ");
         return stopsString;
     }
 }
-exports.BaseConverter = BaseConverter;
-exports.default = BaseConverter;
+export default BaseConverter;

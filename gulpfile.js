@@ -1,8 +1,10 @@
 const gulp = require('gulp');
 const ts = require('gulp-typescript');
-const browserify = require('browserify');
-const tsify = require('tsify');
-const source = require('vinyl-source-stream');
+const babel = require('gulp-babel');
+const concat = require('gulp-concat');
+//const browserify = require('browserify');
+//const tsify = require('tsify');
+//const source = require('vinyl-source-stream');
 const tsProject = ts.createProject('tsconfig.json');
 
 
@@ -22,31 +24,26 @@ function buildTSTask() {
     return pip.js.pipe(gulp.dest('dist'));
 };
 
-function buildESTask(cb) {
-    return browserify({
-        basedir: '.',
-        debug: true,
-        entries: ['./dist/index.js'],        
-        cache: {},
-        packageCache: {}
-    })
-    //.plugin('@babel/plugin-proposal-function-bind')
-    .transform("babelify", {
-        presets: [
-            ['@babel/env', {modules: 'commonjs',}],
-        ],        
-        //plugins: ['transform-runtime'] 
-    })  //使用babel转换es6代码.bundle()*/
-    .bundle()  //合并打包
-    .on('error', function(err) {
-        console.log('bundle', err);
-    })
-    .pipe(source('index.es.js'))
-    .pipe(gulp.dest('dist'));
-}
+// 构建ESM模块
+function buildESM() {
+  const pip = tsProject.src()
+    .pipe(tsProject());
+
+    return pip.js
+      .pipe(babel({
+        presets: ['@babel/preset-env'],
+        plugins: [
+          //'@babel/plugin-transform-modules-commonjs',
+          '@babel/plugin-proposal-class-properties',
+          '@babel/plugin-proposal-object-rest-spread'
+        ]
+      }))
+      .pipe(concat('index.esm.js'))
+      .pipe(gulp.dest('dist'));
+  }
 
 // 构建任务
-const buildTask = gulp.series(buildTSTask);
+const buildTask = gulp.series(buildTSTask, buildESM);
 
 function watch() {
     console.log('watch', tsProject.config.files);

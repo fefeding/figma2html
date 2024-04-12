@@ -1,46 +1,43 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.LineTypes = exports.PathWindingRule = exports.PaintSolidScaleMode = exports.PaintType = exports.EffectType = exports.AxisSizingMode = exports.MaskType = exports.LayoutGridAlignment = exports.LayoutGridPattern = exports.LayoutAlign = exports.LayoutConstraintHorizontal = exports.LayoutConstraintVertical = exports.EasingType = exports.BlendMode = exports.ConstrainType = exports.LineHeightUnit = exports.TextAutoResize = exports.TextDecoration = exports.TextCase = exports.BooleanOperationType = exports.ImageType = exports.StrokeJoin = exports.StrokeAlign = exports.StrokeCap = void 0;
 /** A string enum with value, describing the end caps of vector paths. */
-var StrokeCap;
+export var StrokeCap;
 (function (StrokeCap) {
     StrokeCap["NONE"] = "NONE";
     StrokeCap["ROUND"] = "ROUND";
     StrokeCap["SQUARE"] = "SQUARE";
     StrokeCap["LINE_ARROW"] = "LINE_ARROW";
     StrokeCap["TRIANGLE_ARROW"] = "TRIANGLE_ARROW";
-})(StrokeCap || (exports.StrokeCap = StrokeCap = {}));
+})(StrokeCap || (StrokeCap = {}));
 /** Where stroke is drawn relative to the vector outline as a string enum */
-var StrokeAlign;
+export var StrokeAlign;
 (function (StrokeAlign) {
     StrokeAlign["INSIDE"] = "INSIDE";
     StrokeAlign["OUTSIDE"] = "OUTSIDE";
     StrokeAlign["CENTER"] = "CENTER";
-})(StrokeAlign || (exports.StrokeAlign = StrokeAlign = {}));
+})(StrokeAlign || (StrokeAlign = {}));
 /** A string enum with value, describing how corners in vector paths are rendered. */
-var StrokeJoin;
+export var StrokeJoin;
 (function (StrokeJoin) {
     StrokeJoin["MITER"] = "MITER";
     StrokeJoin["BEVEL"] = "BEVEL";
     StrokeJoin["ROUND"] = "ROUND";
-})(StrokeJoin || (exports.StrokeJoin = StrokeJoin = {}));
-var ImageType;
+})(StrokeJoin || (StrokeJoin = {}));
+export var ImageType;
 (function (ImageType) {
     ImageType["JPG"] = "JPG";
     ImageType["PNG"] = "PNG";
     ImageType["SVG"] = "SVG";
     ImageType["PDF"] = "PDF";
-})(ImageType || (exports.ImageType = ImageType = {}));
+})(ImageType || (ImageType = {}));
 /** A string enum with value, indicating the type of boolean operation applied */
-var BooleanOperationType;
+export var BooleanOperationType;
 (function (BooleanOperationType) {
     BooleanOperationType["UNION"] = "UNION";
     BooleanOperationType["INTERSECT"] = "INTERSECT";
     BooleanOperationType["SUBTRACT"] = "SUBTRACT";
     BooleanOperationType["EXCLUDE"] = "EXCLUDE";
-})(BooleanOperationType || (exports.BooleanOperationType = BooleanOperationType = {}));
+})(BooleanOperationType || (BooleanOperationType = {}));
 /** Text casing applied to the node, default is the original casing */
-var TextCase;
+export var TextCase;
 (function (TextCase) {
     TextCase["ORIGINAL"] = "ORIGINAL";
     TextCase["UPPER"] = "UPPER";
@@ -48,30 +45,30 @@ var TextCase;
     TextCase["TITLE"] = "TITLE";
     TextCase["SMALL_CAPS"] = "SMALL_CAPS";
     TextCase["SMALL_CAPS_FORCED"] = "SMALL_CAPS_FORCED";
-})(TextCase || (exports.TextCase = TextCase = {}));
+})(TextCase || (TextCase = {}));
 /** Text decoration applied to the node */
-var TextDecoration;
+export var TextDecoration;
 (function (TextDecoration) {
     TextDecoration["NONE"] = "NONE";
     TextDecoration["STRIKETHROUGH"] = "STRIKETHROUGH";
     TextDecoration["UNDERLINE"] = "UNDERLINE";
-})(TextDecoration || (exports.TextDecoration = TextDecoration = {}));
+})(TextDecoration || (TextDecoration = {}));
 /** Dimensions along which text will auto resize, default is that the text does not auto-resize. */
-var TextAutoResize;
+export var TextAutoResize;
 (function (TextAutoResize) {
     TextAutoResize["NONE"] = "NONE";
     TextAutoResize["HEIGHT"] = "HEIGHT";
     TextAutoResize["WIDTH_AND_HEIGHT"] = "WIDTH_AND_HEIGHT";
     TextAutoResize["TRUNCATE"] = "TRUNCATE";
-})(TextAutoResize || (exports.TextAutoResize = TextAutoResize = {}));
+})(TextAutoResize || (TextAutoResize = {}));
 /** The unit of the line height value specified by the user. */
-var LineHeightUnit;
+export var LineHeightUnit;
 (function (LineHeightUnit) {
     LineHeightUnit["PIXELS"] = "PIXELS";
     LineHeightUnit["FONT_SIZE_%"] = "FONT_SIZE_%";
     LineHeightUnit["INTRINSIC_%"] = "INTRINSIC_%";
-})(LineHeightUnit || (exports.LineHeightUnit = LineHeightUnit = {}));
-var ConstrainType;
+})(LineHeightUnit || (LineHeightUnit = {}));
+export var ConstrainType;
 (function (ConstrainType) {
     /** Scale by value */
     ConstrainType["SCALE"] = "SCALE";
@@ -79,7 +76,7 @@ var ConstrainType;
     ConstrainType["WIDTH"] = "WIDTH";
     /** Scale proportionally and set width to value */
     ConstrainType["HEIGHT"] = "HEIGHT";
-})(ConstrainType || (exports.ConstrainType = ConstrainType = {}));
+})(ConstrainType || (ConstrainType = {}));
 /**
  * This type is a string enum with the following possible values
  * Normal blends:
@@ -113,7 +110,7 @@ var ConstrainType;
  * "COLOR"
  * "LUMINOSITY"
  */
-var BlendMode;
+export var BlendMode;
 (function (BlendMode) {
     /** (Only applicable to objects with children) */
     BlendMode["PASS_THROUGH"] = "PASS_THROUGH";
@@ -141,7 +138,7 @@ var BlendMode;
     BlendMode["SATURATION"] = "SATURATION";
     BlendMode["COLOR"] = "COLOR";
     BlendMode["LUMINOSITY"] = "LUMINOSITY";
-})(BlendMode || (exports.BlendMode = BlendMode = {}));
+})(BlendMode || (BlendMode = {}));
 /**
  * Enum describing animation easing curves
  * This type is a string enum with the following possible values
@@ -150,7 +147,7 @@ var BlendMode;
  * "EASE_IN_AND_OUT": Ease in and then out with an animation curve similar to CSS ease-in-out.
  * "LINEAR": No easing, similar to CSS linear.
  */
-var EasingType;
+export var EasingType;
 (function (EasingType) {
     /** Ease in with an animation curve similar to CSS ease-in. */
     EasingType["EASE_IN"] = "EASE_IN";
@@ -160,24 +157,24 @@ var EasingType;
     EasingType["EASE_IN_AND_OUT"] = "EASE_IN_AND_OUT";
     /** No easing, similar to CSS linear. */
     EasingType["LINEAR"] = "LINEAR";
-})(EasingType || (exports.EasingType = EasingType = {}));
-var LayoutConstraintVertical;
+})(EasingType || (EasingType = {}));
+export var LayoutConstraintVertical;
 (function (LayoutConstraintVertical) {
     LayoutConstraintVertical["TOP"] = "TOP";
     LayoutConstraintVertical["BOTTOM"] = "BOTTOM";
     LayoutConstraintVertical["CENTER"] = "CENTER";
     LayoutConstraintVertical["TOP_BOTTOM"] = "TOP_BOTTOM";
     LayoutConstraintVertical["SCALE"] = "SCALE";
-})(LayoutConstraintVertical || (exports.LayoutConstraintVertical = LayoutConstraintVertical = {}));
-var LayoutConstraintHorizontal;
+})(LayoutConstraintVertical || (LayoutConstraintVertical = {}));
+export var LayoutConstraintHorizontal;
 (function (LayoutConstraintHorizontal) {
     LayoutConstraintHorizontal["LEFT"] = "LEFT";
     LayoutConstraintHorizontal["RIGHT"] = "RIGHT";
     LayoutConstraintHorizontal["CENTER"] = "CENTER";
     LayoutConstraintHorizontal["LEFT_RIGHT"] = "LEFT_RIGHT";
     LayoutConstraintHorizontal["SCALE"] = "SCALE";
-})(LayoutConstraintHorizontal || (exports.LayoutConstraintHorizontal = LayoutConstraintHorizontal = {}));
-var LayoutAlign;
+})(LayoutConstraintHorizontal || (LayoutConstraintHorizontal = {}));
+export var LayoutAlign;
 (function (LayoutAlign) {
     /** Determines if the layer should stretch along the parent’s counter axis. This property is only provided for direct children of auto-layout frames. */
     LayoutAlign["INHERIT"] = "INHERIT";
@@ -186,38 +183,38 @@ var LayoutAlign;
     LayoutAlign["MIN"] = "MIN";
     LayoutAlign["CENTER"] = "CENTER";
     LayoutAlign["MAX"] = "MAX";
-})(LayoutAlign || (exports.LayoutAlign = LayoutAlign = {}));
-var LayoutGridPattern;
+})(LayoutAlign || (LayoutAlign = {}));
+export var LayoutGridPattern;
 (function (LayoutGridPattern) {
     LayoutGridPattern["COLUMNS"] = "COLUMNS";
     LayoutGridPattern["ROWS"] = "ROWS";
     LayoutGridPattern["GRID"] = "GRID";
-})(LayoutGridPattern || (exports.LayoutGridPattern = LayoutGridPattern = {}));
-var LayoutGridAlignment;
+})(LayoutGridPattern || (LayoutGridPattern = {}));
+export var LayoutGridAlignment;
 (function (LayoutGridAlignment) {
     LayoutGridAlignment["MIN"] = "MIN";
     LayoutGridAlignment["MAX"] = "MAX";
     LayoutGridAlignment["CENTER"] = "CENTER";
-})(LayoutGridAlignment || (exports.LayoutGridAlignment = LayoutGridAlignment = {}));
-var MaskType;
+})(LayoutGridAlignment || (LayoutGridAlignment = {}));
+export var MaskType;
 (function (MaskType) {
     MaskType["ALPHA"] = "ALPHA";
     MaskType["VECTOR"] = "VECTOR";
     MaskType["LUMINANCE"] = "LUMINANCE"; //the luminance value of each pixel of the mask node will be used to determine the opacity of that pixel in the masked result.
-})(MaskType || (exports.MaskType = MaskType = {}));
-var AxisSizingMode;
+})(MaskType || (MaskType = {}));
+export var AxisSizingMode;
 (function (AxisSizingMode) {
     AxisSizingMode["FIXED"] = "FIXED";
     AxisSizingMode["AUTO"] = "AUTO";
-})(AxisSizingMode || (exports.AxisSizingMode = AxisSizingMode = {}));
-var EffectType;
+})(AxisSizingMode || (AxisSizingMode = {}));
+export var EffectType;
 (function (EffectType) {
     EffectType["INNER_SHADOW"] = "INNER_SHADOW";
     EffectType["DROP_SHADOW"] = "DROP_SHADOW";
     EffectType["LAYER_BLUR"] = "LAYER_BLUR";
     EffectType["BACKGROUND_BLUR"] = "BACKGROUND_BLUR";
-})(EffectType || (exports.EffectType = EffectType = {}));
-var PaintType;
+})(EffectType || (EffectType = {}));
+export var PaintType;
 (function (PaintType) {
     PaintType["SOLID"] = "SOLID";
     PaintType["GRADIENT_LINEAR"] = "GRADIENT_LINEAR";
@@ -227,23 +224,23 @@ var PaintType;
     PaintType["IMAGE"] = "IMAGE";
     PaintType["EMOJI"] = "EMOJI";
     PaintType["VIDEO"] = "VIDEO";
-})(PaintType || (exports.PaintType = PaintType = {}));
-var PaintSolidScaleMode;
+})(PaintType || (PaintType = {}));
+export var PaintSolidScaleMode;
 (function (PaintSolidScaleMode) {
     PaintSolidScaleMode["FILL"] = "FILL";
     PaintSolidScaleMode["FIT"] = "FIT";
     PaintSolidScaleMode["TILE"] = "TILE";
     PaintSolidScaleMode["STRETCH"] = "STRETCH";
-})(PaintSolidScaleMode || (exports.PaintSolidScaleMode = PaintSolidScaleMode = {}));
-var PathWindingRule;
+})(PaintSolidScaleMode || (PaintSolidScaleMode = {}));
+export var PathWindingRule;
 (function (PathWindingRule) {
     PathWindingRule["EVENODD"] = "EVENODD";
     PathWindingRule["NONZERO"] = "NONZERO";
-})(PathWindingRule || (exports.PathWindingRule = PathWindingRule = {}));
+})(PathWindingRule || (PathWindingRule = {}));
 /** List types are represented as string enums with one of these possible values: ORDERED: Text is an ordered list (numbered), UNORDERED: Text is an unordered list (bulleted), NONE: Text is plain text and not part of any list */
-var LineTypes;
+export var LineTypes;
 (function (LineTypes) {
     LineTypes["ORDERED"] = "ORDERED";
     LineTypes["UNORDERED"] = "UNORDERED";
     LineTypes["NONE"] = "NONE";
-})(LineTypes || (exports.LineTypes = LineTypes = {}));
+})(LineTypes || (LineTypes = {}));

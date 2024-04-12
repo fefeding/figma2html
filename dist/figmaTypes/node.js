@@ -1,30 +1,24 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.nodeToDom = exports.convert = void 0;
-const baseNode_1 = __importDefault(require("./baseNode"));
-const document_1 = __importDefault(require("./document"));
-const page_1 = __importDefault(require("./page"));
-const frame_1 = __importDefault(require("./frame"));
-const group_1 = __importDefault(require("./group"));
-const text_1 = __importDefault(require("./text"));
-const ellipse_1 = __importDefault(require("./ellipse"));
-const rectangle_1 = __importDefault(require("./rectangle"));
-const frameConverter = new frame_1.default();
+import BaseConverter from './baseNode';
+import DocumentConverter from './document';
+import PageConverter from './page';
+import FrameConverter from './frame';
+import GroupConverter from './group';
+import TextConverter from './text';
+import EllipseConverter from './ellipse';
+import RectangleConverter from './rectangle';
+const frameConverter = new FrameConverter();
 const ConverterMaps = {
-    'BASE': new baseNode_1.default(),
+    'BASE': new BaseConverter(),
     'FRAME': frameConverter,
-    'GROUP': new group_1.default(),
-    'TEXT': new text_1.default(),
-    'DOCUMENT': new document_1.default(),
-    'CANVAS': new page_1.default(),
-    'ELLIPSE': new ellipse_1.default(),
-    'RECTANGLE': new rectangle_1.default(),
+    'GROUP': new GroupConverter(),
+    'TEXT': new TextConverter(),
+    'DOCUMENT': new DocumentConverter(),
+    'CANVAS': new PageConverter(),
+    'ELLIPSE': new EllipseConverter(),
+    'RECTANGLE': new RectangleConverter(),
 };
 // 转node为html结构对象
-async function convert(node, parentNode, option) {
+export async function convert(node, parentNode, option) {
     // 如果是根，则返回document
     if (node.document) {
         const docDom = await convert(node.document, node, option);
@@ -55,9 +49,8 @@ async function convert(node, parentNode, option) {
     }
     return dom;
 }
-exports.convert = convert;
 // 把figma数据转为dom对象
-async function nodeToDom(node, option) {
+export async function nodeToDom(node, option) {
     switch (node.type) {
         case 'document': {
             return await renderDocument(node, option);
@@ -82,7 +75,6 @@ async function nodeToDom(node, option) {
         }
     }
 }
-exports.nodeToDom = nodeToDom;
 async function renderDocument(node, option) {
     const doc = await renderElement(node, option);
     return doc;

@@ -1,13 +1,7 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ELLIPSEConverter = void 0;
-const types_1 = require("../common/types");
-const j_design_util_1 = require("j-design-util");
-const baseNode_1 = __importDefault(require("./baseNode"));
-class ELLIPSEConverter extends baseNode_1.default {
+import { PaintType, } from '../common/types';
+import { util } from 'j-design-util';
+import BaseConverter from './baseNode';
+export class ELLIPSEConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
         dom.type = 'svg';
         let ellipse = this.createDomNode('ellipse');
@@ -27,22 +21,22 @@ class ELLIPSEConverter extends baseNode_1.default {
                 if (fill.visible === false)
                     continue;
                 switch (fill.type) {
-                    case types_1.PaintType.SOLID: {
-                        ellipse.fill = j_design_util_1.util.colorToString(fill.color, 255);
+                    case PaintType.SOLID: {
+                        ellipse.fill = util.colorToString(fill.color, 255);
                         break;
                     }
                     // 线性渐变
-                    case types_1.PaintType.GRADIENT_LINEAR: {
+                    case PaintType.GRADIENT_LINEAR: {
                         ellipse.fill = this.convertLinearGradient(fill, dom);
                         break;
                     }
                     // 径向性渐变
-                    case types_1.PaintType.GRADIENT_RADIAL: {
+                    case PaintType.GRADIENT_RADIAL: {
                         ellipse.fill = this.convertRadialGradient(fill, dom);
                         break;
                     }
                     // 图片
-                    case types_1.PaintType.IMAGE: {
+                    case PaintType.IMAGE: {
                         await super.convertFills(node, ellipse, option);
                         break;
                     }
@@ -65,7 +59,7 @@ class ELLIPSEConverter extends baseNode_1.default {
             return super.convertLinearGradient(gradient, dom);
         const defs = dom.children[0];
         const gradientDom = this.createDomNode('linearGradient');
-        gradientDom.id = 'gradient_' + j_design_util_1.util.uuid();
+        gradientDom.id = 'gradient_' + util.uuid();
         const handlePositions = gradient.gradientHandlePositions;
         if (handlePositions && handlePositions.length > 1) {
             gradientDom.x1 = (handlePositions[0].x) * 100 + '%';
@@ -85,7 +79,7 @@ class ELLIPSEConverter extends baseNode_1.default {
             return super.convertRadialGradient(gradient, dom);
         const defs = dom.children[0];
         const gradientDom = this.createDomNode('radialGradient');
-        gradientDom.id = 'gradient_' + j_design_util_1.util.uuid();
+        gradientDom.id = 'gradient_' + util.uuid();
         const handlePositions = gradient.gradientHandlePositions;
         // 该字段包含三个矢量，每个矢量都是归一化对象空间中的一个位置（归一化对象空间是如果对象的边界框的左上角是（0，0），右下角是（1,1））。第一个位置对应于渐变的开始（为了计算渐变停止，值为0），第二个位置是渐变的结束（值为1），第三个手柄位置决定渐变的宽度。
         if (handlePositions && handlePositions.length > 2) {
@@ -111,11 +105,10 @@ class ELLIPSEConverter extends baseNode_1.default {
         for (const s of gradientStops) {
             const stop = this.createDomNode('stop');
             stop.offset = `${Math.round(s.position * 100)}%`;
-            stop.style.stopColor = j_design_util_1.util.colorToString(s.color, 255);
+            stop.style.stopColor = util.colorToString(s.color, 255);
             stops.push(stop);
         }
         return stops;
     }
 }
-exports.ELLIPSEConverter = ELLIPSEConverter;
-exports.default = ELLIPSEConverter;
+export default ELLIPSEConverter;

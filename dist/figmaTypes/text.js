@@ -1,13 +1,7 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.TEXTConverter = void 0;
-const types_1 = require("../common/types");
-const j_design_util_1 = require("j-design-util");
-const baseNode_1 = __importDefault(require("./baseNode"));
-class TEXTConverter extends baseNode_1.default {
+import { PaintType, PaintSolidScaleMode } from '../common/types';
+import { util } from 'j-design-util';
+import BaseConverter from './baseNode';
+export class TEXTConverter extends BaseConverter {
     async convert(node, dom, parentNode, option) {
         dom.type = 'span';
         if (node.characters)
@@ -29,17 +23,17 @@ class TEXTConverter extends baseNode_1.default {
             document.body.appendChild(span);
             let w = span.offsetWidth || span.clientWidth;
             if (dom.style.letterSpacing) {
-                const v = j_design_util_1.util.toNumber(dom.style.letterSpacing);
+                const v = util.toNumber(dom.style.letterSpacing);
                 w += v;
             }
             document.body.removeChild(span);
-            dom.data.width = Math.max(w, j_design_util_1.util.toNumber(dom.data.width));
+            dom.data.width = Math.max(w, util.toNumber(dom.data.width));
         }
         else {
             //dom.style.minWidth = util.toPX(dom.data.width);
             dom.data.width = dom.bounds.width;
         }
-        dom.style.width = j_design_util_1.util.toPX(dom.data.width);
+        dom.style.width = util.toPX(dom.data.width);
         await this.convertCharacterStyleOverrides(node, res, option); // 处理分字样式
         return res;
     }
@@ -79,12 +73,12 @@ class TEXTConverter extends baseNode_1.default {
         if (!node.isMaskOutline && node.fills && node.fills.length) {
             const fill = node.fills[0];
             switch (fill.type) {
-                case types_1.PaintType.SOLID: {
-                    dom.style.color = j_design_util_1.util.colorToString(fill.color, 255);
+                case PaintType.SOLID: {
+                    dom.style.color = util.colorToString(fill.color, 255);
                     break;
                 }
                 // 线性渐变
-                case types_1.PaintType.GRADIENT_LINEAR: {
+                case PaintType.GRADIENT_LINEAR: {
                     dom.style.background = this.convertLinearGradient(fill, dom);
                     dom.style.backgroundClip = 'text';
                     if (!dom.style.color)
@@ -92,7 +86,7 @@ class TEXTConverter extends baseNode_1.default {
                     break;
                 }
                 // 径向性渐变
-                case types_1.PaintType.GRADIENT_RADIAL: {
+                case PaintType.GRADIENT_RADIAL: {
                     dom.style.background = this.convertRadialGradient(fill, dom);
                     dom.style.backgroundClip = 'text';
                     if (!dom.style.color)
@@ -100,7 +94,7 @@ class TEXTConverter extends baseNode_1.default {
                     break;
                 }
                 // 图片
-                case types_1.PaintType.IMAGE: {
+                case PaintType.IMAGE: {
                     if (option && option.getImage) {
                         const img = await option.getImage(fill.imageRef);
                         if (img)
@@ -113,20 +107,20 @@ class TEXTConverter extends baseNode_1.default {
                 }
             }
             switch (fill.scaleMode) {
-                case types_1.PaintSolidScaleMode.FILL: {
+                case PaintSolidScaleMode.FILL: {
                     dom.style.backgroundSize = 'cover';
                     break;
                 }
-                case types_1.PaintSolidScaleMode.FIT: {
+                case PaintSolidScaleMode.FIT: {
                     dom.style.backgroundSize = 'contain';
                     break;
                 }
-                case types_1.PaintSolidScaleMode.STRETCH: {
+                case PaintSolidScaleMode.STRETCH: {
                     dom.style.backgroundSize = '100% 100%';
                     break;
                 }
                 // 平铺
-                case types_1.PaintSolidScaleMode.TILE: {
+                case PaintSolidScaleMode.TILE: {
                     dom.style.backgroundRepeat = 'repeat';
                     break;
                 }
@@ -135,5 +129,4 @@ class TEXTConverter extends baseNode_1.default {
         return dom;
     }
 }
-exports.TEXTConverter = TEXTConverter;
-exports.default = TEXTConverter;
+export default TEXTConverter;
