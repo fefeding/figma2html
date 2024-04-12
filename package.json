@@ -1,6 +1,6 @@
 {
   "name": "j-figma2html",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "figma 转 html 工具类",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,6 +28,7 @@
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@types/node": "^20.11.30",
+    "babel-preset-env": "^1.7.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-stage-0": "^6.24.1",
     "babelify": "^10.0.0",
