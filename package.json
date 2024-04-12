@@ -1,6 +1,6 @@
 {
   "name": "j-figma2html",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "figma 转 html 工具类",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "node test/dev",
     "build": "gulp",
+    "build:esm": "node ./build/build.js",
     "api:json": "npx api-extractor run",
     "api:md": "npx api-documenter markdown -i ./docs/.api -o ./docs/api && node ./build/md.js",
     "api": "npm run api:json && npm run api:md",
