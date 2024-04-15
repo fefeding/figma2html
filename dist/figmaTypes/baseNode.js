@@ -86,6 +86,7 @@ export class BaseConverter {
         const dom = {
             data: {},
             style: {},
+            attributes: {},
             children: [],
             ...option,
             type: type,
@@ -94,6 +95,9 @@ export class BaseConverter {
     }
     // 转换style
     async convertStyle(node, dom, option) {
+        // @ts-ignore
+        if (node.type === 'BOOLEAN_OPERATION')
+            return dom;
         // @ts-ignore
         const style = node.style || node;
         if (!style)
@@ -142,6 +146,8 @@ export class BaseConverter {
     }
     // 处理填充
     async convertFills(node, dom, option) {
+        if (node.type === 'BOOLEAN_OPERATION')
+            return dom;
         // isMaskOutline 如果为true则忽略填充样式
         if (!node.isMaskOutline && node.fills) {
             for (const fill of node.fills) {
@@ -158,6 +164,8 @@ export class BaseConverter {
                         break;
                     }
                     // 径向性渐变
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
                         dom.style.background = this.convertRadialGradient(fill, dom);
                         break;
@@ -218,6 +226,8 @@ export class BaseConverter {
     }
     // 处理边框
     async convertStrokes(node, dom, option) {
+        if (node.type === 'BOOLEAN_OPERATION')
+            return dom;
         if (node.strokes && node.strokes.length) {
             for (const stroke of node.strokes) {
                 if (stroke.visible === false)
@@ -236,6 +246,8 @@ export class BaseConverter {
                         break;
                     }
                     // 径向性渐变
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
                         dom.style.borderImageSource = this.convertRadialGradient(stroke, dom);
                         break;

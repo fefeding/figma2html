@@ -7,6 +7,7 @@ import FrameConverter from './figmaTypes/frame';
 //import GroupConverter from './figmaTypes/group';
 import TextConverter from './figmaTypes/text';
 import PolygonConverter from './figmaTypes/polygon';
+import StarConverter from './figmaTypes/star';
 import EllipseConverter from './figmaTypes/ellipse';
 import RectangleConverter from './figmaTypes/rectangle';
 
@@ -20,6 +21,7 @@ const ConverterMaps = {
     'CANVAS': new PageConverter(),
     'REGULAR_POLYGON': new PolygonConverter(),
     'ELLIPSE': new EllipseConverter(),
+    'STAR': new StarConverter(),
     'RECTANGLE': new RectangleConverter(),
 } as { [key: string]: NodeConverter};
 
@@ -86,7 +88,8 @@ export async function nodeToDom(node: DomNode, option?: NodeToDomOption) {
         case 'svg': {
             return await renderSvg(node, option);
         }
-        case 'ellipse': {
+        case 'ellipse':
+        case 'polygon': {
             return await renderEllipse(node, option);
         }
         case 'stop':
@@ -122,14 +125,14 @@ async function renderSvg(node: DomNode, option?: NodeToDomOption) {
 }
 
 async function renderEllipse(node: DomNode, option?: NodeToDomOption) {
-    const ellipse = await renderSvgElement(node, option);
-    
-    ellipse.setAttribute('fill', node.fill || node.style.background || node.style.backgroundColor);
+    const ellipse = await renderSvgElement(node, option);   
+    if(node.fill) ellipse.setAttribute('fill', node.fill); 
     return ellipse;
 }
 
 async function renderSvgElement(node: DomNode, option?: NodeToDomOption) {
     let el = document.createElementNS("http://www.w3.org/2000/svg", node.type); // 创建SVG元素
+
     await renderElement(node, option, el);
    
     return el;

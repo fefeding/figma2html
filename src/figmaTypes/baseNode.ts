@@ -108,6 +108,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     // 转换style
     async convertStyle(node:  Node<NType>|TypeStyle, dom: DomNode, option?: ConvertNodeOption) {
         // @ts-ignore
+        if(node.type === 'BOOLEAN_OPERATION') return dom;
+        // @ts-ignore
         const style: TypeStyle = node.style || node;
         if(!style) return dom;
 
@@ -154,6 +156,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
 
     // 处理填充
     async convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
+        if(node.type === 'BOOLEAN_OPERATION') return dom;
         // isMaskOutline 如果为true则忽略填充样式
         if(!node.isMaskOutline && node.fills) {
             for(const fill of node.fills) {
@@ -170,6 +173,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                         break;
                     }
                     // 径向性渐变
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
                         dom.style.background = this.convertRadialGradient(fill, dom);
                         break;
@@ -232,6 +237,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
 
     // 处理边框
     async convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
+        if(node.type === 'BOOLEAN_OPERATION') return dom;
+
         if(node.strokes && node.strokes.length) {
             
             for(const stroke of node.strokes) {
@@ -250,6 +257,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                         break;
                     }
                     // 径向性渐变
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
                         dom.style.borderImageSource = this.convertRadialGradient(stroke, dom);
                         break;

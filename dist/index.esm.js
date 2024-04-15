@@ -1135,6 +1135,9 @@ class BaseConverter {
     // 转换style
     async convertStyle(node, dom, option) {
         // @ts-ignore
+        if (node.type === 'BOOLEAN_OPERATION')
+            return dom;
+        // @ts-ignore
         const style = node.style || node;
         if (!style)
             return dom;
@@ -1182,6 +1185,8 @@ class BaseConverter {
     }
     // 处理填充
     async convertFills(node, dom, option) {
+        if (node.type === 'BOOLEAN_OPERATION')
+            return dom;
         // isMaskOutline 如果为true则忽略填充样式
         if (!node.isMaskOutline && node.fills) {
             for (const fill of node.fills) {
@@ -1198,6 +1203,8 @@ class BaseConverter {
                         break;
                     }
                     // 径向性渐变
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
                         dom.style.background = this.convertRadialGradient(fill, dom);
                         break;
@@ -1258,6 +1265,8 @@ class BaseConverter {
     }
     // 处理边框
     async convertStrokes(node, dom, option) {
+        if (node.type === 'BOOLEAN_OPERATION')
+            return dom;
         if (node.strokes && node.strokes.length) {
             for (const stroke of node.strokes) {
                 if (stroke.visible === false)
@@ -1276,6 +1285,8 @@ class BaseConverter {
                         break;
                     }
                     // 径向性渐变
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
                         dom.style.borderImageSource = this.convertRadialGradient(stroke, dom);
                         break;
@@ -1740,7 +1751,8 @@ class PolygonConverter extends BaseConverter {
     polygonName = 'polygon';
     async convert(node, dom, parentNode, page, option) {
         dom.type = 'svg';
-        let polygon = this.createDomNode(this.polygonName);
+        const polygon = this.createDomNode(this.polygonName);
+        polygon.style.fillRule = 'nonzero';
         const defs = this.createDomNode('defs');
         dom.children.push(defs);
         dom.children.push(polygon);
@@ -1764,28 +1776,30 @@ class PolygonConverter extends BaseConverter {
     // 处理填充
     async convertFills(node, dom, option) {
         if (node.fills) {
-            const ellipse = dom.children[1];
+            const polygon = dom.children[1];
             for (const fill of node.fills) {
                 if (fill.visible === false)
                     continue;
                 switch (fill.type) {
                     case PaintType.SOLID: {
-                        ellipse.fill = util.colorToString(fill.color, 255);
+                        polygon.style.fill = util.colorToString(fill.color, 255);
                         break;
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        ellipse.fill = this.convertLinearGradient(fill, dom);
+                        polygon.style.fill = this.convertLinearGradient(fill, dom);
                         break;
                     }
                     // 径向性渐变
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
-                        ellipse.fill = this.convertRadialGradient(fill, dom);
+                        polygon.style.fill = this.convertRadialGradient(fill, dom);
                         break;
                     }
                     // 图片
                     case PaintType.IMAGE: {
-                        await super.convertFills(node, ellipse, option);
+                        await super.convertFills(node, polygon, option);
                         break;
                     }
                 }
@@ -1796,8 +1810,8 @@ class PolygonConverter extends BaseConverter {
     // 处理边框
     async convertStrokes(node, dom, option) {
         if (node.strokes && node.strokes.length) {
-            const ellipse = dom.children[1];
-            await super.convertStrokes(node, ellipse, option);
+            const polygon = dom.children[1];
+            await super.convertStrokes(node, polygon, option);
         }
         return dom;
     }
@@ -1860,6 +1874,46 @@ class PolygonConverter extends BaseConverter {
     }
 }
 
+// 五角星
+class StarConverter extends PolygonConverter {
+    // 生成多边形路径
+    createPolygonPath(dom, node) {
+        const radius = Math.min(dom.bounds.width, dom.bounds.height) / 2; // 画五角星的半径
+        const center = {
+            x: dom.bounds.width / 2,
+            y: dom.bounds.height / 2
+        };
+        const point1 = [center.x, 0]; // 顶点
+        const stepAngle = Math.PI * 2 / 5; // 圆分成五份
+        const angle2 = Math.PI / 2 - stepAngle; // 右上角的点的角度
+        const point2 = [
+            center.x + Math.cos(angle2) * radius,
+            center.y - Math.sin(angle2) * radius,
+        ];
+        const angle3 = stepAngle - angle2;
+        const point3 = [
+            center.x + Math.cos(angle3) * radius,
+            center.y + Math.sin(angle3) * radius,
+        ];
+        const point4 = [
+            center.x - Math.cos(angle3) * radius,
+            center.y + Math.sin(angle3) * radius,
+        ];
+        const point5 = [
+            center.x - Math.cos(angle2) * radius,
+            center.y - Math.sin(angle2) * radius,
+        ];
+        // 每隔一个点连线
+        dom.attributes['points'] = [
+            point1.join(','),
+            point3.join(','),
+            point5.join(','),
+            point2.join(','),
+            point4.join(','),
+        ].join(' ');
+    }
+}
+
 class ELLIPSEConverter extends PolygonConverter {
     // 多边形标签名
     polygonName = 'ellipse';
@@ -1892,6 +1946,7 @@ const ConverterMaps = {
     'CANVAS': new PageConverter(),
     'REGULAR_POLYGON': new PolygonConverter(),
     'ELLIPSE': new ELLIPSEConverter(),
+    'STAR': new StarConverter(),
     'RECTANGLE': new FRAMEConverter(),
 };
 // 转node为html结构对象
@@ -1956,7 +2011,8 @@ async function nodeToDom(node, option) {
         case 'svg': {
             return await renderSvg(node, option);
         }
-        case 'ellipse': {
+        case 'ellipse':
+        case 'polygon': {
             return await renderEllipse(node, option);
         }
         case 'stop':
@@ -1987,7 +2043,8 @@ async function renderSvg(node, option) {
 }
 async function renderEllipse(node, option) {
     const ellipse = await renderSvgElement(node, option);
-    ellipse.setAttribute('fill', node.fill || node.style.background || node.style.backgroundColor);
+    if (node.fill)
+        ellipse.setAttribute('fill', node.fill);
     return ellipse;
 }
 async function renderSvgElement(node, option) {
