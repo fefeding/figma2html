@@ -6,7 +6,7 @@ import PolygonConverter from './polygon';
 export class ELLIPSEConverter extends PolygonConverter<'ELLIPSE'> {
     // 多边形标签名
     polygonName: DomNodeType = 'ellipse';  
-    async convert(node:  Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) {
+    async convert(node:  Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode) {
         // 如果有角度信息，则用多边形来计算
         if(node.arcData) {
             this.polygonName = 'polygon';
@@ -15,7 +15,7 @@ export class ELLIPSEConverter extends PolygonConverter<'ELLIPSE'> {
             this.polygonName = 'ellipse';
         }
 
-        return super.convert(node, dom, parentNode, page, option);
+        return super.convert(node, dom, parentNode, page, option, container);
     }  
 
     // 生成多边形路径

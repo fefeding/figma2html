@@ -26,7 +26,7 @@ const ConverterMaps = {
 } as { [key: string]: NodeConverter};
 
 // 转node为html结构对象
-export async function convert(node: Node, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption): Promise<DomNode> {
+export async function convert(node: Node, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode> {
     // 如果是根，则返回document
     if(node.document) {
         const docDom = await convert(node.document, node, page, option);
@@ -50,26 +50,54 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
     });   
     // 普通元素，不可当作容器
     dom.isElement = ['VECTOR', 'BOOLEAN', 'BOOLEAN_OPERATION', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE'].includes(node.type) || (parentNode && parentNode.clipsContent);
+/*
+    const isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
+    const svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
 
-    const converter = ConverterMaps[node.type] || ConverterMaps.BASE;
-    if(converter) await converter.convert(node, dom, parentNode, page, option);
+    // 容器可能是SVG
+    let isSvg = isContainer && !container;
+    // 容器下所有元素都是SVG元素，则认为是svg块
+    if(isSvg && node.children && node.children.length) {
+        for(const child of node.children) {
+            if(!svgElements.includes(child.type)) {
+                isSvg = false;
+                break;
+            }
+        }
+    }
+    else {
+        isSvg = false;
+    }*/
+    
+    let converter = ConverterMaps[node.type] || ConverterMaps.BASE;
+    // 已识别成图片的，不再处理成svg
+    if(node.type === 'RECTANGLE' && node.fills && node.fills.length && node.fills[0].type === 'IMAGE') {
+        dom.type = 'img';
+        converter = ConverterMaps.BASE;
+    }
+
+    if(converter) await converter.convert(node, dom, parentNode, page, option, container);
 
     if(!page && node.type === 'FRAME' && option?.expandToPage) page = dom;// 当前节点开始，为页面模板
-    else if(page) {
+    else if(page && !container) {
         // 没有显示意义的div不处理
         if(!dom.isElement) page.children.push(dom);
     } 
 
+    /*if(isSvg) {
+        dom.type = 'svg';
+        container = dom;
+    }*/
+
     if(node.children && node.children.length) {
         for(const child of node.children) {
-            //if(child.isMask) continue;
-            const c = await convert(child, node, page, option);   
+            const c = await convert(child, node, container || page, option, container);   
             if(!c) continue;    
             if(ConverterMaps.BASE.isEmptyDom(c)) {
                 console.log('empty dom', c);
                 continue;
             }     
-            if(!page || c.isElement) dom.children.push(c);
+            if(!dom.children.includes(c) && (!page || c.isElement)) dom.children.push(c);
         }
     }
     

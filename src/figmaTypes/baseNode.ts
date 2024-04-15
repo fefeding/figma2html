@@ -3,7 +3,7 @@ import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSo
 import { util, type Point } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
-    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) {
+    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode) {
         dom.style = dom.style || {} as CSSStyleDeclaration;
 
         // 位置

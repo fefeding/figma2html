@@ -4070,10 +4070,10 @@
                                     "height": 113
                                 },
                                 "absoluteRenderBounds": {
-                                    "x": 20.569564819335938,
+                                    "x": 13,
                                     "y": -576,
-                                    "width": 97.86087036132812,
-                                    "height": 84.75
+                                    "width": 113,
+                                    "height": 113
                                 },
                                 "preserveRatio": true,
                                 "constraints": {
@@ -5531,9 +5531,9 @@
     "schemaVersion": 0,
     "styles": {},
     "name": "效果测试",
-    "lastModified": "2024-04-09T09:21:58Z",
-    "thumbnailUrl": "https://s3-alpha.figma.com/thumbnails/05ea4c4a-af18-4048-b011-f24ff10467e0?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQ4GOSFWCZTO4AACV%2F20240414%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240414T120000Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=938c625b0af30b6d3b19bf6e90419ca47beb0828f4603b69c70779287af13c28",
-    "version": "5516391756",
+    "lastModified": "2024-04-15T12:14:35Z",
+    "thumbnailUrl": "https://s3-alpha.figma.com/thumbnails/2b5f3318-c478-4aa9-a232-8580cddf4385?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQ4GOSFWC5QIQERN2%2F20240414%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240414T120000Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=d5dfbd897f9d4fa9afb93944bd8829dde495537abdff9cd2540e94977570e954",
+    "version": "5557814335",
     "role": "owner",
     "editorType": "figma",
     "linkAccess": "view"

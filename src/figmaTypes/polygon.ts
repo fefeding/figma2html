@@ -7,18 +7,35 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
     // 多边形标签名
     polygonName: DomNodeType = 'polygon';
 
-    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) {
-        dom.type = 'svg';
-        const polygon = this.createDomNode(this.polygonName);
+    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode) {
+        let polygon = dom;
+        // 如果 没有生成父的svg标签，则当前dom就是，然后再生成子元素
+        if(!container) {
+            container = dom;
+            dom.type = 'svg';
+            
+            polygon = this.createDomNode(this.polygonName, {
+                // @ts-ignore
+                figmaData: node
+            });
+            polygon.id = node.id || '';
+
+            const defs = this.createDomNode('defs');
+            dom.children.push(defs);
+            dom.children.push(polygon);
+        }
+        else {
+            if(!container.children.length) {
+                const defs = this.createDomNode('defs');
+                container.children.push(defs);
+            }
+            polygon.type = this.polygonName;
+            if(!container.children.includes(polygon)) container.children.push(polygon);
+        }
         polygon.style.fillRule = 'nonzero';
 
-        const defs = this.createDomNode('defs');
-
-        dom.children.push(defs);
-        dom.children.push(polygon);
-
         // svg外转用定位和大小，其它样式都给子元素
-        dom =  await super.convert(node, dom, parentNode, page, option);
+        dom =  await super.convert(node, dom, parentNode, page, option, container);
         polygon.bounds = dom.bounds;
 
         // 生成路径
@@ -38,10 +55,21 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
         dom.attributes['points'] = points.join(' ');
     }
 
+    // 用id获取当前图形
+    getPolygon(node:  Node<NType>, dom: DomNode) {
+        if(dom.figmaData?.id === node.id) return dom;
+        if(dom.children && dom.children.length) {
+            for(const child of dom.children) {
+                if(child.figmaData?.id === node.id) return child;
+            }
+        }
+        return dom;
+    }
+
     // 处理填充
     async convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
         if(node.fills) {
-            const polygon = dom.children[1];
+            const polygon = this.getPolygon(node, dom);
             for(const fill of node.fills) {
                 if(fill.visible === false) continue;
 
@@ -75,7 +103,7 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
 
     // 处理边框
     async convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
-        const polygon = dom.children[1];
+        const polygon = this.getPolygon(node, dom);
         if(node.strokes && node.strokes.length) {
             
             for(const stroke of node.strokes) {

@@ -1,7 +1,7 @@
 import { Node, DomNode, DomNodeType, NodeType, NodeConverter, Vector, ColorStop, ConvertNodeOption, Paint, TypeStyle } from '../common/types';
 import { type Point } from 'j-design-util';
 export declare class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
-    convert(node: Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption): Promise<DomNode>;
+    convert(node: Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;
     createDomNode(type: DomNodeType, option?: DomNode): DomNode;
     convertStyle(node: Node<NType> | TypeStyle, dom: DomNode, option?: ConvertNodeOption): Promise<DomNode>;
     convertEffects(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): Promise<DomNode>;

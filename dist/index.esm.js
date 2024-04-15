@@ -1040,7 +1040,7 @@ var LineTypes;
 })(LineTypes || (LineTypes = {}));
 
 class BaseConverter {
-    async convert(node, dom, parentNode, page, option) {
+    async convert(node, dom, parentNode, page, option, container) {
         dom.style = dom.style || {};
         // 位置
         dom.bounds = {
@@ -1578,7 +1578,7 @@ class PageConverter extends BaseConverter {
     }
 }
 
-let FRAMEConverter$1 = class FRAMEConverter extends BaseConverter {
+class FRAMEConverter extends BaseConverter {
     async convert(node, dom, parentNode, page, option) {
         if (parentNode && parentNode.type === 'CANVAS') {
             dom.style.overflow = 'hidden';
@@ -1603,7 +1603,7 @@ let FRAMEConverter$1 = class FRAMEConverter extends BaseConverter {
         }
         return super.convert(node, dom, parentNode, page, option);
     }
-};
+}
 
 class TEXTConverter extends BaseConverter {
     async convert(node, dom, parentNode, page, option) {
@@ -1749,15 +1749,33 @@ class TEXTConverter extends BaseConverter {
 class PolygonConverter extends BaseConverter {
     // 多边形标签名
     polygonName = 'polygon';
-    async convert(node, dom, parentNode, page, option) {
-        dom.type = 'svg';
-        const polygon = this.createDomNode(this.polygonName);
+    async convert(node, dom, parentNode, page, option, container) {
+        let polygon = dom;
+        // 如果 没有生成父的svg标签，则当前dom就是，然后再生成子元素
+        if (!container) {
+            container = dom;
+            dom.type = 'svg';
+            polygon = this.createDomNode(this.polygonName, {
+                // @ts-ignore
+                figmaData: node
+            });
+            polygon.id = node.id || '';
+            const defs = this.createDomNode('defs');
+            dom.children.push(defs);
+            dom.children.push(polygon);
+        }
+        else {
+            if (!container.children.length) {
+                const defs = this.createDomNode('defs');
+                container.children.push(defs);
+            }
+            polygon.type = this.polygonName;
+            if (!container.children.includes(polygon))
+                container.children.push(polygon);
+        }
         polygon.style.fillRule = 'nonzero';
-        const defs = this.createDomNode('defs');
-        dom.children.push(defs);
-        dom.children.push(polygon);
         // svg外转用定位和大小，其它样式都给子元素
-        dom = await super.convert(node, dom, parentNode, page, option);
+        dom = await super.convert(node, dom, parentNode, page, option, container);
         polygon.bounds = dom.bounds;
         // 生成路径
         this.createPolygonPath(polygon, node);
@@ -1773,10 +1791,22 @@ class PolygonConverter extends BaseConverter {
         ];
         dom.attributes['points'] = points.join(' ');
     }
+    // 用id获取当前图形
+    getPolygon(node, dom) {
+        if (dom.figmaData?.id === node.id)
+            return dom;
+        if (dom.children && dom.children.length) {
+            for (const child of dom.children) {
+                if (child.figmaData?.id === node.id)
+                    return child;
+            }
+        }
+        return dom;
+    }
     // 处理填充
     async convertFills(node, dom, option) {
         if (node.fills) {
-            const polygon = dom.children[1];
+            const polygon = this.getPolygon(node, dom);
             for (const fill of node.fills) {
                 if (fill.visible === false)
                     continue;
@@ -1809,7 +1839,7 @@ class PolygonConverter extends BaseConverter {
     }
     // 处理边框
     async convertStrokes(node, dom, option) {
-        const polygon = dom.children[1];
+        const polygon = this.getPolygon(node, dom);
         if (node.strokes && node.strokes.length) {
             for (const stroke of node.strokes) {
                 if (stroke.visible === false)
@@ -1937,7 +1967,7 @@ class StarConverter extends PolygonConverter {
 class ELLIPSEConverter extends PolygonConverter {
     // 多边形标签名
     polygonName = 'ellipse';
-    async convert(node, dom, parentNode, page, option) {
+    async convert(node, dom, parentNode, page, option, container) {
         // 如果有角度信息，则用多边形来计算
         if (node.arcData) {
             this.polygonName = 'polygon';
@@ -1945,7 +1975,7 @@ class ELLIPSEConverter extends PolygonConverter {
         else {
             this.polygonName = 'ellipse';
         }
-        return super.convert(node, dom, parentNode, page, option);
+        return super.convert(node, dom, parentNode, page, option, container);
     }
     // 生成多边形路径
     createPolygonPath(dom, node) {
@@ -1991,17 +2021,13 @@ class ELLIPSEConverter extends PolygonConverter {
     }
 }
 
-class FRAMEConverter extends BaseConverter {
-    async convert(node, dom, parentNode, page, option) {
-        // 如果是填充的图5片，则直接用img
-        if (node.fills && node.fills.length && node.fills[0].type === 'IMAGE') {
-            dom.type = 'img';
-        }
-        return super.convert(node, dom, parentNode, page, option);
+class RECTANGLEConverter extends PolygonConverter {
+    async convert(node, dom, parentNode, page, option, container) {
+        return super.convert(node, dom, parentNode, page, option, container);
     }
 }
 
-const frameConverter = new FRAMEConverter$1();
+const frameConverter = new FRAMEConverter();
 const ConverterMaps = {
     'BASE': new BaseConverter(),
     'FRAME': frameConverter,
@@ -2012,10 +2038,10 @@ const ConverterMaps = {
     'REGULAR_POLYGON': new PolygonConverter(),
     'ELLIPSE': new ELLIPSEConverter(),
     'STAR': new StarConverter(),
-    'RECTANGLE': new FRAMEConverter(),
+    'RECTANGLE': new RECTANGLEConverter(),
 };
 // 转node为html结构对象
-async function convert(node, parentNode, page, option) {
+async function convert(node, parentNode, page, option, container) {
     // 如果是根，则返回document
     if (node.document) {
         const docDom = await convert(node.document, node, page, option);
@@ -2038,27 +2064,53 @@ async function convert(node, parentNode, page, option) {
     });
     // 普通元素，不可当作容器
     dom.isElement = ['VECTOR', 'BOOLEAN', 'BOOLEAN_OPERATION', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE'].includes(node.type) || (parentNode && parentNode.clipsContent);
-    const converter = ConverterMaps[node.type] || ConverterMaps.BASE;
+    /*
+        const isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
+        const svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
+    
+        // 容器可能是SVG
+        let isSvg = isContainer && !container;
+        // 容器下所有元素都是SVG元素，则认为是svg块
+        if(isSvg && node.children && node.children.length) {
+            for(const child of node.children) {
+                if(!svgElements.includes(child.type)) {
+                    isSvg = false;
+                    break;
+                }
+            }
+        }
+        else {
+            isSvg = false;
+        }*/
+    let converter = ConverterMaps[node.type] || ConverterMaps.BASE;
+    // 已识别成图片的，不再处理成svg
+    if (node.type === 'RECTANGLE' && node.fills && node.fills.length && node.fills[0].type === 'IMAGE') {
+        dom.type = 'img';
+        converter = ConverterMaps.BASE;
+    }
     if (converter)
-        await converter.convert(node, dom, parentNode, page, option);
+        await converter.convert(node, dom, parentNode, page, option, container);
     if (!page && node.type === 'FRAME' && option?.expandToPage)
         page = dom; // 当前节点开始，为页面模板
-    else if (page) {
+    else if (page && !container) {
         // 没有显示意义的div不处理
         if (!dom.isElement)
             page.children.push(dom);
     }
+    /*if(isSvg) {
+        dom.type = 'svg';
+        container = dom;
+    }*/
     if (node.children && node.children.length) {
         for (const child of node.children) {
-            //if(child.isMask) continue;
-            const c = await convert(child, node, page, option);
+            const c = await convert(child, node, container || page, option, container);
             if (!c)
                 continue;
             if (ConverterMaps.BASE.isEmptyDom(c)) {
                 console.log('empty dom', c);
                 continue;
             }
-            if (!page || c.isElement)
+            if (!dom.children.includes(c) && (!page || c.isElement))
                 dom.children.push(c);
         }
     }
