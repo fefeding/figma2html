@@ -117,7 +117,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         if (style.fontSize) dom.style.fontSize = util.toPX(style.fontSize);
         if (style.fontWeight) dom.style.fontWeight = style.fontWeight.toString();
         if(style.italic) dom.style.fontStyle = 'italic';
-        if (style.letterSpacing) {
+        if (typeof style.letterSpacing !== 'undefined') {
             dom.style.letterSpacing = util.toPX(style.letterSpacing);
         }
         if (style.lineHeightPx)

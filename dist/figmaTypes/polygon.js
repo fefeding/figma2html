@@ -64,9 +64,29 @@ export class PolygonConverter extends BaseConverter {
     }
     // 处理边框
     async convertStrokes(node, dom, option) {
+        const polygon = dom.children[1];
         if (node.strokes && node.strokes.length) {
-            const polygon = dom.children[1];
-            await super.convertStrokes(node, polygon, option);
+            for (const stroke of node.strokes) {
+                if (stroke.visible === false)
+                    continue;
+                if (stroke.color) {
+                    if (typeof stroke.opacity !== 'undefined')
+                        stroke.color.a = stroke.opacity;
+                    polygon.attributes['stroke'] = util.colorToString(stroke.color, 255);
+                }
+            }
+            if (node.strokeWeight) {
+                if (dom.style.outlineColor)
+                    dom.style.outlineWidth = util.toPX(node.strokeWeight);
+                if (dom.style.borderImageSource)
+                    dom.style.borderImageWidth = util.toPX(node.strokeWeight);
+            }
+            if (node.strokeDashes && node.strokeDashes.length) {
+                dom.style.outlineStyle = 'dashed';
+            }
+        }
+        if (node.strokeWeight) {
+            polygon.attributes['stroke-width'] = node.strokeWeight.toString();
         }
         return dom;
     }

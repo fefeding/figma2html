@@ -110,7 +110,7 @@ export class BaseConverter {
             dom.style.fontWeight = style.fontWeight.toString();
         if (style.italic)
             dom.style.fontStyle = 'italic';
-        if (style.letterSpacing) {
+        if (typeof style.letterSpacing !== 'undefined') {
             dom.style.letterSpacing = util.toPX(style.letterSpacing);
         }
         if (style.lineHeightPx)
