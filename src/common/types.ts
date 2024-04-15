@@ -888,6 +888,7 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
 };
 
 export declare type ConvertNodeOption = {
+    expandToPage?: boolean;// 是否展开到页面级别的绝对定位
     images?: {[key: string]: string} ;
     getImage?: (key: string)=>Promise<string>;
 }
@@ -1011,6 +1012,7 @@ export declare type DomNode = {
     type: DomNodeType;
     style: CSSStyleDeclaration;
     data: IJElementData;
+    isElement?: boolean;
     transform?: IStyleTransform;
     visible?: boolean;
     preserveRatio?: boolean;
@@ -1031,5 +1033,5 @@ export declare type NodeToDomOption = {
 export interface NodeConverter<NType extends NodeType = NodeType> {
     // 生成节点对象
     createDomNode(type: DomNodeType, option?: DomNode): DomNode;
-    convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node, option?: ConvertNodeOption) => Promise<DomNode>;
+    convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) => Promise<DomNode>;
 }

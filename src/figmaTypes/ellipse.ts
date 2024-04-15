@@ -4,7 +4,7 @@ import { util } from 'j-design-util';
 import BaseConverter from './baseNode';
 
 export class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
-    async convert(node:  Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
+    async convert(node:  Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) {
         dom.type = 'svg';
         let ellipse = this.createDomNode('ellipse');
 
@@ -14,7 +14,7 @@ export class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
         dom.children.push(ellipse);
 
         // svg外转用定位和大小，其它样式都给子元素
-        dom =  await super.convert(node, dom, parentNode, option);
+        dom =  await super.convert(node, dom, parentNode, page, option);
         ellipse.bounds = dom.bounds;
         return dom;
     }

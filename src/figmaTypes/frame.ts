@@ -3,7 +3,7 @@ import type { Node, NodeType, DomNode, ConvertNodeOption } from '../common/types
 import BaseConverter from './baseNode';
 
 export class FRAMEConverter extends BaseConverter<'FRAME'> {
-    async convert(node:  Node<'FRAME'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
+    async convert(node:  Node<'FRAME'>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) {
         
         if(parentNode && parentNode.type === 'CANVAS') {
             dom.style.overflow = 'hidden';
@@ -26,7 +26,7 @@ export class FRAMEConverter extends BaseConverter<'FRAME'> {
                 }
             }
         }
-        return super.convert(node, dom, parentNode, option);
+        return super.convert(node, dom, parentNode, page, option);
     }
 }
 

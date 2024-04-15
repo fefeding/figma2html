@@ -3,7 +3,7 @@ import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSo
 import { util, type Point } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
-    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
+    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) {
         dom.style = dom.style || {} as CSSStyleDeclaration;
 
         // 位置
@@ -17,8 +17,13 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             dom.bounds.width = node.absoluteBoundingBox.width;
             dom.bounds.height = node.absoluteBoundingBox.height;
 
+            // 优先相对于页面坐标, isElement是相于它的父级的
+            if(page && !dom.isElement) {
+                dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - page.absoluteBoundingBox.x; 
+                dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - page.absoluteBoundingBox.y; 
+            }
             // 相对于父位置
-            if(parentNode && parentNode.absoluteBoundingBox) {
+            else if(parentNode && parentNode.absoluteBoundingBox) {
                 dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x; 
                 dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y; 
             }

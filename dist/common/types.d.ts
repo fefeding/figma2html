@@ -871,6 +871,7 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     document?: DOCUMENT;
 };
 export declare type ConvertNodeOption = {
+    expandToPage?: boolean;
     images?: {
         [key: string]: string;
     };
@@ -967,6 +968,7 @@ export declare type DomNode = {
     type: DomNodeType;
     style: CSSStyleDeclaration;
     data: IJElementData;
+    isElement?: boolean;
     transform?: IStyleTransform;
     visible?: boolean;
     preserveRatio?: boolean;
@@ -984,6 +986,6 @@ export declare type NodeToDomOption = {
 };
 export interface NodeConverter<NType extends NodeType = NodeType> {
     createDomNode(type: DomNodeType, option?: DomNode): DomNode;
-    convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node, option?: ConvertNodeOption) => Promise<DomNode>;
+    convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) => Promise<DomNode>;
 }
 export {};

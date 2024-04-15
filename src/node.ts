@@ -1,13 +1,13 @@
 
-import type { Node, DomNode, NodeConverter, NodeToDomOption, ConvertNodeOption, IJElementData } from '../common/types';
-import BaseConverter from './baseNode';
-import DocumentConverter from './document';
-import PageConverter from './page';
-import FrameConverter from './frame';
-//import GroupConverter from './group';
-import TextConverter from './text';
-import EllipseConverter from './ellipse';
-import RectangleConverter from './rectangle';
+import type { Node, DomNode, NodeConverter, NodeToDomOption, ConvertNodeOption, IJElementData } from './common/types';
+import BaseConverter from './figmaTypes/baseNode';
+import DocumentConverter from './figmaTypes/document';
+import PageConverter from './figmaTypes/page';
+import FrameConverter from './figmaTypes/frame';
+//import GroupConverter from './figmaTypes/group';
+import TextConverter from './figmaTypes/text';
+import EllipseConverter from './figmaTypes/ellipse';
+import RectangleConverter from './figmaTypes/rectangle';
 
 const frameConverter = new FrameConverter();
 const ConverterMaps = {
@@ -22,18 +22,20 @@ const ConverterMaps = {
 } as { [key: string]: NodeConverter};
 
 // 转node为html结构对象
-export async function convert(node: Node, parentNode?: Node, option?: ConvertNodeOption): Promise<DomNode> {
+export async function convert(node: Node, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption): Promise<DomNode> {
     // 如果是根，则返回document
     if(node.document) {
-        const docDom = await convert(node.document, node, option);
+        const docDom = await convert(node.document, node, page, option);
         return docDom;
     }
+
+    if(node.visible === false) return null;
    
     const dom = ConverterMaps.BASE.createDomNode('div', {
         id: node.id,
         name: node.name,
         type: 'div',
-        visible: node.visible === false? false: true,
+        visible: true,
         data: {} as IJElementData,
         style: {
             // 默认采用绝对定位
@@ -41,16 +43,25 @@ export async function convert(node: Node, parentNode?: Node, option?: ConvertNod
         } as CSSStyleDeclaration,
         children: [] as Array<DomNode>,
         figmaData: node,
-    });    
+    });   
+    // 普通元素，不可当作容器
+    dom.isElement = ['VECTOR', 'BOOLEAN', 'BOOLEAN_OPERATION', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE'].includes(node.type) || (parentNode && parentNode.clipsContent);
 
     const converter = ConverterMaps[node.type] || ConverterMaps.BASE;
-    if(converter) await converter.convert(node, dom, parentNode, option);
+    if(converter) await converter.convert(node, dom, parentNode, page, option);
+
+    if(!page && node.type === 'FRAME' && option?.expandToPage) page = dom;// 当前节点开始，为页面模板
+    else if(page) {
+        // 没有显示意义的div不处理
+        if(!dom.isElement) page.children.push(dom);
+    } 
 
     if(node.children && node.children.length) {
         for(const child of node.children) {
             //if(child.isMask) continue;
-            const c = await convert(child, node, option);            
-            dom.children.push(c);
+            const c = await convert(child, node, page, option);   
+            if(!c) continue;         
+            if(!page || c.isElement) dom.children.push(c);
         }
     }
     return dom;

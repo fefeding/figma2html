@@ -2,14 +2,14 @@ import { PaintType, } from '../common/types';
 import { util } from 'j-design-util';
 import BaseConverter from './baseNode';
 export class ELLIPSEConverter extends BaseConverter {
-    async convert(node, dom, parentNode, option) {
+    async convert(node, dom, parentNode, page, option) {
         dom.type = 'svg';
         let ellipse = this.createDomNode('ellipse');
         const defs = this.createDomNode('defs');
         dom.children.push(defs);
         dom.children.push(ellipse);
         // svg外转用定位和大小，其它样式都给子元素
-        dom = await super.convert(node, dom, parentNode, option);
+        dom = await super.convert(node, dom, parentNode, page, option);
         ellipse.bounds = dom.bounds;
         return dom;
     }

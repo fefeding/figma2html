@@ -4,10 +4,10 @@ import { util } from 'j-design-util';
 import BaseConverter from './baseNode';
 
 export class TEXTConverter extends BaseConverter<'TEXT'> {
-    async convert(node:  Node<'TEXT'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
+    async convert(node:  Node<'TEXT'>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) {
         dom.type = 'span';
         if(node.characters) dom.text = dom.data.text = node.characters;
-        const res = await super.convert(node, dom, parentNode, option);    
+        const res = await super.convert(node, dom, parentNode, page, option);    
 
         //dom.style.letterSpacing = dom.style.letterSpacing || '1px';
         /*if(dom.style.letterSpacing) {
@@ -50,7 +50,7 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
             for(; index<node.characterStyleOverrides.length; index++) {
                 const s = node.characterStyleOverrides[index];
                 const f = text[index];
-                if(!s || !f) continue;
+                if(!f) continue;
                 const fDom = this.createDomNode('span');
                 fDom.text = f;
                 fDom.style.position = 'relative';// 连续字符不能用绝对定位

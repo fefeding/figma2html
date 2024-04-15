@@ -2,11 +2,11 @@ import { PaintType, PaintSolidScaleMode } from '../common/types';
 import { util } from 'j-design-util';
 import BaseConverter from './baseNode';
 export class TEXTConverter extends BaseConverter {
-    async convert(node, dom, parentNode, option) {
+    async convert(node, dom, parentNode, page, option) {
         dom.type = 'span';
         if (node.characters)
             dom.text = dom.data.text = node.characters;
-        const res = await super.convert(node, dom, parentNode, option);
+        const res = await super.convert(node, dom, parentNode, page, option);
         //dom.style.letterSpacing = dom.style.letterSpacing || '1px';
         /*if(dom.style.letterSpacing) {
             const v = util.toNumber(dom.style.letterSpacing);
@@ -45,7 +45,7 @@ export class TEXTConverter extends BaseConverter {
             for (; index < node.characterStyleOverrides.length; index++) {
                 const s = node.characterStyleOverrides[index];
                 const f = text[index];
-                if (!s || !f)
+                if (!f)
                     continue;
                 const fDom = this.createDomNode('span');
                 fDom.text = f;
