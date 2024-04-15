@@ -986,6 +986,7 @@ export declare type NodeToDomOption = {
 };
 export interface NodeConverter<NType extends NodeType = NodeType> {
     createDomNode(type: DomNodeType, option?: DomNode): DomNode;
+    isEmptyDom(dom: DomNode): boolean;
     convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) => Promise<DomNode>;
 }
 export {};

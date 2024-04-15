@@ -294,6 +294,25 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         return dom;
     }
 
+    // 是否是空的dom节点
+    isEmptyDom(dom: DomNode) {
+        if(dom.children && dom.children.length) return false;
+        if(dom.text) return false;
+        if(dom.type !== 'div') return false;
+        if(dom.style.filter) return false;
+        if(dom.style.borderImageSource || dom.style.backgroundImage || dom.style.background) return false;
+        if(dom.style.backgroundColor && !this.isTransparentColor(dom.style.backgroundColor)) return false;
+        return true;
+    }
+
+    // 是否是透明色
+    isTransparentColor(color) {
+        if(color == 'transparent') return true;
+        if(color === 'rgba(0,0,0,0)' || /rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*0\)/.test(color)) return true;
+        if(typeof color === 'object' && 'a' in color && color.a === 0) return true;
+        return false;
+    }
+
     // 转换线性渐变
     convertLinearGradient(gradient: Paint, dom?: DomNode) {
         const handlePositions = gradient.gradientHandlePositions;

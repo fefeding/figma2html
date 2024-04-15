@@ -57,6 +57,10 @@ export async function convert(node, parentNode, page, option) {
             const c = await convert(child, node, page, option);
             if (!c)
                 continue;
+            if (ConverterMaps.BASE.isEmptyDom(c)) {
+                console.log('empty dom', c);
+                continue;
+            }
             if (!page || c.isElement)
                 dom.children.push(c);
         }

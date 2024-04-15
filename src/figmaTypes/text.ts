@@ -17,33 +17,23 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
         // 如果行高好高度一致,则表示单行文本，可以不指定宽度
         if(dom.bounds?.height < node.style?.fontSize * 2) {           
 
-            const span = document.createElement('span');
-            Object.assign(span.style, dom.style);
-            span.style.width = 'auto';
-            span.style.position = 'absolute';
-            span.innerText = dom.text;
-            span.style.visibility = 'hidden';
-            document.body.appendChild(span);
-            let w = span.offsetWidth || span.clientWidth;
-            if(dom.style.letterSpacing) {
-                const v = util.toNumber(dom.style.letterSpacing);
-                w += v;
-            }
-            document.body.removeChild(span);
+            const w = this.testTextWidth(dom);
             dom.data.width = Math.max(w, util.toNumber(dom.data.width));
         }
         else {
             //dom.style.minWidth = util.toPX(dom.data.width);
             dom.data.width = dom.bounds.width;
         }
-        dom.style.width = util.toPX(dom.data.width);
 
         await this.convertCharacterStyleOverrides(node, res, option);// 处理分字样式
+
+        dom.style.width = util.toPX(dom.data.width);
         return res;
     }
 
     // 解析字体多样式
     async convertCharacterStyleOverrides(node: Node<'TEXT'>, dom: DomNode, option?: ConvertNodeOption) {
+        let width = 0;
         if(node.characterStyleOverrides && node.characterStyleOverrides.length && node.styleOverrideTable) {
             const text = dom.text || '';
             let index = 0;
@@ -60,16 +50,22 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
                     await this.convertStyle(style, fDom, option);
                 }
                 dom.children.push(fDom);
+                const w = this.testTextWidth(fDom);
+                width += w;
             }
             // 还有未处理完的，则加到后面
             if(text.length > index) {
                 const fDom = this.createDomNode('span');
                 fDom.text = text.substring(index);
                 dom.children.push(fDom);
+                const w = this.testTextWidth(fDom);
+                width += w;
             }
             dom.text = '';
             dom.type = 'div';
         }
+        // 这种方式文本宽度需要重新计算
+        dom.data.width = Math.max(width, util.toNumber(dom.data.width));
     }
     
     // 处理填充, 文本的fill就是字体的颜色
@@ -130,6 +126,24 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
             }     
         } 
         return dom;     
+    }
+
+    // 测试字宽度
+    testTextWidth(dom: DomNode) {
+        const span = document.createElement('span');
+        Object.assign(span.style, dom.style);
+        span.style.width = 'auto';
+        span.style.position = 'absolute';
+        span.innerText = dom.text;
+        span.style.visibility = 'hidden';
+        document.body.appendChild(span);
+        let w = span.offsetWidth || span.clientWidth;
+        if(dom.style.letterSpacing) {
+            const v = util.toNumber(dom.style.letterSpacing);
+            w += v;
+        }
+        document.body.removeChild(span);
+        return w;
     }
 }
 

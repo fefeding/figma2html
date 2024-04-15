@@ -60,10 +60,15 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
         for(const child of node.children) {
             //if(child.isMask) continue;
             const c = await convert(child, node, page, option);   
-            if(!c) continue;         
+            if(!c) continue;    
+            if(ConverterMaps.BASE.isEmptyDom(c)) {
+                console.log('empty dom', c);
+                continue;
+            }     
             if(!page || c.isElement) dom.children.push(c);
         }
     }
+    
     return dom;
 }
 

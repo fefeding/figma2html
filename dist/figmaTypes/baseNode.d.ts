@@ -7,6 +7,8 @@ export declare class BaseConverter<NType extends NodeType = NodeType> implements
     convertEffects(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): Promise<DomNode>;
     convertFills(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): Promise<DomNode>;
     convertStrokes(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption): Promise<DomNode>;
+    isEmptyDom(dom: DomNode): boolean;
+    isTransparentColor(color: any): boolean;
     convertLinearGradient(gradient: Paint, dom?: DomNode): string;
     convertRadialGradient(gradient: Paint, dom?: DomNode): string;
     getGradientSize(gradientHandlePositions: Vector[]): {

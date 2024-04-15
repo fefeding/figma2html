@@ -1033,5 +1033,7 @@ export declare type NodeToDomOption = {
 export interface NodeConverter<NType extends NodeType = NodeType> {
     // 生成节点对象
     createDomNode(type: DomNodeType, option?: DomNode): DomNode;
+    // 是否是空的dom节点
+    isEmptyDom(dom: DomNode): boolean;
     convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) => Promise<DomNode>;
 }
