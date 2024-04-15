@@ -1,5 +1,5 @@
 
-import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint, TypeStyle } from '../common/types';
+import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint, TypeStyle, StringKeyValue } from '../common/types';
 import { util, type Point } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
@@ -97,6 +97,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         const dom = {
             data: {} as IJElementData,
             style: {} as CSSStyleDeclaration,
+            attributes: {} as StringKeyValue,
             children: [] as Array<DomNode>,
             ...option,
             type: type,

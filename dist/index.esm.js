@@ -1125,6 +1125,7 @@ class BaseConverter {
         const dom = {
             data: {},
             style: {},
+            attributes: {},
             children: [],
             ...option,
             type: type,
@@ -1734,17 +1735,31 @@ class TEXTConverter extends BaseConverter {
     }
 }
 
-class ELLIPSEConverter extends BaseConverter {
+class PolygonConverter extends BaseConverter {
+    // 多边形标签名
+    polygonName = 'polygon';
     async convert(node, dom, parentNode, page, option) {
         dom.type = 'svg';
-        let ellipse = this.createDomNode('ellipse');
+        let polygon = this.createDomNode(this.polygonName);
         const defs = this.createDomNode('defs');
         dom.children.push(defs);
-        dom.children.push(ellipse);
+        dom.children.push(polygon);
         // svg外转用定位和大小，其它样式都给子元素
         dom = await super.convert(node, dom, parentNode, page, option);
-        ellipse.bounds = dom.bounds;
+        polygon.bounds = dom.bounds;
+        // 生成路径
+        this.createPolygonPath(polygon, node);
         return dom;
+    }
+    // 生成多边形路径
+    createPolygonPath(dom, node) {
+        const points = [
+            [0, 0].join(','),
+            [dom.bounds.width, 0].join(','),
+            [dom.bounds.width, dom.bounds.height].join(','),
+            [0, dom.bounds.height].join(','),
+        ];
+        dom.attributes['points'] = points.join(' ');
     }
     // 处理填充
     async convertFills(node, dom, option) {
@@ -1845,6 +1860,18 @@ class ELLIPSEConverter extends BaseConverter {
     }
 }
 
+class ELLIPSEConverter extends PolygonConverter {
+    // 多边形标签名
+    polygonName = 'ellipse';
+    // 生成多边形路径
+    createPolygonPath(dom, node) {
+        dom.attributes['cx'] = '50%';
+        dom.attributes['cy'] = '50%';
+        dom.attributes['rx'] = '50%';
+        dom.attributes['ry'] = '50%';
+    }
+}
+
 class FRAMEConverter extends BaseConverter {
     async convert(node, dom, parentNode, page, option) {
         // 如果是填充的图5片，则直接用img
@@ -1863,6 +1890,7 @@ const ConverterMaps = {
     'TEXT': new TEXTConverter(),
     'DOCUMENT': new DocumentConverter(),
     'CANVAS': new PageConverter(),
+    'REGULAR_POLYGON': new PolygonConverter(),
     'ELLIPSE': new ELLIPSEConverter(),
     'RECTANGLE': new FRAMEConverter(),
 };
@@ -1959,10 +1987,6 @@ async function renderSvg(node, option) {
 }
 async function renderEllipse(node, option) {
     const ellipse = await renderSvgElement(node, option);
-    ellipse.setAttribute('cx', '50%');
-    ellipse.setAttribute('cy', '50%');
-    ellipse.setAttribute('rx', '50%');
-    ellipse.setAttribute('ry', '50%');
     ellipse.setAttribute('fill', node.fill || node.style.background || node.style.backgroundColor);
     return ellipse;
 }
@@ -1986,6 +2010,13 @@ async function renderElement(node, option, dom) {
         dom.src = node.url;
     if (node.visible === false)
         dom.style.display = 'none';
+    if (node.attributes) {
+        for (const name in node.attributes) {
+            if (typeof node.attributes[name] !== 'undefined' && typeof name === 'string') {
+                dom.setAttribute(name, node.attributes[name]);
+            }
+        }
+    }
     if (node.name)
         dom.setAttribute('data-name', node.name);
     if (node.id)

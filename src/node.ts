@@ -6,6 +6,7 @@ import PageConverter from './figmaTypes/page';
 import FrameConverter from './figmaTypes/frame';
 //import GroupConverter from './figmaTypes/group';
 import TextConverter from './figmaTypes/text';
+import PolygonConverter from './figmaTypes/polygon';
 import EllipseConverter from './figmaTypes/ellipse';
 import RectangleConverter from './figmaTypes/rectangle';
 
@@ -17,6 +18,7 @@ const ConverterMaps = {
     'TEXT': new TextConverter(),
     'DOCUMENT': new DocumentConverter(),
     'CANVAS': new PageConverter(),
+    'REGULAR_POLYGON': new PolygonConverter(),
     'ELLIPSE': new EllipseConverter(),
     'RECTANGLE': new RectangleConverter(),
 } as { [key: string]: NodeConverter};
@@ -121,10 +123,7 @@ async function renderSvg(node: DomNode, option?: NodeToDomOption) {
 
 async function renderEllipse(node: DomNode, option?: NodeToDomOption) {
     const ellipse = await renderSvgElement(node, option);
-    ellipse.setAttribute('cx', '50%');
-    ellipse.setAttribute('cy', '50%');
-    ellipse.setAttribute('rx', '50%');
-    ellipse.setAttribute('ry', '50%');
+    
     ellipse.setAttribute('fill', node.fill || node.style.background || node.style.backgroundColor);
     return ellipse;
 }
@@ -151,6 +150,14 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
     if(node.type === 'img' && node.url) dom.src = node.url;
 
     if(node.visible === false) dom.style.display = 'none';
+
+    if(node.attributes) {
+        for(const name in node.attributes) {
+            if(typeof node.attributes[name] !== 'undefined' && typeof name === 'string') {
+                dom.setAttribute(name, node.attributes[name]);
+            }
+        }
+    }
 
     if(node.name) dom.setAttribute('data-name', node.name);
     if(node.id) dom.setAttribute('id', node.id);

@@ -60,6 +60,9 @@ export declare enum LineHeightUnit {
     'FONT_SIZE_%' = "FONT_SIZE_%",
     'INTRINSIC_%' = "INTRINSIC_%"
 }
+export declare type StringKeyValue = {
+    [key: string]: string;
+};
 /**
  * Map<StyleType, String>
  * A mapping of a StyleType to style ID (see Style) of styles present on this node. The style ID can be used to look up more information about the style in the top-level styles field.
@@ -872,12 +875,10 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
 };
 export declare type ConvertNodeOption = {
     expandToPage?: boolean;
-    images?: {
-        [key: string]: string;
-    };
+    images?: StringKeyValue;
     getImage?: (key: string) => Promise<string>;
 };
-export type DomNodeType = 'div' | 'img' | 'span' | 'document' | 'page' | 'frame' | 'ellipse' | 'svg' | 'defs' | 'linearGradient' | 'radialGradient' | 'stop';
+export type DomNodeType = 'div' | 'img' | 'span' | 'document' | 'page' | 'frame' | 'ellipse' | 'svg' | 'defs' | 'linearGradient' | 'radialGradient' | 'stop' | 'polygon';
 export declare type SvgLinearGradientDom = {
     id: string;
     x1?: string;
@@ -968,6 +969,7 @@ export declare type DomNode = {
     type: DomNodeType;
     style: CSSStyleDeclaration;
     data: IJElementData;
+    attributes?: StringKeyValue;
     isElement?: boolean;
     transform?: IStyleTransform;
     visible?: boolean;

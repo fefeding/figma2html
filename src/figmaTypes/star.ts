@@ -3,12 +3,11 @@ import { Node, DomNode, ConvertNodeOption, PaintType, PaintSolidScaleMode, Paint
 import { util } from 'j-design-util';
 import PolygonConverter from './polygon';
 
-export class ELLIPSEConverter extends PolygonConverter<'ELLIPSE'> {
-    // 多边形标签名
-    polygonName: DomNodeType = 'ellipse';    
+// 五角星
+export class StarConverter extends PolygonConverter<'STAR'> {
 
     // 生成多边形路径
-    createPolygonPath(dom: DomNode, node:  Node<'ELLIPSE'>) {
+    createPolygonPath(dom: DomNode, node:  Node<'STAR'>) {
         dom.attributes['cx'] = '50%';
         dom.attributes['cy'] = '50%';
         dom.attributes['rx'] = '50%';
@@ -16,4 +15,4 @@ export class ELLIPSEConverter extends PolygonConverter<'ELLIPSE'> {
     }
 }
 
-export default ELLIPSEConverter;
+export default StarConverter;
