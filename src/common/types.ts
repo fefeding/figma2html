@@ -586,6 +586,28 @@ export interface FRAME {
     };
     /** Position of stroke relative to vector outline, as a string enum */
     strokeAlign: StrokeAlign;
+    /**
+     * A string enum with values describing the end caps of vector paths.
+NONE
+ROUND
+SQUARE
+LINE_ARROW
+TRIANGLE_ARROW
+DIAMOND_FILLED
+CIRCLE_FILLED
+TRIANGLE_FILLED
+WASHI_TAPE_1
+WASHI_TAPE_2
+WASHI_TAPE_3
+WASHI_TAPE_4
+WASHI_TAPE_5
+WASHI_TAPE_6
+     */
+    strokeCap?: string;
+    /**
+     * A string enum with value of "MITER", "BEVEL", or "ROUND", describing how corners in vector paths are rendered.
+     */
+    strokeJoin?: string;
     /** Radius of each corner of the frame if a single radius is set for all corners */
     cornerRadius: number;
     /** Array of length 4 of the radius of each corner of the rectangle, starting in the top left and proceeding clockwise */
@@ -871,6 +893,8 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     preserveRatio?: boolean;
     "strokeWeight"?: number;
     "strokeAlign"?: StrokeAlign;
+    strokeCap?: string;
+    strokeJoin?: string;
     strokeDashes?: Vector[];
     cornerRadius?: number;
     rectangleCornerRadii?: [number, number, number, number];

@@ -6,6 +6,7 @@ export class PolygonConverter extends BaseConverter {
     polygonName = 'polygon';
     async convert(node, dom, parentNode, page, option, container) {
         let polygon = dom;
+        let defs;
         // 如果 没有生成父的svg标签，则当前dom就是，然后再生成子元素
         if (!container) {
             container = dom;
@@ -15,27 +16,31 @@ export class PolygonConverter extends BaseConverter {
                 figmaData: node
             });
             polygon.id = node.id || '';
-            const defs = this.createDomNode('defs');
+            defs = this.createDomNode('defs');
             dom.children.push(defs);
-            dom.children.push(polygon);
         }
         else {
-            let defs = container.children[0];
+            defs = container.children[0];
             if (!defs) {
                 defs = this.createDomNode('defs');
                 container.children.push(defs);
             }
             polygon.type = this.polygonName;
-            // 如果是蒙板
-            if (node.isMask) {
-                const mask = this.createDomNode('mask');
-                mask.id = 'mask_' + util.uuid();
-                defs.children.push(mask);
-                mask.children.push(polygon);
-                polygon.isMask = true;
-            }
-            else if (!container.children.includes(polygon))
+        }
+        // 如果是蒙板
+        if (node.isMask) {
+            const mask = this.createDomNode('mask');
+            mask.id = 'mask_' + util.uuid();
+            defs.children.push(mask);
+            mask.children.push(polygon);
+            polygon.isMask = true;
+        }
+        else {
+            if (container && !container.children.includes(polygon))
                 container.children.push(polygon);
+            else if (!container) {
+                dom.children.push(polygon);
+            }
         }
         polygon.style.fillRule = 'nonzero';
         // svg外转用定位和大小，其它样式都给子元素
@@ -57,6 +62,10 @@ export class PolygonConverter extends BaseConverter {
         /*if(node.strokeDashes) {
             polygon.attributes['stroke-dasharray'] = node.strokeDashes.join(',');
         }*/
+        if (dom.type === 'svg') {
+            delete dom.style.borderRadius;
+            delete dom.style.border;
+        }
         // 生成路径
         this.createPolygonPath(polygon, node, container);
         return dom;
@@ -86,8 +95,10 @@ export class PolygonConverter extends BaseConverter {
     getMask(container) {
         const defs = container.children[0];
         if (defs.children?.length) {
-            const mask = defs.children[defs.children.length - 1];
-            return mask.type === 'mask' ? mask : null;
+            for (const child of defs.children) {
+                if (child.type === 'mask')
+                    return child;
+            }
         }
         return null;
     }
@@ -138,6 +149,9 @@ export class PolygonConverter extends BaseConverter {
                     }
                 }
             }
+            // 默认透明
+            if (!polygon.style.fill)
+                polygon.style.fill = 'transparent';
         }
         return dom;
     }
@@ -166,6 +180,15 @@ export class PolygonConverter extends BaseConverter {
         }
         if (node.strokeWeight) {
             polygon.attributes['stroke-width'] = node.strokeWeight.toString();
+        }
+        if (node.strokeAlign) {
+            //polygon.attributes['stroke-align'] = node.strokeAlign;
+        }
+        if (node.strokeCap) {
+            polygon.style.strokeLinecap = node.strokeCap;
+        }
+        if (node.strokeJoin) {
+            polygon.style.strokeLinejoin = node.strokeJoin;
         }
         return dom;
     }

@@ -51,6 +51,7 @@ export class BaseConverter {
                 dom.style.textAlign = { 'SCALE': 'center', 'LEFT_RIGHT': 'justify-all' }[node.constraints.vertical];
             }
         }
+        dom.style.transformOrigin = 'center center';
         // 旋转
         if (node.rotation) {
             dom.data.rotation = node.rotation;

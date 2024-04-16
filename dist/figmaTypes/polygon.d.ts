@@ -9,7 +9,7 @@ export declare class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'
     };
     createPolygonPath(dom: DomNode, node: Node<NType>, container?: DomNode): void;
     getMask(container: DomNode): DomNode;
-    getPolygon(node: Node<NType>, dom: DomNode): any;
+    getPolygon(node: Node<NType>, dom: DomNode): DomNode;
     convertFills(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;
     convertStrokes(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;
     convertLinearGradient(gradient: Paint, dom?: DomNode, container?: DomNode): string;

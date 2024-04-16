@@ -20,7 +20,9 @@ export class RECTANGLEConverter extends PolygonConverter<'RECTANGLE'> {
         //dom.attributes['width'] = dom.bounds.width + '';
         //dom.attributes['height'] = dom.bounds.height + '';
         const path = [];
-        const [r1, r2, r3, r4] = node.rectangleCornerRadii || [0,0,0,0];
+        const defaultRadius = node.cornerRadius||0;
+        const [r1, r2, r3, r4] = node.rectangleCornerRadii || [ defaultRadius, defaultRadius, defaultRadius, defaultRadius];
+        
         if(r1) {
             path.push('M', pos.x, pos.y + r1);
             // 圆弧
