@@ -9,6 +9,7 @@ import TextConverter from './figmaTypes/text';
 import PolygonConverter from './figmaTypes/polygon';
 import StarConverter from './figmaTypes/star';
 import EllipseConverter from './figmaTypes/ellipse';
+import LineConverter from './figmaTypes/line';
 import RectangleConverter from './figmaTypes/rectangle';
 
 const frameConverter = new FrameConverter();
@@ -23,6 +24,8 @@ const ConverterMaps = {
     'ELLIPSE': new EllipseConverter(),
     'STAR': new StarConverter(),
     'RECTANGLE': new RectangleConverter(),
+    'LINE': new LineConverter(),
+    'VECTOR': new RectangleConverter(),
 } as { [key: string]: NodeConverter};
 
 // 转node为html结构对象
@@ -49,7 +52,7 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
         figmaData: node,
     });   
     // 普通元素，不可当作容器
-    dom.isElement = ['VECTOR', 'BOOLEAN', 'BOOLEAN_OPERATION', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE'].includes(node.type) || (parentNode && parentNode.clipsContent);
+    dom.isElement = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE'].includes(node.type) || (parentNode && parentNode.clipsContent);
 
     const isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
     const svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
@@ -89,23 +92,31 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
     if(converter) await converter.convert(node, dom, parentNode, page, option, container);
 
     if(!page && node.type === 'FRAME' && option?.expandToPage) page = dom;// 当前节点开始，为页面模板
-    else if(page && !container) {
+    else if(page && (!container || dom.type === 'svg')) {
         // 没有显示意义的div不处理
         if(!dom.isElement) page.children.push(dom);
     } 
 
     if(node.children && node.children.length) {
-        if(node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN') {
-            if(svgElements.includes(node.children[0].type)) node.children[0].isMask = true;
+        if(isSvg && (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN')) {
+           // if(svgElements.includes(node.children[0].type)) node.children[0].isMask = true;
         }
+
+        let lastChildDom = null;
         for(const child of node.children) {
-            const c = await convert(child, node, container || page, option, container);   
-            if(!c) continue;    
+            let parent = container;
+            // 如果是蒙板，则加入上一个SVG元素中
+            if(child.isMask && !parent && lastChildDom?.type === 'svg') {
+                parent = lastChildDom;
+            }
+            const c = await convert(child, node, parent || page, option, parent);   
+            if(!c) continue;   
+            lastChildDom = c; 
             if(ConverterMaps.BASE.isEmptyDom(c)) {
                 console.log('empty dom', c);
                 continue;
             }     
-            if(!dom.children.includes(c) && (!page || c.isElement)) dom.children.push(c);
+            if(!c.isMask && !dom.children.includes(c) && (!page || c.isElement)) dom.children.push(c);
         }
     }
     
@@ -157,8 +168,8 @@ async function renderPage(node: DomNode, option?: NodeToDomOption) {
 async function renderSvg(node: DomNode, option?: NodeToDomOption) {
     const svg = await renderSvgElement(node, option);
     
-    svg.setAttribute('width', node.bounds.width + '');
-    svg.setAttribute('height', node.bounds.height + '');
+    //svg.setAttribute('width', node.bounds.width + '');
+    //svg.setAttribute('height', node.bounds.height + '');
 
     return svg;
 }

@@ -7,6 +7,7 @@ import TextConverter from './figmaTypes/text';
 import PolygonConverter from './figmaTypes/polygon';
 import StarConverter from './figmaTypes/star';
 import EllipseConverter from './figmaTypes/ellipse';
+import LineConverter from './figmaTypes/line';
 import RectangleConverter from './figmaTypes/rectangle';
 const frameConverter = new FrameConverter();
 const ConverterMaps = {
@@ -20,9 +21,11 @@ const ConverterMaps = {
     'ELLIPSE': new EllipseConverter(),
     'STAR': new StarConverter(),
     'RECTANGLE': new RectangleConverter(),
+    'LINE': new LineConverter(),
+    'VECTOR': new RectangleConverter(),
 };
 // 转node为html结构对象
-export async function convert(node, parentNode, page, option) {
+export async function convert(node, parentNode, page, option, container) {
     // 如果是根，则返回document
     if (node.document) {
         const docDom = await convert(node.document, node, page, option);
@@ -44,28 +47,67 @@ export async function convert(node, parentNode, page, option) {
         figmaData: node,
     });
     // 普通元素，不可当作容器
-    dom.isElement = ['VECTOR', 'BOOLEAN', 'BOOLEAN_OPERATION', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE'].includes(node.type) || (parentNode && parentNode.clipsContent);
-    const converter = ConverterMaps[node.type] || ConverterMaps.BASE;
+    dom.isElement = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE'].includes(node.type) || (parentNode && parentNode.clipsContent);
+    const isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
+    const svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
+    // 容器可能是SVG
+    let isSvg = isContainer && !container;
+    // 容器下所有元素都是SVG元素，则认为是svg块
+    if (isSvg && node.children && node.children.length) {
+        for (const child of node.children) {
+            if (!svgElements.includes(child.type)) {
+                isSvg = false;
+                break;
+            }
+            // 已识别成图片的，不再处理成svg
+            if (child.type === 'RECTANGLE' && child.fills && child.fills.length && child.fills[0].type === 'IMAGE') {
+                isSvg = false;
+                break;
+            }
+        }
+    }
+    else {
+        isSvg = false;
+    }
+    if (isSvg) {
+        dom.type = 'svg';
+        container = dom;
+    }
+    let converter = ConverterMaps[node.type] || ConverterMaps.BASE;
+    // 已识别成图片的，不再处理成svg
+    if (node.type === 'RECTANGLE' && node.fills && node.fills.length && node.fills[0].type === 'IMAGE') {
+        dom.type = 'img';
+        converter = ConverterMaps.BASE;
+    }
     if (converter)
-        await converter.convert(node, dom, parentNode, page, option);
+        await converter.convert(node, dom, parentNode, page, option, container);
     if (!page && node.type === 'FRAME' && option?.expandToPage)
         page = dom; // 当前节点开始，为页面模板
-    else if (page) {
+    else if (page && (!container || dom.type === 'svg')) {
         // 没有显示意义的div不处理
         if (!dom.isElement)
             page.children.push(dom);
     }
     if (node.children && node.children.length) {
+        if (isSvg && (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN')) {
+            // if(svgElements.includes(node.children[0].type)) node.children[0].isMask = true;
+        }
+        let lastChildDom = null;
         for (const child of node.children) {
-            //if(child.isMask) continue;
-            const c = await convert(child, node, page, option);
+            let parent = container;
+            // 如果是蒙板，则加入上一个SVG元素中
+            if (child.isMask && !parent && lastChildDom?.type === 'svg') {
+                parent = lastChildDom;
+            }
+            const c = await convert(child, node, parent || page, option, parent);
             if (!c)
                 continue;
+            lastChildDom = c;
             if (ConverterMaps.BASE.isEmptyDom(c)) {
                 console.log('empty dom', c);
                 continue;
             }
-            if (!page || c.isElement)
+            if (!c.isMask && !dom.children.includes(c) && (!page || c.isElement))
                 dom.children.push(c);
         }
     }
@@ -84,11 +126,14 @@ export async function nodeToDom(node, option) {
             return await renderSvg(node, option);
         }
         case 'ellipse':
+        case 'line':
+        case 'path':
         case 'polygon': {
             return await renderEllipse(node, option);
         }
         case 'stop':
         case 'defs':
+        case 'mask':
         case 'linearGradient':
         case 'radialGradient': {
             return await renderSvgElement(node, option);
@@ -109,8 +154,8 @@ async function renderPage(node, option) {
 }
 async function renderSvg(node, option) {
     const svg = await renderSvgElement(node, option);
-    svg.setAttribute('width', node.bounds.width + '');
-    svg.setAttribute('height', node.bounds.height + '');
+    //svg.setAttribute('width', node.bounds.width + '');
+    //svg.setAttribute('height', node.bounds.height + '');
     return svg;
 }
 async function renderEllipse(node, option) {

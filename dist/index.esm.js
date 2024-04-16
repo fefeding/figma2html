@@ -1800,6 +1800,10 @@ class PolygonConverter extends BaseConverter {
         else if (mask) {
             polygon.style.mask = `url(#${mask.id})`;
         }
+        // 虚线
+        /*if(node.strokeDashes) {
+            polygon.attributes['stroke-dasharray'] = node.strokeDashes.join(',');
+        }*/
         // 生成路径
         this.createPolygonPath(polygon, node, container);
         return dom;
@@ -1836,8 +1840,6 @@ class PolygonConverter extends BaseConverter {
     }
     // 用id获取当前图形
     getPolygon(node, dom) {
-        if (dom.figmaData?.id === node.id)
-            return dom;
         if (dom.children && dom.children.length) {
             for (const child of dom.children) {
                 if (child.id === node.id || child.figmaData?.id === node.id)
@@ -1849,6 +1851,7 @@ class PolygonConverter extends BaseConverter {
                 }
             }
         }
+        //if(dom.figmaData?.id === node.id) return dom;
         return dom;
     }
     // 处理填充
@@ -1905,7 +1908,7 @@ class PolygonConverter extends BaseConverter {
                     dom.style.borderImageWidth = util.toPX(node.strokeWeight);
             }
             if (node.strokeDashes && node.strokeDashes.length) {
-                dom.style.outlineStyle = 'dashed';
+                polygon.attributes['stroke-dasharray'] = node.strokeDashes.join(',');
             }
         }
         if (node.strokeWeight) {
@@ -2075,6 +2078,32 @@ class ELLIPSEConverter extends PolygonConverter {
     }
 }
 
+class LINEConverter extends PolygonConverter {
+    polygonName = 'line';
+    async convert(node, dom, parentNode, page, option, container) {
+        const res = await super.convert(node, dom, parentNode, page, option, container);
+        if (dom.style.transform) {
+            //polygon.style.transform = dom.style.transform;
+            delete dom.style.transform;
+        }
+        delete dom.attributes['width'];
+        delete dom.style['width'];
+        delete dom.style['height'];
+        delete dom.attributes['height'];
+        delete dom.data['height'];
+        delete dom.data['height'];
+        return res;
+    }
+    // 生成多边形路径
+    createPolygonPath(dom, node, container) {
+        const pos = this.getPosition(dom, container);
+        dom.attributes['x1'] = pos.x + '';
+        dom.attributes['y1'] = pos.y + '';
+        dom.attributes['x2'] = (pos.x + dom.bounds.width) + '';
+        dom.attributes['y2'] = (pos.y + dom.bounds.height) + '';
+    }
+}
+
 class RECTANGLEConverter extends PolygonConverter {
     polygonName = 'path';
     async convert(node, dom, parentNode, page, option, container) {
@@ -2141,6 +2170,8 @@ const ConverterMaps = {
     'ELLIPSE': new ELLIPSEConverter(),
     'STAR': new StarConverter(),
     'RECTANGLE': new RECTANGLEConverter(),
+    'LINE': new LINEConverter(),
+    'VECTOR': new RECTANGLEConverter(),
 };
 // 转node为html结构对象
 async function convert(node, parentNode, page, option, container) {
@@ -2165,7 +2196,7 @@ async function convert(node, parentNode, page, option, container) {
         figmaData: node,
     });
     // 普通元素，不可当作容器
-    dom.isElement = ['VECTOR', 'BOOLEAN', 'BOOLEAN_OPERATION', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE'].includes(node.type) || (parentNode && parentNode.clipsContent);
+    dom.isElement = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE'].includes(node.type) || (parentNode && parentNode.clipsContent);
     const isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
     const svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
     // 容器可能是SVG
@@ -2201,25 +2232,29 @@ async function convert(node, parentNode, page, option, container) {
         await converter.convert(node, dom, parentNode, page, option, container);
     if (!page && node.type === 'FRAME' && option?.expandToPage)
         page = dom; // 当前节点开始，为页面模板
-    else if (page && !container) {
+    else if (page && (!container || dom.type === 'svg')) {
         // 没有显示意义的div不处理
         if (!dom.isElement)
             page.children.push(dom);
     }
     if (node.children && node.children.length) {
-        if (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN') {
-            if (svgElements.includes(node.children[0].type))
-                node.children[0].isMask = true;
-        }
+        if (isSvg && (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN')) ;
+        let lastChildDom = null;
         for (const child of node.children) {
-            const c = await convert(child, node, container || page, option, container);
+            let parent = container;
+            // 如果是蒙板，则加入上一个SVG元素中
+            if (child.isMask && !parent && lastChildDom?.type === 'svg') {
+                parent = lastChildDom;
+            }
+            const c = await convert(child, node, parent || page, option, parent);
             if (!c)
                 continue;
+            lastChildDom = c;
             if (ConverterMaps.BASE.isEmptyDom(c)) {
                 console.log('empty dom', c);
                 continue;
             }
-            if (!dom.children.includes(c) && (!page || c.isElement))
+            if (!c.isMask && !dom.children.includes(c) && (!page || c.isElement))
                 dom.children.push(c);
         }
     }
@@ -2266,8 +2301,8 @@ async function renderPage(node, option) {
 }
 async function renderSvg(node, option) {
     const svg = await renderSvgElement(node, option);
-    svg.setAttribute('width', node.bounds.width + '');
-    svg.setAttribute('height', node.bounds.height + '');
+    //svg.setAttribute('width', node.bounds.width + '');
+    //svg.setAttribute('height', node.bounds.height + '');
     return svg;
 }
 async function renderEllipse(node, option) {

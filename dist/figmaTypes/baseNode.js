@@ -1,7 +1,7 @@
 import { PaintType, PaintSolidScaleMode, EffectType } from '../common/types';
 import { util } from 'j-design-util';
 export class BaseConverter {
-    async convert(node, dom, parentNode, page, option) {
+    async convert(node, dom, parentNode, page, option, container) {
         dom.style = dom.style || {};
         // 位置
         dom.bounds = {
@@ -61,20 +61,22 @@ export class BaseConverter {
             dom.style.overflow = 'hidden';
         dom.preserveRatio = node.preserveRatio;
         // padding
-        for (const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
-            const v = node[padding];
-            if (v) {
-                dom.style[padding] = util.toPX(v);
-                if (['paddingLeft', 'paddingRight'].includes(padding))
-                    dom.bounds.width -= v;
-                else
-                    dom.bounds.height -= v;
+        if (dom.type !== 'svg') {
+            for (const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
+                const v = node[padding];
+                if (v) {
+                    dom.style[padding] = util.toPX(v);
+                    if (['paddingLeft', 'paddingRight'].includes(padding))
+                        dom.bounds.width -= v;
+                    else
+                        dom.bounds.height -= v;
+                }
             }
         }
-        await this.convertStyle(node, dom, option);
-        await this.convertFills(node, dom, option); // 解析fills
-        await this.convertStrokes(node, dom, option); // 边框
-        await this.convertEffects(node, dom, option); // 滤镜
+        await this.convertStyle(node, dom, option, container);
+        await this.convertFills(node, dom, option, container); // 解析fills
+        await this.convertStrokes(node, dom, option, container); // 边框
+        await this.convertEffects(node, dom, option, container); // 滤镜
         dom.data.width = dom.bounds.width;
         dom.data.height = dom.bounds.height;
         dom.style.width = util.toPX(dom.bounds.width).toString();
@@ -94,7 +96,7 @@ export class BaseConverter {
         return dom;
     }
     // 转换style
-    async convertStyle(node, dom, option) {
+    async convertStyle(node, dom, option, container) {
         // @ts-ignore
         if (node.type === 'BOOLEAN_OPERATION')
             return dom;
@@ -122,7 +124,7 @@ export class BaseConverter {
         return dom;
     }
     // 转换滤镜
-    async convertEffects(node, dom, option) {
+    async convertEffects(node, dom, option, container) {
         if (!node.isMaskOutline && node.effects) {
             dom.style.filter = dom.style.filter || '';
             for (const effect of node.effects) {
@@ -145,7 +147,7 @@ export class BaseConverter {
         return dom;
     }
     // 处理填充
-    async convertFills(node, dom, option) {
+    async convertFills(node, dom, option, container) {
         if (node.type === 'BOOLEAN_OPERATION')
             return dom;
         // isMaskOutline 如果为true则忽略填充样式
@@ -160,14 +162,14 @@ export class BaseConverter {
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.style.background = this.convertLinearGradient(fill, dom);
+                        dom.style.background = this.convertLinearGradient(fill, dom, container);
                         break;
                     }
                     // 径向性渐变
                     case PaintType.GRADIENT_DIAMOND:
                     case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.style.background = this.convertRadialGradient(fill, dom);
+                        dom.style.background = this.convertRadialGradient(fill, dom, container);
                         break;
                     }
                     // 图片
@@ -225,7 +227,7 @@ export class BaseConverter {
         return dom;
     }
     // 处理边框
-    async convertStrokes(node, dom, option) {
+    async convertStrokes(node, dom, option, container) {
         if (node.type === 'BOOLEAN_OPERATION')
             return dom;
         if (node.strokes && node.strokes.length) {
@@ -242,14 +244,14 @@ export class BaseConverter {
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.style.borderImageSource = this.convertLinearGradient(stroke, dom);
+                        dom.style.borderImageSource = this.convertLinearGradient(stroke, dom, container);
                         break;
                     }
                     // 径向性渐变
                     case PaintType.GRADIENT_DIAMOND:
                     case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.style.borderImageSource = this.convertRadialGradient(stroke, dom);
+                        dom.style.borderImageSource = this.convertRadialGradient(stroke, dom, container);
                         break;
                     }
                     // 图片
@@ -321,7 +323,7 @@ export class BaseConverter {
         return false;
     }
     // 转换线性渐变
-    convertLinearGradient(gradient, dom) {
+    convertLinearGradient(gradient, dom, container) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
         /**
@@ -400,7 +402,7 @@ export class BaseConverter {
         return linearGradient;
     }
     // 转换径向性渐变
-    convertRadialGradient(gradient, dom) {
+    convertRadialGradient(gradient, dom, container) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
         const radialGradient = `radial-gradient(${this.getRadialGradientPosition(handlePositions)}, ${this.getGradientStops(gradientStops)})`;

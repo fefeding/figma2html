@@ -46,7 +46,7 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
         // svg外转用定位和大小，其它样式都给子元素
         dom =  await super.convert(node, dom, parentNode, page, option, container);
         polygon.bounds = dom.bounds;
-
+        
         const mask = this.getMask(container);
         if(node.isMask) {            
             if(mask) {
@@ -59,6 +59,10 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
         else if(mask) {
             polygon.style.mask = `url(#${mask.id})`;
         }
+        // 虚线
+        /*if(node.strokeDashes) {
+            polygon.attributes['stroke-dasharray'] = node.strokeDashes.join(',');
+        }*/
 
         // 生成路径
         this.createPolygonPath(polygon, node, container);
@@ -101,7 +105,6 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
 
     // 用id获取当前图形
     getPolygon(node:  Node<NType>, dom: DomNode) {
-        if(dom.figmaData?.id === node.id) return dom;
         if(dom.children && dom.children.length) {
             for(const child of dom.children) {
                 if(child.id === node.id || child.figmaData?.id === node.id) return child;
@@ -111,6 +114,7 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
                 }
             }
         }
+        //if(dom.figmaData?.id === node.id) return dom;
         return dom;
     }
 
@@ -166,7 +170,7 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
                 if(dom.style.borderImageSource) dom.style.borderImageWidth = util.toPX(node.strokeWeight);
             }
             if(node.strokeDashes && node.strokeDashes.length) {
-                dom.style.outlineStyle = 'dashed';
+                polygon.attributes['stroke-dasharray'] = node.strokeDashes.join(',');
             }
         }
         if(node.strokeWeight) {
