@@ -7,11 +7,12 @@ import PolygonConverter from './polygon';
 export class StarConverter extends PolygonConverter<'STAR'> {
 
     // 生成多边形路径
-    createPolygonPath(dom: DomNode, node:  Node<'STAR'>) {
+    createPolygonPath(dom: DomNode, node:  Node<'STAR'>, container?: DomNode) {
+        const pos = this.getPosition(dom, container);
         const radius = Math.min(dom.bounds.width, dom.bounds.height) / 2;// 画五角星的半径
         const center = {
-            x: dom.bounds.width / 2,
-            y: dom.bounds.height / 2
+            x: dom.bounds.width / 2 + pos.x,
+            y: dom.bounds.height / 2 + pos.y
         };
         const point1 = [center.x, 0]; // 顶点
         const stepAngle = Math.PI * 2 / 5;// 圆分成五份

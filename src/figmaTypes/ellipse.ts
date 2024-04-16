@@ -8,7 +8,7 @@ export class ELLIPSEConverter extends PolygonConverter<'ELLIPSE'> {
     polygonName: DomNodeType = 'ellipse';  
     async convert(node:  Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode) {
         // 如果有角度信息，则用多边形来计算
-        if(node.arcData) {
+        if(node.arcData && (node.arcData.endingAngle - node.arcData.startingAngle < Math.PI * 2)) {
             this.polygonName = 'polygon';
         }
         else {
@@ -19,17 +19,19 @@ export class ELLIPSEConverter extends PolygonConverter<'ELLIPSE'> {
     }  
 
     // 生成多边形路径
-    createPolygonPath(dom: DomNode, node:  Node<'ELLIPSE'>) {
-        if(node.arcData) {
-            const center = {
-                x: dom.bounds.width / 2,
-                y: dom.bounds.height / 2
-            };
+    createPolygonPath(dom: DomNode, node:  Node<'ELLIPSE'>, container?: DomNode) {
+        const pos = this.getPosition(dom, container);
+        const center = {
+            x: dom.bounds.width / 2 + pos.x,
+            y: dom.bounds.height / 2 + pos.y
+        };
+
+        if(this.polygonName === 'polygon') {
             // 圆的半径
             let radius = Math.min(dom.bounds.width, dom.bounds.height) / 2;
             // 减去边框大小
             if(node.strokeWeight) {
-                radius -= node.strokeWeight * 2;
+                radius -= node.strokeWeight;
             }
 
             const points = this.createArcPoints(center, radius, node.arcData.startingAngle, node.arcData.endingAngle);
@@ -42,10 +44,10 @@ export class ELLIPSEConverter extends PolygonConverter<'ELLIPSE'> {
             dom.attributes['points'] = points.map(p => p.join(',')).join(' ');
         }
         else {
-            dom.attributes['cx'] = '50%';
-            dom.attributes['cy'] = '50%';
-            dom.attributes['rx'] = '50%';
-            dom.attributes['ry'] = '50%';
+            dom.attributes['cx'] = center.x + '';
+            dom.attributes['cy'] = center.y + '';
+            dom.attributes['rx'] = dom.bounds.width / 2 + '';
+            dom.attributes['ry'] = dom.bounds.height / 2 + '';
         }
     }
 

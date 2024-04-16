@@ -897,7 +897,7 @@ export declare type ConvertNodeOption = {
     getImage?: (key: string)=>Promise<string>;
 }
 
-export type DomNodeType = 'div'|'img'|'span'|'document'|'page'|'frame'|'ellipse'|'svg'|'defs'|'linearGradient'|'radialGradient'|'stop'|'polygon';
+export type DomNodeType = 'div'|'img'|'span'|'document'|'page'|'frame'|'ellipse'|'svg'|'defs'|'linearGradient'|'radialGradient'|'stop'|'polygon'|'mask'|'rect'|'line'|'circle'|'path';
 
 export declare type SvgLinearGradientDom = {
     id: string;
@@ -1018,6 +1018,7 @@ export declare type DomNode = {
     data: IJElementData;
     attributes?: StringKeyValue;
     isElement?: boolean;
+    isMask?: boolean;
     transform?: IStyleTransform;
     visible?: boolean;
     preserveRatio?: boolean;

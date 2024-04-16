@@ -50,7 +50,7 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
     });   
     // 普通元素，不可当作容器
     dom.isElement = ['VECTOR', 'BOOLEAN', 'BOOLEAN_OPERATION', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE'].includes(node.type) || (parentNode && parentNode.clipsContent);
-/*
+
     const isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
     const svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
 
@@ -63,11 +63,21 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
                 isSvg = false;
                 break;
             }
+            // 已识别成图片的，不再处理成svg
+            if(child.type === 'RECTANGLE' && child.fills && child.fills.length && child.fills[0].type === 'IMAGE') {
+                isSvg = false;
+                break;
+            }
         }
     }
     else {
         isSvg = false;
-    }*/
+    }
+
+    if(isSvg) {
+        dom.type = 'svg';
+        container = dom;
+    }
     
     let converter = ConverterMaps[node.type] || ConverterMaps.BASE;
     // 已识别成图片的，不再处理成svg
@@ -84,12 +94,10 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
         if(!dom.isElement) page.children.push(dom);
     } 
 
-    /*if(isSvg) {
-        dom.type = 'svg';
-        container = dom;
-    }*/
-
     if(node.children && node.children.length) {
+        if(node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN') {
+            if(svgElements.includes(node.children[0].type)) node.children[0].isMask = true;
+        }
         for(const child of node.children) {
             const c = await convert(child, node, container || page, option, container);   
             if(!c) continue;    
@@ -117,15 +125,18 @@ export async function nodeToDom(node: DomNode, option?: NodeToDomOption) {
             return await renderSvg(node, option);
         }
         case 'ellipse':
+        case 'line':
+        case 'path':
         case 'polygon': {
             return await renderEllipse(node, option);
         }
         case 'stop':
-            case 'defs':
-            case 'linearGradient':
-                case 'radialGradient': {
-                    return await renderSvgElement(node, option);
-                }
+        case 'defs':
+        case 'mask':
+        case 'linearGradient':
+        case 'radialGradient': {
+            return await renderSvgElement(node, option);
+        }
         default: {
             return await renderElement(node, option);
         }

@@ -25,12 +25,21 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
             dom.children.push(polygon);
         }
         else {
-            if(!container.children.length) {
-                const defs = this.createDomNode('defs');
+            let defs = container.children[0];
+            if(!defs) {
+                defs = this.createDomNode('defs');
                 container.children.push(defs);
             }
             polygon.type = this.polygonName;
-            if(!container.children.includes(polygon)) container.children.push(polygon);
+            // 如果是蒙板
+            if(node.isMask) {
+                const mask = this.createDomNode('mask');
+                mask.id = 'mask_' + util.uuid();
+                defs.children.push(mask);
+                mask.children.push(polygon);
+                polygon.isMask = true;
+            }            
+            else if(!container.children.includes(polygon)) container.children.push(polygon);
         }
         polygon.style.fillRule = 'nonzero';
 
@@ -38,21 +47,56 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
         dom =  await super.convert(node, dom, parentNode, page, option, container);
         polygon.bounds = dom.bounds;
 
+        const mask = this.getMask(container);
+        if(node.isMask) {            
+            if(mask) {
+                mask.attributes['x'] = polygon.bounds.x + '';
+                mask.attributes['y'] = polygon.bounds.y + '';
+                mask.attributes['width'] = polygon.bounds.width + '';
+                mask.attributes['height'] = polygon.bounds.height + '';
+            }
+        }
+        else if(mask) {
+            polygon.style.mask = `url(#${mask.id})`;
+        }
+
         // 生成路径
-        this.createPolygonPath(polygon, node);
+        this.createPolygonPath(polygon, node, container);
 
         return dom;
     }
 
+    // 获取定位
+    getPosition(dom: DomNode, container?: DomNode) {
+        const isAbsolute = !dom.isMask && container && container.id !== dom.id;
+        const left = isAbsolute? dom.bounds.x: 0;
+        const top = isAbsolute? dom.bounds.y: 0;
+        return {
+            x: left,
+            y: top
+        };
+    }
+
     // 生成多边形路径
-    createPolygonPath(dom: DomNode, node:  Node<NType>) {
+    createPolygonPath(dom: DomNode, node:  Node<NType>, container?: DomNode) {
+        const pos = this.getPosition(dom, container);
         const points = [
-            [0,0].join(','),
-            [dom.bounds.width,0].join(','),
-            [dom.bounds.width,dom.bounds.height].join(','),
-            [0,dom.bounds.height].join(','),
+            [pos.x, pos.y].join(','),
+            [pos.x + dom.bounds.width, pos.y].join(','),
+            [pos.x + dom.bounds.width, pos.y + dom.bounds.height].join(','),
+            [pos.x, pos.y + dom.bounds.height].join(','),
         ];
         dom.attributes['points'] = points.join(' ');
+    }
+
+    // 获取蒙板
+    getMask(container: DomNode) {
+        const defs = container.children[0];
+        if(defs.children?.length) {
+            const mask = defs.children[defs.children.length - 1];
+            return mask.type === 'mask'? mask: null;
+        }
+        return null;
     }
 
     // 用id获取当前图形
@@ -60,16 +104,20 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
         if(dom.figmaData?.id === node.id) return dom;
         if(dom.children && dom.children.length) {
             for(const child of dom.children) {
-                if(child.figmaData?.id === node.id) return child;
+                if(child.id === node.id || child.figmaData?.id === node.id) return child;
+                if(child.children && child.children.length) {
+                    const d = this.getPolygon(node, child);
+                    if(d && d !== child) return d;
+                }
             }
         }
         return dom;
     }
 
     // 处理填充
-    async convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
+    async convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
         if(node.fills) {
-            const polygon = this.getPolygon(node, dom);
+            const polygon = this.getPolygon(node, container || dom);
             for(const fill of node.fills) {
                 if(fill.visible === false) continue;
 
@@ -80,19 +128,19 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        polygon.style.fill = this.convertLinearGradient(fill, dom);
+                        polygon.style.fill = this.convertLinearGradient(fill, dom, container);
                         break;
                     }
                     // 径向性渐变
                     case PaintType.GRADIENT_DIAMOND:
                     case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
-                        polygon.style.fill = this.convertRadialGradient(fill, dom);
+                        polygon.style.fill = this.convertRadialGradient(fill, dom, container);
                         break;
                     }
                     // 图片
                     case PaintType.IMAGE: {
-                        await super.convertFills(node, polygon, option);
+                        await super.convertFills(node, polygon, option, container);
                         break;
                     }
                 }
@@ -102,8 +150,8 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
     }
 
     // 处理边框
-    async convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
-        const polygon = this.getPolygon(node, dom);
+    async convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
+        const polygon = this.getPolygon(node, container || dom);
         if(node.strokes && node.strokes.length) {
             
             for(const stroke of node.strokes) {
@@ -128,10 +176,11 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
     }
 
     // 转换线性渐变
-    convertLinearGradient(gradient: Paint, dom?: DomNode) {
-        if(dom.type !== 'svg') return super.convertLinearGradient(gradient, dom);
+    convertLinearGradient(gradient: Paint, dom?: DomNode, container?: DomNode) {
+        container = container || dom;
+        if(container.type !== 'svg') return super.convertLinearGradient(gradient, dom, container);
 
-        const defs = dom.children[0];
+        const defs = container.children[0];
         const gradientDom = this.createDomNode('linearGradient');
         gradientDom.id = 'gradient_' + util.uuid();
 
@@ -151,10 +200,13 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
     }
 
     // 转换径向性渐变
-    convertRadialGradient(gradient: Paint, dom?: DomNode) {
-        if(dom.type !== 'svg') return super.convertRadialGradient(gradient, dom);
+    convertRadialGradient(gradient: Paint, dom?: DomNode, container?: DomNode) {
+        container = container || dom;
+        if(container.type !== 'svg') return super.convertRadialGradient(gradient, dom, container);
 
-        const defs = dom.children[0];
+        const defs = container.children[0];
+        if(!defs) return '';
+
         const gradientDom = this.createDomNode('radialGradient');
         gradientDom.id = 'gradient_' + util.uuid();
 
