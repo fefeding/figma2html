@@ -67,10 +67,8 @@ export class BaseConverter {
                 const v = node[padding];
                 if (v) {
                     dom.style[padding] = util.toPX(v);
-                    if (['paddingLeft', 'paddingRight'].includes(padding))
-                        dom.bounds.width -= v;
-                    else
-                        dom.bounds.height -= v;
+                    //if(['paddingLeft', 'paddingRight'].includes(padding)) dom.bounds.width -= v;
+                    //else dom.bounds.height -= v;
                 }
             }
         }
@@ -88,10 +86,13 @@ export class BaseConverter {
     createDomNode(type, option) {
         const dom = {
             data: {},
-            style: {},
             attributes: {},
             children: [],
             ...option,
+            style: {
+                boxSizing: 'border-box',
+                ...option?.style,
+            },
             type: type,
         };
         return dom;

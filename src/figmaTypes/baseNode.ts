@@ -73,8 +73,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                 const v = node[padding];
                 if(v) {
                     dom.style[padding] = util.toPX(v);
-                    if(['paddingLeft', 'paddingRight'].includes(padding)) dom.bounds.width -= v;
-                    else dom.bounds.height -= v;
+                    //if(['paddingLeft', 'paddingRight'].includes(padding)) dom.bounds.width -= v;
+                    //else dom.bounds.height -= v;
                 }
             }
         }
@@ -98,10 +98,13 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     createDomNode(type: DomNodeType, option?: DomNode) {
         const dom = {
             data: {} as IJElementData,
-            style: {} as CSSStyleDeclaration,
             attributes: {} as StringKeyValue,
             children: [] as Array<DomNode>,
             ...option,
+            style: {
+                boxSizing: 'border-box',
+                ...option?.style,
+            } as CSSStyleDeclaration,
             type: type,
         } as DomNode; 
         return dom;
