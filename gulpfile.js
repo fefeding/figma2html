@@ -52,7 +52,7 @@ function buildESM() {
   }
 
 // 构建任务
-const buildTask = gulp.series(buildTSTask, buildESM, buildESTask);
+const buildTask = gulp.series(buildTSTask, buildESTask);
 
 function watch() {
     console.log('watch', tsProject.config.files);
