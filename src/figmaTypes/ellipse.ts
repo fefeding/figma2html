@@ -1,130 +1,71 @@
 
-import { Node, DomNode, ConvertNodeOption, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, } from '../common/types';
-import { util } from 'j-design-util';
-import BaseConverter from './baseNode';
+import { Node, DomNode, ConvertNodeOption, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, DomNodeType, } from '../common/types';
+import { Point, util } from 'j-design-util';
+import PolygonConverter from './polygon';
 
-export class ELLIPSEConverter extends BaseConverter<'ELLIPSE'> {
-    async convert(node:  Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
-        dom.type = 'svg';
-        let ellipse = this.createDomNode('ellipse');
+export class ELLIPSEConverter extends PolygonConverter<'ELLIPSE'> {
+    // 多边形标签名
+    polygonName: DomNodeType = 'ellipse';  
+    async convert(node:  Node<'ELLIPSE'>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode) {
+        // 如果有角度信息，则用多边形来计算
+        if(node.arcData && (node.arcData.endingAngle - node.arcData.startingAngle < Math.PI * 2)) {
+            this.polygonName = 'polygon';
+        }
+        else {
+            this.polygonName = 'ellipse';
+        }
 
-        const defs = this.createDomNode('defs');
+        return super.convert(node, dom, parentNode, page, option, container);
+    }  
 
-        dom.children.push(defs);
-        dom.children.push(ellipse);
+    // 生成多边形路径
+    createPolygonPath(dom: DomNode, node:  Node<'ELLIPSE'>, container?: DomNode) {
+        const pos = this.getPosition(dom, container);
+        const center = {
+            x: dom.bounds.width / 2 + pos.x,
+            y: dom.bounds.height / 2 + pos.y
+        };
 
-        // svg外转用定位和大小，其它样式都给子元素
-        dom =  await super.convert(node, dom, parentNode, option);
-        ellipse.bounds = dom.bounds;
-        return dom;
-    }
-
-    // 处理填充
-    async convertFills(node:  Node<'ELLIPSE'>, dom: DomNode, option?: ConvertNodeOption) {
-        if(node.fills) {
-            const ellipse = dom.children[1];
-            for(const fill of node.fills) {
-                if(fill.visible === false) continue;
-
-                switch(fill.type) {
-                    case PaintType.SOLID: {
-                        ellipse.fill = util.colorToString(fill.color, 255);
-                        break;
-                    }
-                    // 线性渐变
-                    case PaintType.GRADIENT_LINEAR: {
-                        ellipse.fill = this.convertLinearGradient(fill, dom);
-                        break;
-                    }
-                    // 径向性渐变
-                    case PaintType.GRADIENT_RADIAL: {
-                        ellipse.fill = this.convertRadialGradient(fill, dom);
-                        break;
-                    }
-                    // 图片
-                    case PaintType.IMAGE: {
-                        await super.convertFills(node, ellipse, option);
-                        break;
-                    }
-                }
+        if(this.polygonName === 'polygon') {
+            // 圆的半径
+            let radius = Math.min(dom.bounds.width, dom.bounds.height) / 2;
+            // 减去边框大小
+            if(node.strokeWeight) {
+                radius -= node.strokeWeight;
             }
+
+            const points = this.createArcPoints(center, radius, node.arcData.startingAngle, node.arcData.endingAngle);
+            // 有内圆
+            if(node.arcData.innerRadius > 0) {
+                const innerPoints = this.createArcPoints(center, radius * node.arcData.innerRadius, node.arcData.startingAngle, node.arcData.endingAngle);
+                // 为了首尾相接，把内圆坐标反转
+                points.push(...innerPoints.reverse());
+            }
+            dom.attributes['points'] = points.map(p => p.join(',')).join(' ');
         }
-        return dom;
+        else {
+            dom.attributes['cx'] = center.x + '';
+            dom.attributes['cy'] = center.y + '';
+            dom.attributes['rx'] = dom.bounds.width / 2 + '';
+            dom.attributes['ry'] = dom.bounds.height / 2 + '';
+        }
     }
 
-    // 处理边框
-    async convertStrokes(node:  Node<'ELLIPSE'>, dom: DomNode, option?: ConvertNodeOption) {
-        if(node.strokes && node.strokes.length) {
-            const ellipse = dom.children[1];
-            await super.convertStrokes(node, ellipse, option);
-        }
-        return dom;
+    createArcPoints(center: Point, radius: number, startAngle: number=0, endAngle: number=Math.PI*2) {
+        const step = 1 / radius;
+
+		const points = [] as Array<[number,number]>;
+		//椭圆方程x=a*cos(r) ,y=b*sin(r)	
+		for(let r=startAngle; r <= endAngle; r += step) {	
+
+			const x = Math.cos(r) * radius + center.x;
+			const y = Math.sin(r) * radius + center.y;
+			points.push([
+                x, y
+            ]);
+		}
+        return points;
     }
-
-    // 转换线性渐变
-    convertLinearGradient(gradient: Paint, dom?: DomNode) {
-        if(dom.type !== 'svg') return super.convertLinearGradient(gradient, dom);
-
-        const defs = dom.children[0];
-        const gradientDom = this.createDomNode('linearGradient');
-        gradientDom.id = 'gradient_' + util.uuid();
-
-        const handlePositions = gradient.gradientHandlePositions;
-        if(handlePositions && handlePositions.length > 1) {
-            gradientDom.x1 = (handlePositions[0].x) * 100 + '%';
-            gradientDom.y1 = (handlePositions[0].y) * 100 + '%';
-            gradientDom.x2 = (handlePositions[1].x) * 100 + '%';
-            gradientDom.y2 = (handlePositions[1].y) * 100 + '%';
-        }
-        const gradientStops = gradient.gradientStops;
-        const stops = this.getGradientStopDoms(gradientStops);
-        gradientDom.children.push(...stops);
-
-        defs.children.push(gradientDom);
-        return `url(#${gradientDom.id})`;
-    }
-
-    // 转换径向性渐变
-    convertRadialGradient(gradient: Paint, dom?: DomNode) {
-        if(dom.type !== 'svg') return super.convertRadialGradient(gradient, dom);
-
-        const defs = dom.children[0];
-        const gradientDom = this.createDomNode('radialGradient');
-        gradientDom.id = 'gradient_' + util.uuid();
-
-        const handlePositions = gradient.gradientHandlePositions;
-
-        // 该字段包含三个矢量，每个矢量都是归一化对象空间中的一个位置（归一化对象空间是如果对象的边界框的左上角是（0，0），右下角是（1,1））。第一个位置对应于渐变的开始（为了计算渐变停止，值为0），第二个位置是渐变的结束（值为1），第三个手柄位置决定渐变的宽度。
-        if(handlePositions && handlePositions.length > 2) {
-            gradientDom.fx = Math.round(handlePositions[0].x * 100) + '%';
-            gradientDom.fy = Math.round(handlePositions[0].y * 100) + '%';
-            gradientDom.cx = gradientDom.fx
-            gradientDom.cy = gradientDom.fy
-            // 大小位置跟起点的距离为渐变宽
-            const dx = handlePositions[1].x - handlePositions[0].x;
-            const dy = handlePositions[1].y - handlePositions[0].y;
-            const r = Math.sqrt(dx * dx + dy * dy);
-            gradientDom.r = Math.round(r * 100) + '%';
-        }
-        const gradientStops = gradient.gradientStops;
-        const stops = this.getGradientStopDoms(gradientStops);
-        gradientDom.children.push(...stops);
-        
-        defs.children.push(gradientDom);
-        return `url(#${gradientDom.id})`;
-    }
-      
-      // Helper function to get the gradient stops
-      getGradientStopDoms(gradientStops: ColorStop[]) {
-        const stops = [] as Array<DomNode>;
-        for(const s of gradientStops) {
-            const stop = this.createDomNode('stop');
-            stop.offset = `${Math.round(s.position * 100)}%`;
-            stop.style.stopColor = util.colorToString(s.color, 255);
-            stops.push(stop);
-        }
-        return stops;
-      }
 }
 
 export default ELLIPSEConverter;

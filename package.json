@@ -1,6 +1,6 @@
 {
   "name": "j-figma2html",
-  "version": "1.0.13",
+  "version": "1.0.23",
   "description": "figma 转 html 工具类",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "node test/dev",
     "build": "gulp",
+    "build:esm": "node ./build/build.js",
     "api:json": "npx api-extractor run",
     "api:md": "npx api-documenter markdown -i ./docs/.api -o ./docs/api && node ./build/md.js",
     "api": "npm run api:json && npm run api:md",
@@ -28,6 +29,7 @@
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@types/node": "^20.11.30",
+    "babel-preset-env": "^1.7.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-stage-0": "^6.24.1",
     "babelify": "^10.0.0",
@@ -48,7 +50,7 @@
     "vitest": "^1.2.2"
   },
   "dependencies": {
-    "j-design-util": "^1.0.35"
+    "j-design-util": "^1.0.36"
   },
   "author": "fefeding",
   "license": "MIT"

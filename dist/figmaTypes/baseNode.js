@@ -1,7 +1,7 @@
 import { PaintType, PaintSolidScaleMode, EffectType } from '../common/types';
 import { util } from 'j-design-util';
 export class BaseConverter {
-    async convert(node, dom, parentNode, option) {
+    async convert(node, dom, parentNode, page, option, container) {
         dom.style = dom.style || {};
         // 位置
         dom.bounds = {
@@ -13,8 +13,13 @@ export class BaseConverter {
         if (node.absoluteBoundingBox) {
             dom.bounds.width = node.absoluteBoundingBox.width;
             dom.bounds.height = node.absoluteBoundingBox.height;
+            // 优先相对于页面坐标, isElement是相于它的父级的
+            if (page && !dom.isElement) {
+                dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - page.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - page.absoluteBoundingBox.y;
+            }
             // 相对于父位置
-            if (parentNode && parentNode.absoluteBoundingBox) {
+            else if (parentNode && parentNode.absoluteBoundingBox) {
                 dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x;
                 dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y;
             }
@@ -46,6 +51,7 @@ export class BaseConverter {
                 dom.style.textAlign = { 'SCALE': 'center', 'LEFT_RIGHT': 'justify-all' }[node.constraints.vertical];
             }
         }
+        dom.style.transformOrigin = 'center center';
         // 旋转
         if (node.rotation) {
             dom.data.rotation = node.rotation;
@@ -56,20 +62,20 @@ export class BaseConverter {
             dom.style.overflow = 'hidden';
         dom.preserveRatio = node.preserveRatio;
         // padding
-        for (const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
-            const v = node[padding];
-            if (v) {
-                dom.style[padding] = util.toPX(v);
-                if (['paddingLeft', 'paddingRight'].includes(padding))
-                    dom.bounds.width -= v;
-                else
-                    dom.bounds.height -= v;
+        if (dom.type !== 'svg') {
+            for (const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
+                const v = node[padding];
+                if (v) {
+                    dom.style[padding] = util.toPX(v);
+                    //if(['paddingLeft', 'paddingRight'].includes(padding)) dom.bounds.width -= v;
+                    //else dom.bounds.height -= v;
+                }
             }
         }
-        await this.convertStyle(node, dom, option);
-        await this.convertFills(node, dom, option); // 解析fills
-        await this.convertStrokes(node, dom, option); // 边框
-        await this.convertEffects(node, dom, option); // 滤镜
+        await this.convertStyle(node, dom, option, container);
+        await this.convertFills(node, dom, option, container); // 解析fills
+        await this.convertStrokes(node, dom, option, container); // 边框
+        await this.convertEffects(node, dom, option, container); // 滤镜
         dom.data.width = dom.bounds.width;
         dom.data.height = dom.bounds.height;
         dom.style.width = util.toPX(dom.bounds.width).toString();
@@ -80,15 +86,22 @@ export class BaseConverter {
     createDomNode(type, option) {
         const dom = {
             data: {},
-            style: {},
+            attributes: {},
             children: [],
             ...option,
+            style: {
+                boxSizing: 'border-box',
+                ...option?.style,
+            },
             type: type,
         };
         return dom;
     }
     // 转换style
-    async convertStyle(node, dom, option) {
+    async convertStyle(node, dom, option, container) {
+        // @ts-ignore
+        if (node.type === 'BOOLEAN_OPERATION')
+            return dom;
         // @ts-ignore
         const style = node.style || node;
         if (!style)
@@ -101,7 +114,7 @@ export class BaseConverter {
             dom.style.fontWeight = style.fontWeight.toString();
         if (style.italic)
             dom.style.fontStyle = 'italic';
-        if (style.letterSpacing) {
+        if (typeof style.letterSpacing !== 'undefined') {
             dom.style.letterSpacing = util.toPX(style.letterSpacing);
         }
         if (style.lineHeightPx)
@@ -113,7 +126,7 @@ export class BaseConverter {
         return dom;
     }
     // 转换滤镜
-    async convertEffects(node, dom, option) {
+    async convertEffects(node, dom, option, container) {
         if (!node.isMaskOutline && node.effects) {
             dom.style.filter = dom.style.filter || '';
             for (const effect of node.effects) {
@@ -136,7 +149,9 @@ export class BaseConverter {
         return dom;
     }
     // 处理填充
-    async convertFills(node, dom, option) {
+    async convertFills(node, dom, option, container) {
+        if (node.type === 'BOOLEAN_OPERATION')
+            return dom;
         // isMaskOutline 如果为true则忽略填充样式
         if (!node.isMaskOutline && node.fills) {
             for (const fill of node.fills) {
@@ -149,12 +164,14 @@ export class BaseConverter {
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.style.background = this.convertLinearGradient(fill, dom);
+                        dom.style.background = this.convertLinearGradient(fill, dom, container);
                         break;
                     }
                     // 径向性渐变
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.style.background = this.convertRadialGradient(fill, dom);
+                        dom.style.background = this.convertRadialGradient(fill, dom, container);
                         break;
                     }
                     // 图片
@@ -212,7 +229,9 @@ export class BaseConverter {
         return dom;
     }
     // 处理边框
-    async convertStrokes(node, dom, option) {
+    async convertStrokes(node, dom, option, container) {
+        if (node.type === 'BOOLEAN_OPERATION')
+            return dom;
         if (node.strokes && node.strokes.length) {
             for (const stroke of node.strokes) {
                 if (stroke.visible === false)
@@ -227,12 +246,14 @@ export class BaseConverter {
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.style.borderImageSource = this.convertLinearGradient(stroke, dom);
+                        dom.style.borderImageSource = this.convertLinearGradient(stroke, dom, container);
                         break;
                     }
                     // 径向性渐变
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.style.borderImageSource = this.convertRadialGradient(stroke, dom);
+                        dom.style.borderImageSource = this.convertRadialGradient(stroke, dom, container);
                         break;
                     }
                     // 图片
@@ -277,8 +298,34 @@ export class BaseConverter {
         }
         return dom;
     }
+    // 是否是空的dom节点
+    isEmptyDom(dom) {
+        if (dom.children && dom.children.length)
+            return false;
+        if (dom.text)
+            return false;
+        if (dom.type !== 'div')
+            return false;
+        if (dom.style.filter)
+            return false;
+        if (dom.style.borderImageSource || dom.style.backgroundImage || dom.style.background)
+            return false;
+        if (dom.style.backgroundColor && !this.isTransparentColor(dom.style.backgroundColor))
+            return false;
+        return true;
+    }
+    // 是否是透明色
+    isTransparentColor(color) {
+        if (color == 'transparent')
+            return true;
+        if (color === 'rgba(0,0,0,0)' || /rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*0\)/.test(color))
+            return true;
+        if (typeof color === 'object' && 'a' in color && color.a === 0)
+            return true;
+        return false;
+    }
     // 转换线性渐变
-    convertLinearGradient(gradient, dom) {
+    convertLinearGradient(gradient, dom, container) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
         /**
@@ -357,7 +404,7 @@ export class BaseConverter {
         return linearGradient;
     }
     // 转换径向性渐变
-    convertRadialGradient(gradient, dom) {
+    convertRadialGradient(gradient, dom, container) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
         const radialGradient = `radial-gradient(${this.getRadialGradientPosition(handlePositions)}, ${this.getGradientStops(gradientStops)})`;

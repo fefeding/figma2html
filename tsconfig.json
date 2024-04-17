@@ -1,6 +1,6 @@
 {
   "files": [
-    "src/**/**/*.ts"
+    "src/index.ts"
   ],
   "compilerOptions": {
     "esModuleInterop": true,

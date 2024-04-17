@@ -1,6 +1,8 @@
-import type { Node, DomNode, ConvertNodeOption } from '../common/types';
-import BaseConverter from './baseNode';
-export declare class FRAMEConverter extends BaseConverter<'RECTANGLE'> {
-    convert(node: Node<'RECTANGLE'>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption): Promise<DomNode>;
+import type { Node, DomNode, ConvertNodeOption, DomNodeType } from '../common/types';
+import PolygonConverter from './polygon';
+export declare class RECTANGLEConverter extends PolygonConverter<'RECTANGLE'> {
+    polygonName: DomNodeType;
+    convert(node: Node<'RECTANGLE'>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;
+    createPolygonPath(dom: DomNode, node: Node<'RECTANGLE'>, container?: DomNode): void;
 }
-export default FRAMEConverter;
+export default RECTANGLEConverter;

@@ -1,5 +1,5 @@
 import { util } from 'j-design-util';
-import { convert, nodeToDom } from './figmaTypes/node';
+import { convert, nodeToDom } from './node';
 /**
  * 获取figma文件
  * @param fileId

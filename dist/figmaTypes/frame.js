@@ -1,6 +1,6 @@
 import BaseConverter from './baseNode';
 export class FRAMEConverter extends BaseConverter {
-    async convert(node, dom, parentNode, option) {
+    async convert(node, dom, parentNode, page, option) {
         if (parentNode && parentNode.type === 'CANVAS') {
             dom.style.overflow = 'hidden';
             if (parentNode && !parentNode.absoluteBoundingBox) {
@@ -22,7 +22,7 @@ export class FRAMEConverter extends BaseConverter {
                 }
             }
         }
-        return super.convert(node, dom, parentNode, option);
+        return super.convert(node, dom, parentNode, page, option);
     }
 }
 export default FRAMEConverter;

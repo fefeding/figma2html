@@ -27,16 +27,14 @@ function buildTSTask() {
 
 // 构建ESM模块
 function buildESM() {
-  const pip = tsProject.src()
-    .pipe(tsProject());
+  const pip = gulp.src('dist/index.js');
 
-    return pip.js
-      .pipe(babel({
-        presets: ['@babel/preset-env'],
+    return pip.pipe(babel({
+        presets: ['env'],
         plugins: [
           //'@babel/plugin-transform-modules-commonjs',
-          '@babel/plugin-proposal-class-properties',
-          '@babel/plugin-proposal-object-rest-spread'
+          //'@babel/plugin-proposal-class-properties',
+          //'@babel/plugin-proposal-object-rest-spread'
         ]
       }))
       .pipe(concat('index.esm.js'))

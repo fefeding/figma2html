@@ -84,7 +84,7 @@
 		}
 
 		// 转换模板，并动态获取图片地址
-		const tpl = await convert(data, null, {
+		const tpl = await convert(data, null, null, {
 			images,
 			async getImage(key) {
 				console.log('get image', key);

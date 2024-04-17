@@ -60,6 +60,10 @@ export enum LineHeightUnit {
     'FONT_SIZE_%' = "FONT_SIZE_%",
     'INTRINSIC_%' = "INTRINSIC_%"
 }
+
+// 其础字符串类型
+export declare type StringKeyValue ={[key: string]: string};
+
 /**
  * Map<StyleType, String>
  * A mapping of a StyleType to style ID (see Style) of styles present on this node. The style ID can be used to look up more information about the style in the top-level styles field.
@@ -582,6 +586,28 @@ export interface FRAME {
     };
     /** Position of stroke relative to vector outline, as a string enum */
     strokeAlign: StrokeAlign;
+    /**
+     * A string enum with values describing the end caps of vector paths.
+NONE
+ROUND
+SQUARE
+LINE_ARROW
+TRIANGLE_ARROW
+DIAMOND_FILLED
+CIRCLE_FILLED
+TRIANGLE_FILLED
+WASHI_TAPE_1
+WASHI_TAPE_2
+WASHI_TAPE_3
+WASHI_TAPE_4
+WASHI_TAPE_5
+WASHI_TAPE_6
+     */
+    strokeCap?: string;
+    /**
+     * A string enum with value of "MITER", "BEVEL", or "ROUND", describing how corners in vector paths are rendered.
+     */
+    strokeJoin?: string;
     /** Radius of each corner of the frame if a single radius is set for all corners */
     cornerRadius: number;
     /** Array of length 4 of the radius of each corner of the rectangle, starting in the top left and proceeding clockwise */
@@ -867,6 +893,8 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     preserveRatio?: boolean;
     "strokeWeight"?: number;
     "strokeAlign"?: StrokeAlign;
+    strokeCap?: string;
+    strokeJoin?: string;
     strokeDashes?: Vector[];
     cornerRadius?: number;
     rectangleCornerRadii?: [number, number, number, number];
@@ -888,11 +916,12 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
 };
 
 export declare type ConvertNodeOption = {
-    images?: {[key: string]: string} ;
+    expandToPage?: boolean;// 是否展开到页面级别的绝对定位
+    images?: StringKeyValue;
     getImage?: (key: string)=>Promise<string>;
 }
 
-export type DomNodeType = 'div'|'img'|'span'|'document'|'page'|'frame'|'ellipse'|'svg'|'defs'|'linearGradient'|'radialGradient'|'stop';
+export type DomNodeType = 'div'|'img'|'span'|'document'|'page'|'frame'|'ellipse'|'svg'|'defs'|'linearGradient'|'radialGradient'|'stop'|'polygon'|'mask'|'rect'|'line'|'circle'|'path';
 
 export declare type SvgLinearGradientDom = {
     id: string;
@@ -1011,6 +1040,9 @@ export declare type DomNode = {
     type: DomNodeType;
     style: CSSStyleDeclaration;
     data: IJElementData;
+    attributes?: StringKeyValue;
+    isElement?: boolean;
+    isMask?: boolean;
     transform?: IStyleTransform;
     visible?: boolean;
     preserveRatio?: boolean;
@@ -1031,5 +1063,7 @@ export declare type NodeToDomOption = {
 export interface NodeConverter<NType extends NodeType = NodeType> {
     // 生成节点对象
     createDomNode(type: DomNodeType, option?: DomNode): DomNode;
-    convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node, option?: ConvertNodeOption) => Promise<DomNode>;
+    // 是否是空的dom节点
+    isEmptyDom(dom: DomNode): boolean;
+    convert: (node: Node<NType>, dom?: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode) => Promise<DomNode>;
 }

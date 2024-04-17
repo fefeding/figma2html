@@ -1,9 +1,9 @@
 
-import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint, TypeStyle } from '../common/types';
+import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint, TypeStyle, StringKeyValue } from '../common/types';
 import { util, type Point } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
-    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, option?: ConvertNodeOption) {
+    async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode) {
         dom.style = dom.style || {} as CSSStyleDeclaration;
 
         // 位置
@@ -17,8 +17,13 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             dom.bounds.width = node.absoluteBoundingBox.width;
             dom.bounds.height = node.absoluteBoundingBox.height;
 
+            // 优先相对于页面坐标, isElement是相于它的父级的
+            if(page && !dom.isElement) {
+                dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - page.absoluteBoundingBox.x; 
+                dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - page.absoluteBoundingBox.y; 
+            }
             // 相对于父位置
-            if(parentNode && parentNode.absoluteBoundingBox) {
+            else if(parentNode && parentNode.absoluteBoundingBox) {
                 dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x; 
                 dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y; 
             }
@@ -51,7 +56,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                 dom.style.textAlign = {'SCALE': 'center', 'LEFT_RIGHT': 'justify-all'}[node.constraints.vertical];
             }
         }
-
+        dom.style.transformOrigin = 'center center';
         // 旋转
         if(node.rotation) {
             dom.data.rotation = node.rotation;
@@ -63,19 +68,21 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         dom.preserveRatio = node.preserveRatio;
 
         // padding
-        for(const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
-            const v = node[padding];
-            if(v) {
-                dom.style[padding] = util.toPX(v);
-                if(['paddingLeft', 'paddingRight'].includes(padding)) dom.bounds.width -= v;
-                else dom.bounds.height -= v;
+        if(dom.type !== 'svg') {
+            for(const padding of ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']) {
+                const v = node[padding];
+                if(v) {
+                    dom.style[padding] = util.toPX(v);
+                    //if(['paddingLeft', 'paddingRight'].includes(padding)) dom.bounds.width -= v;
+                    //else dom.bounds.height -= v;
+                }
             }
         }
         
-        await this.convertStyle(node, dom, option);
-        await this.convertFills(node, dom, option);// 解析fills
-        await this.convertStrokes(node, dom, option);// 边框
-        await this.convertEffects(node, dom, option);// 滤镜
+        await this.convertStyle(node, dom, option, container);
+        await this.convertFills(node, dom, option, container);// 解析fills
+        await this.convertStrokes(node, dom, option, container);// 边框
+        await this.convertEffects(node, dom, option, container);// 滤镜
         
 
         dom.data.width = dom.bounds.width;
@@ -91,16 +98,22 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     createDomNode(type: DomNodeType, option?: DomNode) {
         const dom = {
             data: {} as IJElementData,
-            style: {} as CSSStyleDeclaration,
+            attributes: {} as StringKeyValue,
             children: [] as Array<DomNode>,
             ...option,
+            style: {
+                boxSizing: 'border-box',
+                ...option?.style,
+            } as CSSStyleDeclaration,
             type: type,
         } as DomNode; 
         return dom;
     }
 
     // 转换style
-    async convertStyle(node:  Node<NType>|TypeStyle, dom: DomNode, option?: ConvertNodeOption) {
+    async convertStyle(node:  Node<NType>|TypeStyle, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
+        // @ts-ignore
+        if(node.type === 'BOOLEAN_OPERATION') return dom;
         // @ts-ignore
         const style: TypeStyle = node.style || node;
         if(!style) return dom;
@@ -109,7 +122,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         if (style.fontSize) dom.style.fontSize = util.toPX(style.fontSize);
         if (style.fontWeight) dom.style.fontWeight = style.fontWeight.toString();
         if(style.italic) dom.style.fontStyle = 'italic';
-        if (style.letterSpacing) {
+        if (typeof style.letterSpacing !== 'undefined') {
             dom.style.letterSpacing = util.toPX(style.letterSpacing);
         }
         if (style.lineHeightPx)
@@ -124,7 +137,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 转换滤镜
-    async convertEffects(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
+    async convertEffects(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
         if(!node.isMaskOutline && node.effects) {
             dom.style.filter = dom.style.filter || '';
             for(const effect of node.effects) {
@@ -147,7 +160,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 处理填充
-    async convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
+    async convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
+        if(node.type === 'BOOLEAN_OPERATION') return dom;
         // isMaskOutline 如果为true则忽略填充样式
         if(!node.isMaskOutline && node.fills) {
             for(const fill of node.fills) {
@@ -160,12 +174,14 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.style.background = this.convertLinearGradient(fill, dom);
+                        dom.style.background = this.convertLinearGradient(fill, dom, container);
                         break;
                     }
                     // 径向性渐变
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.style.background = this.convertRadialGradient(fill, dom);
+                        dom.style.background = this.convertRadialGradient(fill, dom, container);
                         break;
                     }
                     // 图片
@@ -225,7 +241,9 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 处理边框
-    async convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption) {
+    async convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
+        if(node.type === 'BOOLEAN_OPERATION') return dom;
+
         if(node.strokes && node.strokes.length) {
             
             for(const stroke of node.strokes) {
@@ -240,12 +258,14 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     }
                     // 线性渐变
                     case PaintType.GRADIENT_LINEAR: {
-                        dom.style.borderImageSource = this.convertLinearGradient(stroke, dom);
+                        dom.style.borderImageSource = this.convertLinearGradient(stroke, dom, container);
                         break;
                     }
                     // 径向性渐变
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
                     case PaintType.GRADIENT_RADIAL: {
-                        dom.style.borderImageSource = this.convertRadialGradient(stroke, dom);
+                        dom.style.borderImageSource = this.convertRadialGradient(stroke, dom, container);
                         break;
                     }
                     // 图片
@@ -289,8 +309,27 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         return dom;
     }
 
+    // 是否是空的dom节点
+    isEmptyDom(dom: DomNode) {
+        if(dom.children && dom.children.length) return false;
+        if(dom.text) return false;
+        if(dom.type !== 'div') return false;
+        if(dom.style.filter) return false;
+        if(dom.style.borderImageSource || dom.style.backgroundImage || dom.style.background) return false;
+        if(dom.style.backgroundColor && !this.isTransparentColor(dom.style.backgroundColor)) return false;
+        return true;
+    }
+
+    // 是否是透明色
+    isTransparentColor(color) {
+        if(color == 'transparent') return true;
+        if(color === 'rgba(0,0,0,0)' || /rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*0\)/.test(color)) return true;
+        if(typeof color === 'object' && 'a' in color && color.a === 0) return true;
+        return false;
+    }
+
     // 转换线性渐变
-    convertLinearGradient(gradient: Paint, dom?: DomNode) {
+    convertLinearGradient(gradient: Paint, dom?: DomNode, container?: DomNode) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
         
@@ -373,7 +412,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     }
 
     // 转换径向性渐变
-    convertRadialGradient(gradient: Paint, dom?: DomNode) {
+    convertRadialGradient(gradient: Paint, dom?: DomNode, container?: DomNode) {
         const handlePositions = gradient.gradientHandlePositions;
         const gradientStops = gradient.gradientStops;
         
