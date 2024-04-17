@@ -6,6 +6,7 @@ const concat = require('gulp-concat');
 //const tsify = require('tsify');
 //const source = require('vinyl-source-stream');
 const tsProject = ts.createProject('tsconfig.json');
+const tsCJSProject = ts.createProject('tsconfig.cjs.json');
 
 
 function createDtsTask(cb) {
@@ -42,8 +43,18 @@ function buildESM() {
       .pipe(gulp.dest('dist'));
   }
 
+  function buildESTask(cb) {
+      const pip = tsCJSProject.src()
+      .pipe(tsCJSProject());
+  
+      pip.dts.pipe(gulp.dest('dist'));
+  
+      return pip.js.pipe(concat('index.cjs.js'))
+      .pipe(gulp.dest('dist'));
+  }
+
 // 构建任务
-const buildTask = gulp.series(buildTSTask, buildESM);
+const buildTask = gulp.series(buildTSTask, buildESM, buildESTask);
 
 function watch() {
     console.log('watch', tsProject.config.files);
