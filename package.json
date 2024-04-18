@@ -1,6 +1,6 @@
 {
   "name": "j-figma2html",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "description": "figma 转 html 工具类",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -50,7 +50,7 @@
     "vitest": "^1.2.2"
   },
   "dependencies": {
-    "j-design-util": "^1.0.36"
+    "j-design-util": "^1.0.37"
   },
   "author": "fefeding",
   "license": "MIT"

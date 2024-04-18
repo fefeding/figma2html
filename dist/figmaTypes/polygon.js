@@ -202,10 +202,10 @@ export class PolygonConverter extends BaseConverter {
         gradientDom.id = 'gradient_' + util.uuid();
         const handlePositions = gradient.gradientHandlePositions;
         if (handlePositions && handlePositions.length > 1) {
-            gradientDom.x1 = (handlePositions[0].x) * 100 + '%';
-            gradientDom.y1 = (handlePositions[0].y) * 100 + '%';
-            gradientDom.x2 = (handlePositions[1].x) * 100 + '%';
-            gradientDom.y2 = (handlePositions[1].y) * 100 + '%';
+            gradientDom.attributes['x1'] = gradientDom.x1 = (handlePositions[0].x) * 100 + '%';
+            gradientDom.attributes['y1'] = gradientDom.y1 = (handlePositions[0].y) * 100 + '%';
+            gradientDom.attributes['x2'] = gradientDom.x2 = (handlePositions[1].x) * 100 + '%';
+            gradientDom.attributes['y2'] = gradientDom.y2 = (handlePositions[1].y) * 100 + '%';
         }
         const gradientStops = gradient.gradientStops;
         const stops = this.getGradientStopDoms(gradientStops);
@@ -226,15 +226,15 @@ export class PolygonConverter extends BaseConverter {
         const handlePositions = gradient.gradientHandlePositions;
         // 该字段包含三个矢量，每个矢量都是归一化对象空间中的一个位置（归一化对象空间是如果对象的边界框的左上角是（0，0），右下角是（1,1））。第一个位置对应于渐变的开始（为了计算渐变停止，值为0），第二个位置是渐变的结束（值为1），第三个手柄位置决定渐变的宽度。
         if (handlePositions && handlePositions.length > 2) {
-            gradientDom.fx = Math.round(handlePositions[0].x * 100) + '%';
-            gradientDom.fy = Math.round(handlePositions[0].y * 100) + '%';
-            gradientDom.cx = gradientDom.fx;
-            gradientDom.cy = gradientDom.fy;
+            gradientDom.attributes['fx'] = gradientDom.fx = Math.round(handlePositions[0].x * 100) + '%';
+            gradientDom.attributes['fy'] = gradientDom.fy = Math.round(handlePositions[0].y * 100) + '%';
+            gradientDom.attributes['cx'] = gradientDom.cx = gradientDom.fx;
+            gradientDom.attributes['cy'] = gradientDom.cy = gradientDom.fy;
             // 大小位置跟起点的距离为渐变宽
             const dx = handlePositions[1].x - handlePositions[0].x;
             const dy = handlePositions[1].y - handlePositions[0].y;
             const r = Math.sqrt(dx * dx + dy * dy);
-            gradientDom.r = Math.round(r * 100) + '%';
+            gradientDom.attributes['r'] = gradientDom.r = Math.round(r * 100) + '%';
         }
         const gradientStops = gradient.gradientStops;
         const stops = this.getGradientStopDoms(gradientStops);
@@ -247,7 +247,7 @@ export class PolygonConverter extends BaseConverter {
         const stops = [];
         for (const s of gradientStops) {
             const stop = this.createDomNode('stop');
-            stop.offset = `${Math.round(s.position * 100)}%`;
+            stop.attributes['offset'] = stop.offset = `${Math.round(s.position * 100)}%`;
             stop.style.stopColor = util.colorToString(s.color, 255);
             stops.push(stop);
         }
