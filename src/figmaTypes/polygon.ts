@@ -140,6 +140,7 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
 
                 switch(fill.type) {
                     case PaintType.SOLID: {
+                        if(typeof fill.opacity !== 'undefined') fill.color.a = fill.opacity;
                         polygon.style.fill = util.colorToString(fill.color, 255);
                         break;
                     }

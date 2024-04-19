@@ -1067,6 +1067,8 @@ var BaseConverter = /** @class */ (function () {
                         return [3 /*break*/, 9];
                     case 3:
                         {
+                            if (typeof fill.opacity !== 'undefined')
+                                fill.color.a = fill.opacity;
                             dom.style.backgroundColor = j_design_util_1.util.colorToString(fill.color, 255);
                             return [3 /*break*/, 9];
                         }
@@ -1161,6 +1163,8 @@ var BaseConverter = /** @class */ (function () {
                         if (stroke.visible === false)
                             return [3 /*break*/, 9];
                         if (stroke.color) {
+                            if (typeof stroke.opacity !== 'undefined')
+                                stroke.color.a = stroke.opacity;
                             dom.style.outlineColor = j_design_util_1.util.colorToString(stroke.color, 255);
                         }
                         _c = stroke.type;
@@ -2406,6 +2410,8 @@ var PolygonConverter = /** @class */ (function (_super) {
                         return [3 /*break*/, 8];
                     case 3:
                         {
+                            if (typeof fill.opacity !== 'undefined')
+                                fill.color.a = fill.opacity;
                             polygon.style.fill = j_design_util_1.util.colorToString(fill.color, 255);
                             return [3 /*break*/, 8];
                         }
@@ -2868,9 +2874,9 @@ var TEXTConverter = /** @class */ (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     TEXTConverter.prototype.convert = function (node, dom, parentNode, page, option) {
-        var _a, _b;
         return __awaiter(this, void 0, void 0, function () {
             var res, w;
+            var _a, _b;
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:

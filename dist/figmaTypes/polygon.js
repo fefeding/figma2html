@@ -127,6 +127,8 @@ export class PolygonConverter extends BaseConverter {
                     continue;
                 switch (fill.type) {
                     case PaintType.SOLID: {
+                        if (typeof fill.opacity !== 'undefined')
+                            fill.color.a = fill.opacity;
                         polygon.style.fill = util.colorToString(fill.color, 255);
                         break;
                     }
