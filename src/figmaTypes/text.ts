@@ -14,9 +14,10 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
             const v = util.toNumber(dom.style.letterSpacing);
             dom.bounds.width += v * (dom.bounds.width/node.style.fontSize);
         }*/
+        let isSingleLine = false;// 单行处理
         // 如果行高好高度一致,则表示单行文本，可以不指定宽度
         if(dom.bounds?.height < node.style?.fontSize * 2) {           
-
+            isSingleLine = true;
             const w = this.testTextWidth(dom);
             dom.data.width = Math.max(w, util.toNumber(dom.data.width));
         }
@@ -25,14 +26,14 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
             dom.data.width = dom.bounds.width;
         }
 
-        await this.convertCharacterStyleOverrides(node, res, option);// 处理分字样式
+        await this.convertCharacterStyleOverrides(node, res, option, isSingleLine);// 处理分字样式
 
         dom.style.width = util.toPX(dom.data.width);
         return res;
     }
 
     // 解析字体多样式
-    async convertCharacterStyleOverrides(node: Node<'TEXT'>, dom: DomNode, option?: ConvertNodeOption) {
+    async convertCharacterStyleOverrides(node: Node<'TEXT'>, dom: DomNode, option?: ConvertNodeOption, isSingleLine = false) {
         let width = 0;
         if(node.characterStyleOverrides && node.characterStyleOverrides.length && node.styleOverrideTable) {
             const text = dom.text || '';
@@ -50,16 +51,20 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
                     await this.convertStyle(style, fDom, option);
                 }
                 dom.children.push(fDom);
-                const w = this.testTextWidth(fDom);
-                width += w;
+                if(isSingleLine) {
+                    const w = this.testTextWidth(fDom);
+                    width += w;
+                }
             }
             // 还有未处理完的，则加到后面
             if(text.length > index) {
                 const fDom = this.createDomNode('span');
                 fDom.text = text.substring(index);
                 dom.children.push(fDom);
-                const w = this.testTextWidth(fDom);
-                width += w;
+                if(isSingleLine) {
+                    const w = this.testTextWidth(fDom);
+                    width += w;
+                }
             }
             dom.text = '';
             dom.type = 'div';

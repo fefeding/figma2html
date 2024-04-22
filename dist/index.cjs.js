@@ -2899,7 +2899,7 @@ var TEXTConverter = /** @class */ (function (_super) {
     TEXTConverter.prototype.convert = function (node, dom, parentNode, page, option) {
         var _a, _b;
         return __awaiter(this, void 0, void 0, function () {
-            var res, w;
+            var res, isSingleLine, w;
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
@@ -2909,13 +2909,10 @@ var TEXTConverter = /** @class */ (function (_super) {
                         return [4 /*yield*/, _super.prototype.convert.call(this, node, dom, parentNode, page, option)];
                     case 1:
                         res = _c.sent();
-                        //dom.style.letterSpacing = dom.style.letterSpacing || '1px';
-                        /*if(dom.style.letterSpacing) {
-                            const v = util.toNumber(dom.style.letterSpacing);
-                            dom.bounds.width += v * (dom.bounds.width/node.style.fontSize);
-                        }*/
+                        isSingleLine = false;
                         // 如果行高好高度一致,则表示单行文本，可以不指定宽度
                         if (((_a = dom.bounds) === null || _a === void 0 ? void 0 : _a.height) < ((_b = node.style) === null || _b === void 0 ? void 0 : _b.fontSize) * 2) {
+                            isSingleLine = true;
                             w = this.testTextWidth(dom);
                             dom.data.width = Math.max(w, j_design_util_1.util.toNumber(dom.data.width));
                         }
@@ -2923,7 +2920,7 @@ var TEXTConverter = /** @class */ (function (_super) {
                             //dom.style.minWidth = util.toPX(dom.data.width);
                             dom.data.width = dom.bounds.width;
                         }
-                        return [4 /*yield*/, this.convertCharacterStyleOverrides(node, res, option)];
+                        return [4 /*yield*/, this.convertCharacterStyleOverrides(node, res, option, isSingleLine)];
                     case 2:
                         _c.sent(); // 处理分字样式
                         dom.style.width = j_design_util_1.util.toPX(dom.data.width);
@@ -2933,7 +2930,8 @@ var TEXTConverter = /** @class */ (function (_super) {
         });
     };
     // 解析字体多样式
-    TEXTConverter.prototype.convertCharacterStyleOverrides = function (node, dom, option) {
+    TEXTConverter.prototype.convertCharacterStyleOverrides = function (node, dom, option, isSingleLine) {
+        if (isSingleLine === void 0) { isSingleLine = false; }
         return __awaiter(this, void 0, void 0, function () {
             var width, text, index, s, f, fDom, style, w, fDom, w;
             return __generator(this, function (_a) {
@@ -2964,8 +2962,10 @@ var TEXTConverter = /** @class */ (function (_super) {
                         _a.label = 4;
                     case 4:
                         dom.children.push(fDom);
-                        w = this.testTextWidth(fDom);
-                        width += w;
+                        if (isSingleLine) {
+                            w = this.testTextWidth(fDom);
+                            width += w;
+                        }
                         _a.label = 5;
                     case 5:
                         index++;
@@ -2976,8 +2976,10 @@ var TEXTConverter = /** @class */ (function (_super) {
                             fDom = this.createDomNode('span');
                             fDom.text = text.substring(index);
                             dom.children.push(fDom);
-                            w = this.testTextWidth(fDom);
-                            width += w;
+                            if (isSingleLine) {
+                                w = this.testTextWidth(fDom);
+                                width += w;
+                            }
                         }
                         dom.text = '';
                         dom.type = 'div';
