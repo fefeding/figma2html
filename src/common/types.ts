@@ -889,6 +889,7 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     isMaskOutline?: boolean;
     rotation?: number;
     opacity?:number;
+    blendMode?: BlendMode;
     // 是否保持宽高比
     preserveRatio?: boolean;
     "strokeWeight"?: number;

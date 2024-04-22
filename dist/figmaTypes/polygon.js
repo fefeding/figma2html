@@ -1,4 +1,4 @@
-import { PaintType, } from '../common/types';
+import { PaintType, BlendMode, } from '../common/types';
 import { util } from 'j-design-util';
 import BaseConverter from './baseNode';
 export class PolygonConverter extends BaseConverter {
@@ -147,6 +147,13 @@ export class PolygonConverter extends BaseConverter {
                     // 图片
                     case PaintType.IMAGE: {
                         await super.convertFills(node, polygon, option, container);
+                        break;
+                    }
+                }
+                // 不支持的模式，直接透明
+                switch (fill.blendMode) {
+                    case BlendMode.SCREEN: {
+                        dom.style.opacity = '0';
                         break;
                     }
                 }

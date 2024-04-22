@@ -953,6 +953,13 @@ var BaseConverter = /** @class */ (function () {
                         dom.data.height = dom.bounds.height;
                         dom.style.width = j_design_util_1.util.toPX(dom.bounds.width).toString();
                         dom.style.height = j_design_util_1.util.toPX(dom.bounds.height).toString();
+                        // 不支持的模式，直接透明
+                        switch (node.blendMode) {
+                            case types_1.BlendMode.SCREEN: {
+                                dom.style.opacity = '0';
+                                break;
+                            }
+                        }
                         return [2 /*return*/, dom];
                 }
             });
@@ -1118,6 +1125,13 @@ var BaseConverter = /** @class */ (function () {
                             // 平铺
                             case types_1.PaintSolidScaleMode.TILE: {
                                 dom.style.backgroundRepeat = 'repeat';
+                                break;
+                            }
+                        }
+                        // 不支持的模式，直接透明
+                        switch (fill.blendMode) {
+                            case types_1.BlendMode.SCREEN: {
+                                dom.style.opacity = '0';
                                 break;
                             }
                         }
@@ -2386,18 +2400,18 @@ var PolygonConverter = /** @class */ (function (_super) {
             return __generator(this, function (_e) {
                 switch (_e.label) {
                     case 0:
-                        if (!node.fills) return [3 /*break*/, 13];
+                        if (!node.fills) return [3 /*break*/, 14];
                         polygon = this.getPolygon(node, container || dom);
                         _e.label = 1;
                     case 1:
-                        _e.trys.push([1, 10, 11, 12]);
+                        _e.trys.push([1, 11, 12, 13]);
                         _a = __values(node.fills), _b = _a.next();
                         _e.label = 2;
                     case 2:
-                        if (!!_b.done) return [3 /*break*/, 9];
+                        if (!!_b.done) return [3 /*break*/, 10];
                         fill = _b.value;
                         if (fill.visible === false)
-                            return [3 /*break*/, 8];
+                            return [3 /*break*/, 9];
                         _c = fill.type;
                         switch (_c) {
                             case types_1.PaintType.SOLID: return [3 /*break*/, 3];
@@ -2433,25 +2447,34 @@ var PolygonConverter = /** @class */ (function (_super) {
                         _e.sent();
                         return [3 /*break*/, 8];
                     case 8:
+                        // 不支持的模式，直接透明
+                        switch (fill.blendMode) {
+                            case types_1.BlendMode.SCREEN: {
+                                dom.style.opacity = '0';
+                                break;
+                            }
+                        }
+                        _e.label = 9;
+                    case 9:
                         _b = _a.next();
                         return [3 /*break*/, 2];
-                    case 9: return [3 /*break*/, 12];
-                    case 10:
+                    case 10: return [3 /*break*/, 13];
+                    case 11:
                         e_3_1 = _e.sent();
                         e_3 = { error: e_3_1 };
-                        return [3 /*break*/, 12];
-                    case 11:
+                        return [3 /*break*/, 13];
+                    case 12:
                         try {
                             if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
                         }
                         finally { if (e_3) throw e_3.error; }
                         return [7 /*endfinally*/];
-                    case 12:
+                    case 13:
                         // 默认透明
                         if (!polygon.style.fill)
                             polygon.style.fill = 'transparent';
-                        _e.label = 13;
-                    case 13: return [2 /*return*/, dom];
+                        _e.label = 14;
+                    case 14: return [2 /*return*/, dom];
                 }
             });
         });
@@ -2874,9 +2897,9 @@ var TEXTConverter = /** @class */ (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     TEXTConverter.prototype.convert = function (node, dom, parentNode, page, option) {
+        var _a, _b;
         return __awaiter(this, void 0, void 0, function () {
             var res, w;
-            var _a, _b;
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:

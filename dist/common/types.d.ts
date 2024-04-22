@@ -874,6 +874,7 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     isMaskOutline?: boolean;
     rotation?: number;
     opacity?: number;
+    blendMode?: BlendMode;
     preserveRatio?: boolean;
     "strokeWeight"?: number;
     "strokeAlign"?: StrokeAlign;

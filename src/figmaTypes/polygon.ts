@@ -1,5 +1,5 @@
 
-import { Node, DomNode, ConvertNodeOption, PaintType, PaintSolidScaleMode, Paint, NodeType, ColorStop, DomNodeType, } from '../common/types';
+import { Node, DomNode, ConvertNodeOption, PaintType, PaintSolidScaleMode, Paint, NodeType, ColorStop, DomNodeType, BlendMode, } from '../common/types';
 import { util } from 'j-design-util';
 import BaseConverter from './baseNode';
 
@@ -159,6 +159,14 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
                     // 图片
                     case PaintType.IMAGE: {
                         await super.convertFills(node, polygon, option, container);
+                        break;
+                    }
+                }
+
+                // 不支持的模式，直接透明
+                switch(fill.blendMode) {
+                    case BlendMode.SCREEN: {
+                        dom.style.opacity = '0';
                         break;
                     }
                 }

@@ -1130,6 +1130,13 @@ class BaseConverter {
         dom.data.height = dom.bounds.height;
         dom.style.width = util.toPX(dom.bounds.width).toString();
         dom.style.height = util.toPX(dom.bounds.height).toString();
+        // 不支持的模式，直接透明
+        switch (node.blendMode) {
+            case BlendMode.SCREEN: {
+                dom.style.opacity = '0';
+                break;
+            }
+        }
         return dom;
     }
     // 生成节点对象
@@ -1259,6 +1266,13 @@ class BaseConverter {
                     // 平铺
                     case PaintSolidScaleMode.TILE: {
                         dom.style.backgroundRepeat = 'repeat';
+                        break;
+                    }
+                }
+                // 不支持的模式，直接透明
+                switch (fill.blendMode) {
+                    case BlendMode.SCREEN: {
+                        dom.style.opacity = '0';
                         break;
                     }
                 }
@@ -1911,6 +1925,13 @@ class PolygonConverter extends BaseConverter {
                     // 图片
                     case PaintType.IMAGE: {
                         await super.convertFills(node, polygon, option, container);
+                        break;
+                    }
+                }
+                // 不支持的模式，直接透明
+                switch (fill.blendMode) {
+                    case BlendMode.SCREEN: {
+                        dom.style.opacity = '0';
                         break;
                     }
                 }

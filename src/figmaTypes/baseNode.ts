@@ -1,5 +1,5 @@
 
-import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint, TypeStyle, StringKeyValue } from '../common/types';
+import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint, TypeStyle, StringKeyValue, BlendMode } from '../common/types';
 import { util, type Point } from 'j-design-util';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
@@ -90,6 +90,14 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
 
         dom.style.width = util.toPX(dom.bounds.width).toString();
         dom.style.height = util.toPX(dom.bounds.height).toString();
+
+        // 不支持的模式，直接透明
+        switch(node.blendMode) {
+            case BlendMode.SCREEN: {
+                dom.style.opacity = '0';
+                break;
+            }
+        }
 
         return dom;
     }
@@ -219,6 +227,14 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     // 平铺
                     case PaintSolidScaleMode.TILE: {
                         dom.style.backgroundRepeat = 'repeat';
+                        break;
+                    }
+                }
+
+                // 不支持的模式，直接透明
+                switch(fill.blendMode) {
+                    case BlendMode.SCREEN: {
+                        dom.style.opacity = '0';
                         break;
                     }
                 }
