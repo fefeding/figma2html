@@ -2883,6 +2883,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -2933,58 +2944,75 @@ var TEXTConverter = /** @class */ (function (_super) {
     TEXTConverter.prototype.convertCharacterStyleOverrides = function (node, dom, option, isSingleLine) {
         if (isSingleLine === void 0) { isSingleLine = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var width, text, index, s, f, fDom, style, w, fDom, w;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var width, text, index, lastStyleOverrides, lastDom, s, f, style, fDom, _a, _b, c, w;
+            var e_1, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         width = 0;
-                        if (!(node.characterStyleOverrides && node.characterStyleOverrides.length && node.styleOverrideTable)) return [3 /*break*/, 7];
+                        if (!(node.characterStyleOverrides && node.characterStyleOverrides.length && node.styleOverrideTable)) return [3 /*break*/, 8];
                         text = dom.text || '';
                         index = 0;
-                        _a.label = 1;
+                        lastStyleOverrides = -1;
+                        lastDom = null;
+                        _d.label = 1;
                     case 1:
-                        if (!(index < node.characterStyleOverrides.length)) return [3 /*break*/, 6];
+                        if (!(index < node.characterStyleOverrides.length)) return [3 /*break*/, 7];
                         s = node.characterStyleOverrides[index];
                         f = text[index];
                         if (!f)
-                            return [3 /*break*/, 5];
-                        fDom = this.createDomNode('span');
-                        fDom.text = f;
-                        fDom.style.position = 'relative'; // 连续字符不能用绝对定位
+                            return [3 /*break*/, 6];
+                        if (!(!lastDom || lastStyleOverrides !== s)) return [3 /*break*/, 5];
+                        lastDom = this.createDomNode('span');
+                        lastDom.text = '';
+                        lastDom.style.position = 'relative'; // 连续字符不能用绝对定位
                         style = node.styleOverrideTable[s];
                         if (!style) return [3 /*break*/, 4];
-                        return [4 /*yield*/, this.convertFills(style, fDom, option)];
+                        return [4 /*yield*/, this.convertFills(style, lastDom, option)];
                     case 2:
-                        _a.sent();
-                        return [4 /*yield*/, this.convertStyle(style, fDom, option)];
+                        _d.sent();
+                        return [4 /*yield*/, this.convertStyle(style, lastDom, option)];
                     case 3:
-                        _a.sent();
-                        _a.label = 4;
+                        _d.sent();
+                        _d.label = 4;
                     case 4:
-                        dom.children.push(fDom);
-                        if (isSingleLine) {
-                            w = this.testTextWidth(fDom);
-                            width += w;
-                        }
-                        _a.label = 5;
+                        dom.children.push(lastDom);
+                        _d.label = 5;
                     case 5:
+                        lastDom.text += f;
+                        lastStyleOverrides = s;
+                        _d.label = 6;
+                    case 6:
                         index++;
                         return [3 /*break*/, 1];
-                    case 6:
+                    case 7:
                         // 还有未处理完的，则加到后面
                         if (text.length > index) {
                             fDom = this.createDomNode('span');
                             fDom.text = text.substring(index);
                             dom.children.push(fDom);
-                            if (isSingleLine) {
-                                w = this.testTextWidth(fDom);
-                                width += w;
+                        }
+                        // 单行需要计算宽度
+                        if (isSingleLine) {
+                            try {
+                                for (_a = __values(dom.children), _b = _a.next(); !_b.done; _b = _a.next()) {
+                                    c = _b.value;
+                                    w = this.testTextWidth(c);
+                                    width += w;
+                                }
+                            }
+                            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                            finally {
+                                try {
+                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                }
+                                finally { if (e_1) throw e_1.error; }
                             }
                         }
                         dom.text = '';
                         dom.type = 'div';
-                        _a.label = 7;
-                    case 7:
+                        _d.label = 8;
+                    case 8:
                         // 这种方式文本宽度需要重新计算
                         dom.data.width = Math.max(width, j_design_util_1.util.toNumber(dom.data.width));
                         return [2 /*return*/];

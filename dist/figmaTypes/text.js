@@ -33,32 +33,38 @@ export class TEXTConverter extends BaseConverter {
         if (node.characterStyleOverrides && node.characterStyleOverrides.length && node.styleOverrideTable) {
             const text = dom.text || '';
             let index = 0;
+            let lastStyleOverrides = -1;
+            let lastDom = null;
             for (; index < node.characterStyleOverrides.length; index++) {
                 const s = node.characterStyleOverrides[index];
                 const f = text[index];
                 if (!f)
                     continue;
-                const fDom = this.createDomNode('span');
-                fDom.text = f;
-                fDom.style.position = 'relative'; // 连续字符不能用绝对定位
-                const style = node.styleOverrideTable[s];
-                if (style) {
-                    await this.convertFills(style, fDom, option);
-                    await this.convertStyle(style, fDom, option);
+                // 如果是连续的同样的样式文字，则组合
+                if (!lastDom || lastStyleOverrides !== s) {
+                    lastDom = this.createDomNode('span');
+                    lastDom.text = '';
+                    lastDom.style.position = 'relative'; // 连续字符不能用绝对定位
+                    const style = node.styleOverrideTable[s];
+                    if (style) {
+                        await this.convertFills(style, lastDom, option);
+                        await this.convertStyle(style, lastDom, option);
+                    }
+                    dom.children.push(lastDom);
                 }
-                dom.children.push(fDom);
-                if (isSingleLine) {
-                    const w = this.testTextWidth(fDom);
-                    width += w;
-                }
+                lastDom.text += f;
+                lastStyleOverrides = s;
             }
             // 还有未处理完的，则加到后面
             if (text.length > index) {
                 const fDom = this.createDomNode('span');
                 fDom.text = text.substring(index);
                 dom.children.push(fDom);
-                if (isSingleLine) {
-                    const w = this.testTextWidth(fDom);
+            }
+            // 单行需要计算宽度
+            if (isSingleLine) {
+                for (const c of dom.children) {
+                    const w = this.testTextWidth(c);
                     width += w;
                 }
             }
