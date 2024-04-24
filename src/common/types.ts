@@ -892,6 +892,8 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     blendMode?: BlendMode;
     // 是否保持宽高比
     preserveRatio?: boolean;
+    /** default: [] An array of export settings representing images to export from the canvas */
+    exportSettings?: ExportSetting[];
     "strokeWeight"?: number;
     "strokeAlign"?: StrokeAlign;
     strokeCap?: string;

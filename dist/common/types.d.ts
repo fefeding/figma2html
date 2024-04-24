@@ -876,6 +876,8 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     opacity?: number;
     blendMode?: BlendMode;
     preserveRatio?: boolean;
+    /** default: [] An array of export settings representing images to export from the canvas */
+    exportSettings?: ExportSetting[];
     "strokeWeight"?: number;
     "strokeAlign"?: StrokeAlign;
     strokeCap?: string;

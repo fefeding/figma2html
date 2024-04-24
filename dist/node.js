@@ -1,3 +1,4 @@
+import { ImageType } from './common/types';
 import BaseConverter from './figmaTypes/baseNode';
 import DocumentConverter from './figmaTypes/document';
 import PageConverter from './figmaTypes/page';
@@ -24,6 +25,23 @@ const ConverterMaps = {
     'LINE': new LineConverter(),
     'VECTOR': new RectangleConverter(),
 };
+// rectange是否处理成svg，是返回svg，否则返回img或div
+function rectType(item) {
+    if (item.type !== 'RECTANGLE')
+        return '';
+    // 已识别成图片的，不再处理成svg
+    if (item.type === 'RECTANGLE' && item.fills && item.fills.length && item.fills[0].type === 'IMAGE') {
+        return 'img';
+    }
+    if (item.type === 'RECTANGLE' && item.exportSettings) {
+        for (const setting of item.exportSettings) {
+            if (setting.format !== ImageType.SVG) {
+                return 'div';
+            }
+        }
+    }
+    return 'svg';
+}
 // 转node为html结构对象
 export async function convert(node, parentNode, page, option, container) {
     // 如果是根，则返回document
@@ -60,7 +78,7 @@ export async function convert(node, parentNode, page, option, container) {
                 break;
             }
             // 已识别成图片的，不再处理成svg
-            if (child.type === 'RECTANGLE' && child.fills && child.fills.length && child.fills[0].type === 'IMAGE') {
+            if (rectType(child) !== 'svg') {
                 isSvg = false;
                 break;
             }
@@ -75,8 +93,9 @@ export async function convert(node, parentNode, page, option, container) {
     }
     let converter = ConverterMaps[node.type] || ConverterMaps.BASE;
     // 已识别成图片的，不再处理成svg
-    if (node.type === 'RECTANGLE' && node.fills && node.fills.length && node.fills[0].type === 'IMAGE') {
-        dom.type = 'img';
+    const recType = rectType(node);
+    if (recType && recType !== 'svg') {
+        dom.type = recType;
         converter = ConverterMaps.BASE;
     }
     if (converter)

@@ -173,6 +173,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.nodeToDom = exports.convert = void 0;
+var types_1 = require("./common/types");
 var baseNode_1 = __importDefault(require("./figmaTypes/baseNode"));
 var document_1 = __importDefault(require("./figmaTypes/document"));
 var page_1 = __importDefault(require("./figmaTypes/page"));
@@ -199,11 +200,39 @@ var ConverterMaps = {
     'LINE': new line_1.default(),
     'VECTOR': new rectangle_1.default(),
 };
+// rectange是否处理成svg，是返回svg，否则返回img或div
+function rectType(item) {
+    var e_1, _a;
+    if (item.type !== 'RECTANGLE')
+        return '';
+    // 已识别成图片的，不再处理成svg
+    if (item.type === 'RECTANGLE' && item.fills && item.fills.length && item.fills[0].type === 'IMAGE') {
+        return 'img';
+    }
+    if (item.type === 'RECTANGLE' && item.exportSettings) {
+        try {
+            for (var _b = __values(item.exportSettings), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var setting = _c.value;
+                if (setting.format !== types_1.ImageType.SVG) {
+                    return 'div';
+                }
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_1) throw e_1.error; }
+        }
+    }
+    return 'svg';
+}
 // 转node为html结构对象
 function convert(node, parentNode, page, option, container) {
     return __awaiter(this, void 0, void 0, function () {
-        var docDom, dom, isContainer, svgElements, isSvg, _a, _b, child, converter, lastChildDom, _c, _d, child, parent_1, c, e_1_1;
-        var e_2, _e, e_1, _f;
+        var docDom, dom, isContainer, svgElements, isSvg, _a, _b, child, converter, recType, lastChildDom, _c, _d, child, parent_1, c, e_2_1;
+        var e_3, _e, e_2, _f;
         return __generator(this, function (_g) {
             switch (_g.label) {
                 case 0:
@@ -243,18 +272,18 @@ function convert(node, parentNode, page, option, container) {
                                     break;
                                 }
                                 // 已识别成图片的，不再处理成svg
-                                if (child.type === 'RECTANGLE' && child.fills && child.fills.length && child.fills[0].type === 'IMAGE') {
+                                if (rectType(child) !== 'svg') {
                                     isSvg = false;
                                     break;
                                 }
                             }
                         }
-                        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                        catch (e_3_1) { e_3 = { error: e_3_1 }; }
                         finally {
                             try {
                                 if (_b && !_b.done && (_e = _a.return)) _e.call(_a);
                             }
-                            finally { if (e_2) throw e_2.error; }
+                            finally { if (e_3) throw e_3.error; }
                         }
                     }
                     else {
@@ -265,9 +294,9 @@ function convert(node, parentNode, page, option, container) {
                         container = dom;
                     }
                     converter = ConverterMaps[node.type] || ConverterMaps.BASE;
-                    // 已识别成图片的，不再处理成svg
-                    if (node.type === 'RECTANGLE' && node.fills && node.fills.length && node.fills[0].type === 'IMAGE') {
-                        dom.type = 'img';
+                    recType = rectType(node);
+                    if (recType && recType !== 'svg') {
+                        dom.type = recType;
                         converter = ConverterMaps.BASE;
                     }
                     if (!converter) return [3 /*break*/, 4];
@@ -319,14 +348,14 @@ function convert(node, parentNode, page, option, container) {
                     return [3 /*break*/, 6];
                 case 9: return [3 /*break*/, 12];
                 case 10:
-                    e_1_1 = _g.sent();
-                    e_1 = { error: e_1_1 };
+                    e_2_1 = _g.sent();
+                    e_2 = { error: e_2_1 };
                     return [3 /*break*/, 12];
                 case 11:
                     try {
                         if (_d && !_d.done && (_f = _c.return)) _f.call(_c);
                     }
-                    finally { if (e_1) throw e_1.error; }
+                    finally { if (e_2) throw e_2.error; }
                     return [7 /*endfinally*/];
                 case 12: return [2 /*return*/, dom];
             }
@@ -448,8 +477,8 @@ function renderSvgElement(node, option) {
 }
 function renderElement(node, option, dom) {
     return __awaiter(this, void 0, void 0, function () {
-        var name_1, _a, _b, child, c, e_3_1;
-        var e_3, _c;
+        var name_1, _a, _b, child, c, e_4_1;
+        var e_4, _c;
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
@@ -519,14 +548,14 @@ function renderElement(node, option, dom) {
                     return [3 /*break*/, 2];
                 case 5: return [3 /*break*/, 8];
                 case 6:
-                    e_3_1 = _d.sent();
-                    e_3 = { error: e_3_1 };
+                    e_4_1 = _d.sent();
+                    e_4 = { error: e_4_1 };
                     return [3 /*break*/, 8];
                 case 7:
                     try {
                         if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                     }
-                    finally { if (e_3) throw e_3.error; }
+                    finally { if (e_4) throw e_4.error; }
                     return [7 /*endfinally*/];
                 case 8: return [2 /*return*/, dom];
             }
