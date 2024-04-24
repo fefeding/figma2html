@@ -68,7 +68,7 @@ export class TEXTConverter extends BaseConverter {
                     width += w;
                 }
             }
-            dom.text = '';
+            dom.data.text = dom.text = '';
             //dom.type = 'div';
         }
         // 这种方式文本宽度需要重新计算

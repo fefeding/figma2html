@@ -3038,7 +3038,7 @@ var TEXTConverter = /** @class */ (function (_super) {
                                 finally { if (e_1) throw e_1.error; }
                             }
                         }
-                        dom.text = '';
+                        dom.data.text = dom.text = '';
                         _d.label = 8;
                     case 8:
                         // 这种方式文本宽度需要重新计算
