@@ -120,6 +120,17 @@ var util = {
         return str;
     },
     /**
+     * 创建dom元素
+     * @param tag 标签名
+     */
+    createElement(tag, option) {
+        // svg标签创建
+        if (['svg', 'defs', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'g', 'path', 'polygon', 'stop', 'text', 'mask', 'linearGradient', 'radialGradient', 'filter', 'feOffset', 'feBlend'].includes(tag)) {
+            return document.createElementNS("http://www.w3.org/2000/svg", tag, option); // 创建SVG元素
+        }
+        return document.createElement(tag, option);
+    },
+    /**
      * 获取元素的绝对定位
      * @param  el - 目标元素对象
      * @returns  位置对象(top,left)
@@ -372,7 +383,7 @@ var util = {
      * @param rotation
      * @returns
      */
-    async rotateImage(url, rotation) {
+    async rotateImage(url, rotation, quality, type = 'image/png') {
         if (!url)
             return url;
         return new Promise((resolve, reject) => {
@@ -384,11 +395,14 @@ var util = {
                 cvs.height = img.height;
                 const ctx = cvs.getContext('2d');
                 ctx.clearRect(0, 0, cvs.width, cvs.height);
-                ctx.translate(cvs.width / 2, cvs.height / 2);
-                ctx.rotate(rotation);
-                ctx.translate(-cvs.width / 2, -cvs.height / 2);
+                // 如果角度为0，则只是转为了base64
+                if (rotation) {
+                    ctx.translate(cvs.width / 2, cvs.height / 2);
+                    ctx.rotate(rotation);
+                    ctx.translate(-cvs.width / 2, -cvs.height / 2);
+                }
                 ctx.drawImage(img, 0, 0);
-                const data = cvs.toDataURL();
+                const data = cvs.toDataURL(type, quality);
                 resolve(data);
             };
             img.onerror = function (e) {
@@ -396,6 +410,15 @@ var util = {
             };
             img.src = url;
         });
+    },
+    /**
+     * 把图片转为bae64
+     * @param url 图片地址
+     * @returns
+     */
+    async image2Base64(url, quality, type = 'image/png') {
+        const base64 = await this.rotateImage(url, 0, quality, type);
+        return base64;
     },
     /**
      * 请求远程资源
@@ -645,437 +668,6 @@ const getChangeData = (dir, offset, oldPosition, newPosition, center, rotation =
     }
     return args;
 };
-
-/**
- * 滤镜数据
- */
-class FilterData {
-    /**
-     * 名称
-     */
-    name;
-    /**
-     * 中文名
-     */
-    displayName;
-    /**
-     * 配置值
-     */
-    option;
-}
-class BaseFilterOption {
-    constructor(option) {
-        if (option) {
-            if (typeof option === 'string' || typeof option === 'number') {
-                this.value = option;
-            }
-            else {
-                this.value = option.value;
-            }
-        }
-    }
-    value;
-    toString() {
-        return this.value.toString();
-    }
-    toJSON() {
-        return {
-            value: this.value
-        };
-    }
-    clone() {
-        const obj = new BaseFilterOption();
-        // @ts-ignore
-        if (this.value && this.value.clone)
-            obj.value = this.value.clone();
-        else
-            obj.value = this.value;
-        return obj;
-    }
-}
-class ShadowFilterOptionValue {
-    constructor(data) {
-        if (data) {
-            this.x = data.x;
-            this.y = data.y;
-            this.blur = data.blur;
-            this.color = data.color;
-        }
-    }
-    x;
-    y;
-    blur;
-    color;
-    toJSON() {
-        return {
-            x: this.x,
-            y: this.y,
-            blur: this.blur || '',
-            color: this.color || ''
-        };
-    }
-    toString() {
-        return `${this.x} ${this.y} ${this.blur || 0} ${this.color || '#000'}`;
-    }
-    clone() {
-        return new ShadowFilterOptionValue(this);
-    }
-}
-class ShadowFilterOption extends BaseFilterOption {
-    constructor(option) {
-        super();
-        if (option) {
-            // @ts-ignore
-            if (option instanceof ShadowFilterOption || option.value)
-                this.value = new ShadowFilterOptionValue(option.value);
-            else
-                this.value = new ShadowFilterOptionValue(option);
-        }
-    }
-    toString() {
-        return this.value.toString();
-    }
-}
-
-class Filter {
-    constructor(option) {
-        if (option) {
-            if (option instanceof FilterData) {
-                this.name = option.name;
-                this.displayName = option.displayName;
-                option = option.option;
-            }
-            if (option instanceof BaseFilterOption) {
-                this.option = option;
-            }
-            else if (typeof option === 'object') {
-                this.option = new BaseFilterOption(option);
-            }
-        }
-    }
-    name;
-    displayName;
-    /**
-    * 配置值
-    */
-    option;
-    /**
-     * 创建同类型的滤镜
-     * @param option 滤镜参数
-     * @returns
-     */
-    create(option = this.option, name = this.name, displayName = this.displayName, filterType = Filter) {
-        const data = new FilterData();
-        data.name = name;
-        data.displayName = displayName;
-        // @ts-ignore
-        data.option = option.clone ? option.clone() : option;
-        const obj = new filterType(data);
-        return obj;
-    }
-    // 转成json
-    toJSON() {
-        return {
-            name: this.name || '',
-            displayName: this.displayName || '',
-            option: this.option.toJSON()
-        };
-    }
-    toString() {
-        if (!this.name)
-            return '';
-        return `${this.name}(${this.option.toString()})`;
-    }
-}
-/**
- * 反色滤镜
- */
-class InvertFilter extends Filter {
-    constructor(option) {
-        option = Object.assign({ value: 1 }, option);
-        super(option);
-    }
-    name = 'invert';
-    displayName = '反色';
-}
-/**
- * 模糊滤镜 value: 4px
- */
-class BlurFilter extends Filter {
-    constructor(option) {
-        option = Object.assign({ value: '4px' }, option);
-        super(option);
-    }
-    name = 'blur';
-    displayName = '模糊';
-}
-/**
- * 亮度滤镜 value: 0-100
- */
-class BrightnessFilter extends Filter {
-    constructor(option) {
-        option = Object.assign({ value: 2 }, option);
-        super(option);
-    }
-    name = 'brightness';
-    displayName = '亮度';
-}
-/**
- * 灰度滤镜 value: 0-1
- */
-class GrayscaleFilter extends Filter {
-    constructor(option) {
-        option = Object.assign({ value: 1 }, option);
-        super(option);
-    }
-    name = 'grayscale';
-    displayName = '灰度';
-}
-/**
- * 复古滤镜 value: 0-1
- */
-class SepiaFilter extends Filter {
-    constructor(option) {
-        option = Object.assign({ value: 1 }, option);
-        super(option);
-    }
-    name = 'sepia';
-    displayName = '复古';
-}
-/**
- * 旋转滤镜 value: 0-360deg 角度 或 弧度 0-2*Math.PI rad
- */
-class HueRotateFilter extends Filter {
-    constructor(option) {
-        option = Object.assign({ value: '240deg' }, option);
-        super(option);
-    }
-    name = 'hue-rotate';
-    displayName = '旋转';
-}
-/**
- * 透明度 value: 0-1
- */
-class OpacityFilter extends Filter {
-    constructor(option) {
-        option = Object.assign({ value: 0.8 }, option);
-        super(option);
-    }
-    name = 'opacity';
-    displayName = '透明度';
-}
-/**
- * 阴影滤镜
- */
-class DropShadowFilter extends Filter {
-    constructor(option) {
-        if (!option)
-            option = new ShadowFilterOption();
-        option.value = new ShadowFilterOptionValue(option.value || {
-            x: '0',
-            y: '0',
-            blur: '4px',
-            color: '#000'
-        });
-        super(option);
-    }
-    name = 'drop-shadow';
-    displayName = '阴影';
-    /**
-      * 创建同类型的滤镜
-      * @param option 滤镜参数
-      * @returns
-      */
-    create(option = this.option, name = this.name, displayName = this.displayName) {
-        const data = new ShadowFilterOption(option);
-        const obj = new DropShadowFilter(data);
-        obj.name = name;
-        obj.displayName = displayName;
-        return obj;
-    }
-}
-/**
- * 对比度滤镜  value: 2
- */
-class ContrastFilter extends Filter {
-    constructor(option) {
-        option = Object.assign({ value: 2 }, option);
-        super(option);
-    }
-    name = 'contrast';
-    displayName = '对比度';
-}
-/**
- * 饱和度滤镜  value: 3
- */
-class SaturateFilter extends Filter {
-    constructor(option) {
-        option = Object.assign({ value: 3 }, option);
-        super(option);
-    }
-    name = 'saturate';
-    displayName = '饱和度';
-}
-const filters = {
-    /**
-     * 反色滤镜
-     */
-    invert: new InvertFilter(),
-    /**
-     * 亮度
-     */
-    blur: new BlurFilter(),
-    /**
-     * 亮度
-     */
-    brightness: new BrightnessFilter(),
-    /**
-     * 灰度
-     */
-    grayscale: new GrayscaleFilter(),
-    /**
-     * 复古
-     */
-    sepia: new SepiaFilter(),
-    /**
-     * 旋转滤镜
-     */
-    hueRotate: new HueRotateFilter(),
-    /**
-     * 阴影
-     */
-    dropShadow: new DropShadowFilter(),
-    /**
-     * 透明度
-     */
-    opacity: new OpacityFilter(),
-    /**
-     * 对比度
-     */
-    contrast: new ContrastFilter(),
-    /**
-     * 饱和度
-     */
-    saturate: new SaturateFilter(),
-};
-
-class CSSFilters {
-    constructor(target, filters) {
-        if (target)
-            this.target = target;
-        if (filters && filters.length) {
-            this.add(filters);
-        }
-    }
-    // 所有支持的滤镜
-    filters = new Array();
-    /**
-     * 绑定的dom否元素对象
-     */
-    target;
-    /**
-     * 当前滤镜个数
-     */
-    get count() {
-        return this.filters.length;
-    }
-    /**
-     * 根据滤镜名获取滤镜对象
-     * @param name
-     * @returns
-     */
-    get(name) {
-        for (const f of this.filters) {
-            if (f.name === name)
-                return f;
-        }
-    }
-    clear() {
-        this.filters.splice(0, this.filters.length);
-    }
-    /**
-     * 添加滤镜
-     * @param filter
-     */
-    add(filter, option) {
-        if (Array.isArray(filter)) {
-            for (const f of filter) {
-                this.add(f, option);
-            }
-            return;
-        }
-        else if (typeof filter === 'string') {
-            const filterObj = filters[filter];
-            if (!filterObj) {
-                console.error(`${filter}不存在`);
-                return;
-            }
-            filter = filterObj.create(option || filterObj.option);
-            return this.add(filter);
-        }
-        if (filter.name) {
-            const existsFilter = this.get(filter.name);
-            if (existsFilter) {
-                console.error(`${filter.name}已经存在滤镜集合中，不能重复`);
-                return;
-            }
-        }
-        if (filter instanceof Filter) {
-            this.filters.push(filter);
-            this.apply();
-            return;
-        }
-        else if (filter.name) {
-            return this.add(filter.name, filter.option);
-        }
-    }
-    /**
-     * 移除滤镜
-     * @param filter
-     */
-    remove(filter) {
-        if (Array.isArray(filter)) {
-            for (const f of filter)
-                this.remove(f);
-        }
-        else {
-            for (let i = this.filters.length - 1; i >= 0; i--) {
-                if ((typeof filter === 'string' && this.filters[i].name === filter) || this.filters[i] === filter) {
-                    this.filters.splice(i, 1);
-                }
-            }
-        }
-        this.apply();
-    }
-    toJSON() {
-        const res = [];
-        if (this.count) {
-            for (const f of this.filters) {
-                res.push(f.toJSON());
-            }
-        }
-        return res;
-    }
-    toString() {
-        const res = [];
-        for (const f of this.filters) {
-            const r = f.toString();
-            if (r)
-                res.push(r);
-        }
-        if (res.length)
-            return res.join(' ');
-        return '';
-    }
-    /**
-     * 生效
-     * @param target
-     */
-    apply(target = this.target) {
-        if (target && target.style)
-            target.style.filter = this.toString();
-    }
-}
 
 function getDefaultExportFromCjs (x) {
 	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
@@ -1472,6 +1064,560 @@ class JEventEmitter extends EventEmitter {
             name && super.off(name, fn, context);
         }
         return this;
+    }
+}
+
+class JFontData {
+    constructor(family, url, font) {
+        this.family = family;
+        this.url = url;
+        this.font = font;
+    }
+    family;
+    url;
+    // 中文名
+    label;
+    font;
+    get status() {
+        if (this.font)
+            return this.font.status;
+        return 'unloaded';
+    }
+    async load(url = this.url) {
+        this.url = url || this.url;
+        if (!this.font)
+            this.font = new FontFace(this.family, `url("${this.url}")`);
+        const f = await this.font.load();
+        document.fonts.add(f); // 生效
+        return this;
+    }
+    toHtml() {
+        return `@font-face {font-family: "${this.family}"; src: url("${this.url}")}`;
+    }
+}
+class JFonts extends JEventEmitter {
+    constructor(fonts) {
+        super();
+        // 初始化默认支持的字体
+        if (Array.isArray(fonts)) {
+            this.registry(fonts);
+        }
+        else if (fonts) {
+            for (const name in fonts) {
+                if (fonts[name] && typeof fonts[name] === 'object')
+                    this.registry(fonts[name]);
+            }
+        }
+        this.init();
+    }
+    fontConfigs = new Map();
+    fonts = new Map();
+    init() {
+        if (document.fonts) {
+            const fonts = document.fonts.values();
+            let font = fonts.next();
+            while (font && font.done && font.value) {
+                if (font.value) {
+                    const f = new JFontData(font.value.family);
+                    f.font = font.value;
+                    this.fonts.set(f.family, f);
+                }
+                font = fonts.next();
+            }
+        }
+        // 系统默认的一些字体支持
+        this.fonts.set('arial', new JFontData('Arial', '', new FontFace('Arial', '')));
+    }
+    /**
+     * 注入字体配置
+     * @param font 字体
+     */
+    registry(font) {
+        // 初始化默认支持的字体
+        if (Array.isArray(font)) {
+            for (const f of font) {
+                this.registry(f);
+            }
+        }
+        else if (font) {
+            this.fontConfigs.set(font.family.toLocaleLowerCase(), font);
+        }
+    }
+    // 加载字体
+    async load(name, url) {
+        let font = this.get(name);
+        if (font) {
+            if (font.url && (font.status === 'unloaded' || font.status === 'error'))
+                return font.load();
+            return font;
+        }
+        if (!url) {
+            const config = this.fontConfigs.get(name.toLocaleLowerCase());
+            // 没有配置支持的字体，则报错
+            if (!config) {
+                //console.warn(`没有支持的 ${name} 字体配置`);
+                return null;
+            }
+            url = config.url;
+        }
+        font = new JFontData(name, url);
+        this.fonts.set(name.toLocaleLowerCase(), font);
+        const f = await font.load();
+        this.emit('load', f); // 加载字本事件
+        return f;
+    }
+    // 获取已加载的字体
+    get(name) {
+        if (this.fonts) {
+            const lowerName = name.toLocaleLowerCase();
+            if (this.fonts.has(lowerName))
+                return this.fonts.get(lowerName);
+            else {
+                const exist = util.checkFont(name); // 如果系统已经支持，则加到配置中
+                if (exist) {
+                    const font = new JFontData(lowerName, '', new FontFace(name, ''));
+                    this.registry(font);
+                    return font;
+                }
+            }
+        }
+        return null;
+    }
+    // 检查加载的字体是否存在，存在则返回字体对象
+    check(name) {
+        const font = this.get(name);
+        return !!font;
+    }
+}
+
+/**
+ * 滤镜数据
+ */
+class FilterData {
+    /**
+     * 名称
+     */
+    name;
+    /**
+     * 中文名
+     */
+    displayName;
+    /**
+     * 配置值
+     */
+    option;
+}
+class BaseFilterOption {
+    constructor(option) {
+        if (option) {
+            if (typeof option === 'string' || typeof option === 'number') {
+                this.value = option;
+            }
+            else {
+                this.value = option.value;
+            }
+        }
+    }
+    value;
+    toString() {
+        return this.value.toString();
+    }
+    toJSON() {
+        return {
+            value: this.value
+        };
+    }
+    clone() {
+        const obj = new BaseFilterOption();
+        // @ts-ignore
+        if (this.value && this.value.clone)
+            obj.value = this.value.clone();
+        else
+            obj.value = this.value;
+        return obj;
+    }
+}
+class ShadowFilterOptionValue {
+    constructor(data) {
+        if (data) {
+            this.x = data.x;
+            this.y = data.y;
+            this.blur = data.blur;
+            this.color = data.color;
+        }
+    }
+    x;
+    y;
+    blur;
+    color;
+    toJSON() {
+        return {
+            x: this.x,
+            y: this.y,
+            blur: this.blur || '',
+            color: this.color || ''
+        };
+    }
+    toString() {
+        return `${this.x} ${this.y} ${this.blur || 0} ${this.color || '#000'}`;
+    }
+    clone() {
+        return new ShadowFilterOptionValue(this);
+    }
+}
+class ShadowFilterOption extends BaseFilterOption {
+    constructor(option) {
+        super();
+        if (option) {
+            // @ts-ignore
+            if (option instanceof ShadowFilterOption || option.value)
+                this.value = new ShadowFilterOptionValue(option.value);
+            else
+                this.value = new ShadowFilterOptionValue(option);
+        }
+    }
+    toString() {
+        return this.value.toString();
+    }
+}
+
+class Filter {
+    constructor(option) {
+        if (option) {
+            if (option instanceof FilterData) {
+                this.name = option.name;
+                this.displayName = option.displayName;
+                option = option.option;
+            }
+            if (option instanceof BaseFilterOption) {
+                this.option = option;
+            }
+            else if (typeof option === 'object') {
+                this.option = new BaseFilterOption(option);
+            }
+        }
+    }
+    name;
+    displayName;
+    /**
+    * 配置值
+    */
+    option;
+    /**
+     * 创建同类型的滤镜
+     * @param option 滤镜参数
+     * @returns
+     */
+    create(option = this.option, name = this.name, displayName = this.displayName, filterType = Filter) {
+        const data = new FilterData();
+        data.name = name;
+        data.displayName = displayName;
+        // @ts-ignore
+        data.option = option.clone ? option.clone() : option;
+        const obj = new filterType(data);
+        return obj;
+    }
+    // 转成json
+    toJSON() {
+        return {
+            name: this.name || '',
+            displayName: this.displayName || '',
+            option: this.option.toJSON()
+        };
+    }
+    toString() {
+        if (!this.name)
+            return '';
+        return `${this.name}(${this.option.toString()})`;
+    }
+}
+/**
+ * 反色滤镜
+ */
+class InvertFilter extends Filter {
+    constructor(option) {
+        option = Object.assign({ value: 1 }, option);
+        super(option);
+    }
+    name = 'invert';
+    displayName = '反色';
+}
+/**
+ * 模糊滤镜 value: 4px
+ */
+class BlurFilter extends Filter {
+    constructor(option) {
+        option = Object.assign({ value: '4px' }, option);
+        super(option);
+    }
+    name = 'blur';
+    displayName = '模糊';
+}
+/**
+ * 亮度滤镜 value: 0-100
+ */
+class BrightnessFilter extends Filter {
+    constructor(option) {
+        option = Object.assign({ value: 2 }, option);
+        super(option);
+    }
+    name = 'brightness';
+    displayName = '亮度';
+}
+/**
+ * 灰度滤镜 value: 0-1
+ */
+class GrayscaleFilter extends Filter {
+    constructor(option) {
+        option = Object.assign({ value: 1 }, option);
+        super(option);
+    }
+    name = 'grayscale';
+    displayName = '灰度';
+}
+/**
+ * 复古滤镜 value: 0-1
+ */
+class SepiaFilter extends Filter {
+    constructor(option) {
+        option = Object.assign({ value: 1 }, option);
+        super(option);
+    }
+    name = 'sepia';
+    displayName = '复古';
+}
+/**
+ * 旋转滤镜 value: 0-360deg 角度 或 弧度 0-2*Math.PI rad
+ */
+class HueRotateFilter extends Filter {
+    constructor(option) {
+        option = Object.assign({ value: '240deg' }, option);
+        super(option);
+    }
+    name = 'hue-rotate';
+    displayName = '旋转';
+}
+/**
+ * 透明度 value: 0-1
+ */
+class OpacityFilter extends Filter {
+    constructor(option) {
+        option = Object.assign({ value: 0.8 }, option);
+        super(option);
+    }
+    name = 'opacity';
+    displayName = '透明度';
+}
+/**
+ * 阴影滤镜
+ */
+class DropShadowFilter extends Filter {
+    constructor(option) {
+        if (!option)
+            option = new ShadowFilterOption();
+        option.value = new ShadowFilterOptionValue(option.value || {
+            x: '0',
+            y: '0',
+            blur: '4px',
+            color: '#000'
+        });
+        super(option);
+    }
+    name = 'drop-shadow';
+    displayName = '阴影';
+    /**
+      * 创建同类型的滤镜
+      * @param option 滤镜参数
+      * @returns
+      */
+    create(option = this.option, name = this.name, displayName = this.displayName) {
+        const data = new ShadowFilterOption(option);
+        const obj = new DropShadowFilter(data);
+        obj.name = name;
+        obj.displayName = displayName;
+        return obj;
+    }
+}
+/**
+ * 对比度滤镜  value: 2
+ */
+class ContrastFilter extends Filter {
+    constructor(option) {
+        option = Object.assign({ value: 2 }, option);
+        super(option);
+    }
+    name = 'contrast';
+    displayName = '对比度';
+}
+/**
+ * 饱和度滤镜  value: 3
+ */
+class SaturateFilter extends Filter {
+    constructor(option) {
+        option = Object.assign({ value: 3 }, option);
+        super(option);
+    }
+    name = 'saturate';
+    displayName = '饱和度';
+}
+const filters = {
+    /**
+     * 反色滤镜
+     */
+    invert: new InvertFilter(),
+    /**
+     * 亮度
+     */
+    blur: new BlurFilter(),
+    /**
+     * 亮度
+     */
+    brightness: new BrightnessFilter(),
+    /**
+     * 灰度
+     */
+    grayscale: new GrayscaleFilter(),
+    /**
+     * 复古
+     */
+    sepia: new SepiaFilter(),
+    /**
+     * 旋转滤镜
+     */
+    hueRotate: new HueRotateFilter(),
+    /**
+     * 阴影
+     */
+    dropShadow: new DropShadowFilter(),
+    /**
+     * 透明度
+     */
+    opacity: new OpacityFilter(),
+    /**
+     * 对比度
+     */
+    contrast: new ContrastFilter(),
+    /**
+     * 饱和度
+     */
+    saturate: new SaturateFilter(),
+};
+
+class CSSFilters {
+    constructor(target, filters) {
+        if (target)
+            this.target = target;
+        if (filters && filters.length) {
+            this.add(filters);
+        }
+    }
+    // 所有支持的滤镜
+    filters = new Array();
+    /**
+     * 绑定的dom否元素对象
+     */
+    target;
+    /**
+     * 当前滤镜个数
+     */
+    get count() {
+        return this.filters.length;
+    }
+    /**
+     * 根据滤镜名获取滤镜对象
+     * @param name
+     * @returns
+     */
+    get(name) {
+        for (const f of this.filters) {
+            if (f.name === name)
+                return f;
+        }
+    }
+    clear() {
+        this.filters.splice(0, this.filters.length);
+    }
+    /**
+     * 添加滤镜
+     * @param filter
+     */
+    add(filter, option) {
+        if (Array.isArray(filter)) {
+            for (const f of filter) {
+                this.add(f, option);
+            }
+            return;
+        }
+        else if (typeof filter === 'string') {
+            const filterObj = filters[filter];
+            if (!filterObj) {
+                console.error(`${filter}不存在`);
+                return;
+            }
+            filter = filterObj.create(option || filterObj.option);
+            return this.add(filter);
+        }
+        if (filter.name) {
+            const existsFilter = this.get(filter.name);
+            if (existsFilter) {
+                console.error(`${filter.displayName || filter.name}已经存在滤镜集合中，不能重复`);
+                return existsFilter;
+            }
+        }
+        if (filter instanceof Filter) {
+            this.filters.push(filter);
+            this.apply();
+            return filter;
+        }
+        else if (filter.name) {
+            return this.add(filter.name, filter.option);
+        }
+    }
+    /**
+     * 移除滤镜
+     * @param filter
+     */
+    remove(filter) {
+        if (Array.isArray(filter)) {
+            for (const f of filter)
+                this.remove(f);
+        }
+        else {
+            for (let i = this.filters.length - 1; i >= 0; i--) {
+                if ((typeof filter === 'string' && this.filters[i].name === filter) || this.filters[i] === filter) {
+                    this.filters.splice(i, 1);
+                }
+            }
+        }
+        this.apply();
+    }
+    toJSON() {
+        const res = [];
+        if (this.count) {
+            for (const f of this.filters) {
+                res.push(f.toJSON());
+            }
+        }
+        return res;
+    }
+    toString() {
+        const res = [];
+        for (const f of this.filters) {
+            const r = f.toString();
+            if (r)
+                res.push(r);
+        }
+        if (res.length)
+            return res.join(' ');
+        return '';
+    }
+    /**
+     * 生效
+     * @param target
+     */
+    apply(target = this.target) {
+        if (target && target.style)
+            target.style.filter = this.toString();
     }
 }
 
@@ -2423,11 +2569,13 @@ const ContainerDefaultStyle = {
  * 默认编辑器样式
  */
 const editorDefaultCssContent = `.j-design-editor-container {
-        border: 1px solid transparent;
+        border: none;
+        box-sizing: content-box;
+    }.j-design-editor-container * {
+        box-sizing: content-box;
     }
     .j-design-editor-container.selected {
-        box-shadow: none!important;
-        border: 1px solid rgba(6,155,181,1);
+        box-shadow: 0 0 1px rgba(6,155,181,1);
     }
     .j-design-editor-container:hover {
         box-shadow: 0 0 1px 1px rgba(0,0,0,0.2);
@@ -2945,7 +3093,7 @@ class JElement extends JEventEmitter {
         this._type = this.type || option.type || '';
         const nodeType = option.nodeType || 'div';
         // @ts-ignore
-        this._dom = document.createElement(nodeType);
+        this._dom = util.createElement(nodeType);
         this.attr('data-id', this.id);
         this.attr('data-type', this.type);
         if (option.editor)
@@ -3032,6 +3180,17 @@ class JElement extends JEventEmitter {
         if (option.data) {
             this.data.from(option.data);
         }
+        if (option.attributes) {
+            Object.assign(this.attributes, option.attributes);
+            if (this.attributes) {
+                for (const name in this.attributes) {
+                    const v = this.attributes[name];
+                    if (typeof v !== 'undefined' && typeof name === 'string') {
+                        this.attr(name, v);
+                    }
+                }
+            }
+        }
     }
     // 绑定事件
     bindEvent(dom) {
@@ -3071,6 +3230,10 @@ class JElement extends JEventEmitter {
     get dom() {
         return this._dom;
     }
+    /**
+     * dom上的附加属性
+     */
+    attributes = {};
     // 父元素
     parent;
     // 当前编辑器
@@ -3084,7 +3247,8 @@ class JElement extends JEventEmitter {
         return this.dom.className;
     }
     set className(v) {
-        this.dom.className = v;
+        if (this.dom.classList.contains(v))
+            this.dom.classList.add(v);
     }
     get visible() {
         return this.data.visible;
@@ -3171,7 +3335,7 @@ class JElement extends JEventEmitter {
             parent.children.push(child);
             this.emit('childAdded', child);
         }
-        else if (child instanceof HTMLElement) {
+        else if (child instanceof Element && child !== parent.dom) {
             parent.dom.appendChild(child);
         }
     }
@@ -3197,7 +3361,7 @@ class JElement extends JEventEmitter {
     }
     // 转为json
     toJSON(props = [], ig = (p) => true) {
-        const fields = ['type', 'data', 'style', 'transform', 'id', 'filters', ...props];
+        const fields = ['name', 'type', 'data', 'attributes', 'style', 'transform', 'id', 'filters', ...props];
         const obj = {
             children: []
         };
@@ -3208,6 +3372,14 @@ class JElement extends JEventEmitter {
             }
             else if (v && v.toJSON) {
                 obj[k] = v.toJSON();
+            }
+            else if (typeof v === 'object') {
+                obj[k] = {};
+                for (const n in v) {
+                    if (typeof n !== 'string' || (typeof v[n] !== 'string' && typeof v[n] !== 'number'))
+                        continue;
+                    obj[k][n] = v[n];
+                }
             }
         }
         if (this.children && this.children.length) {
@@ -3416,8 +3588,18 @@ class JBaseComponent extends JElement {
     }
     // 添加元素到画布
     addChild(child) {
-        if (child === this.target || child instanceof HTMLElement) {
+        if (child === this)
+            return child;
+        if (child === this.target || child === this.target.dom) {
             return super.addChild(child);
+        }
+        // 非组件直接加到target中
+        if (!(child instanceof JBaseComponent)) {
+            this.target.addChild(child);
+            if (child instanceof JElement) {
+                this.children.push(child);
+            }
+            return child;
         }
         this.bindElementEvent(child);
         child.parent = this; // 把父设置成编辑器
@@ -3426,6 +3608,10 @@ class JBaseComponent extends JElement {
         // 刷新样式
         child.style.refresh();
         this.target.addChild(child);
+        // SVG内部自行处理
+        if (child.type === 'svg') {
+            return child.addChild(child);
+        }
         if (child.option?.children?.length) {
             for (const opt of child.option.children) {
                 const c = child.editor.createShape(opt.type, opt);
@@ -3462,7 +3648,7 @@ class JBaseComponent extends JElement {
                 event: e.event || e,
                 target: this
             });
-        });
+        }, el);
     }
     // 通过ID获取子元素
     getChild(id) {
@@ -3652,7 +3838,7 @@ class JImage extends JBaseComponent {
             dataType: option.dataType || JImageData
         });
         // 如果保持宽高比，则不能拉伸到100%高
-        if (option.preserveRatio) {
+        if (option.preserveRatio || option.target?.style?.height === 'auto') {
             this.target.style.height = 'auto';
         }
         // 图像加载完成时触发 'load' 事件
@@ -3712,6 +3898,7 @@ class JSvg extends JBaseComponent {
         super({
             ...option,
             type: option.type || 'svg',
+            nodeType: 'svg',
             dataType: option.dataType || JSvgData
         });
         // 属性变化映射到style
@@ -3737,12 +3924,49 @@ class JSvg extends JBaseComponent {
     get typeName() {
         return 'svg';
     }
-    // 替换变量
-    renderSvg(svg) {
-        this.data.map((name, value) => {
-            svg = svg.replace(new RegExp(`\\{${name}\\}`, 'g'), value);
+    // 添加元素到画布
+    addChild(child) {
+        if (child === this.target || child instanceof Element || !(child instanceof JBaseComponent)) {
+            return super.addChild(child);
+        }
+        const children = child.option?.children || child.option?.target?.children;
+        if (children?.length) {
+            for (const opt of child.option.children) {
+                const c = this.createSvgElement(opt.type || opt.nodeType, opt);
+                c && child.addChild(c);
+            }
+        }
+        return child;
+    }
+    createSvgElement(tag, node) {
+        const el = new JElement({
+            ...node,
+            nodeType: tag,
         });
-        return svg;
+        this.renderSvgElement(node, el);
+        return el;
+    }
+    // 设置dom属性
+    renderSvgElement(node, el) {
+        // @ts-ignore
+        if (node.preserveRatio && node.type === 'img')
+            el.style.height = 'auto';
+        // @ts-ignore
+        if (node.fill)
+            el.attr('fill', node.fill);
+        if (node.id)
+            el.attr('id', node.id);
+        if (node.name)
+            el.attr('data-name', node.name);
+        if (node.children) {
+            for (const child of node.children) {
+                if (child.visible === false)
+                    continue;
+                const c = this.createSvgElement(child.type || child.nodeType, child);
+                c && el.addChild(c);
+            }
+        }
+        return el;
     }
     // 加载svg内容
     async load(url = this.data.url) {
@@ -4399,121 +4623,6 @@ class JControllerComponent extends JControllerItem {
     }
 }
 
-class JFontData {
-    constructor(family, url, font) {
-        this.family = family;
-        this.url = url;
-        this.font = font;
-    }
-    family;
-    url;
-    // 中文名
-    label;
-    font;
-    get status() {
-        if (this.font)
-            return this.font.status;
-        return 'unloaded';
-    }
-    async load(url = this.url) {
-        this.url = url || this.url;
-        if (!this.font)
-            this.font = new FontFace(this.family, `url("${this.url}")`);
-        const f = await this.font.load();
-        document.fonts.add(f); // 生效
-        return this;
-    }
-    toHtml() {
-        return `@font-face {font-family: "${this.family}"; src: url("${this.url}")}`;
-    }
-}
-class JFonts extends JEventEmitter {
-    constructor(fonts) {
-        super();
-        // 初始化默认支持的字体
-        if (Array.isArray(fonts)) {
-            this.registry(fonts);
-        }
-        else if (fonts) {
-            for (const name in fonts) {
-                if (fonts[name] && typeof fonts[name] === 'object')
-                    this.registry(fonts[name]);
-            }
-        }
-        this.init();
-    }
-    fontConfigs = new Map();
-    fonts = new Map();
-    init() {
-        if (document.fonts) {
-            const fonts = document.fonts.values();
-            let font = fonts.next();
-            while (font && font.done && font.value) {
-                if (font.value) {
-                    const f = new JFontData(font.value.family);
-                    f.font = font.value;
-                    this.fonts.set(f.family, f);
-                }
-                font = fonts.next();
-            }
-        }
-        // 系统默认的一些字体支持
-        this.fonts.set('arial', new JFontData('Arial', '', new FontFace('Arial', '')));
-    }
-    /**
-     * 注入字体配置
-     * @param font 字体
-     */
-    registry(font) {
-        // 初始化默认支持的字体
-        if (Array.isArray(font)) {
-            for (const f of font) {
-                this.registry(f);
-            }
-        }
-        else if (font) {
-            this.fontConfigs.set(font.family.toLocaleLowerCase(), font);
-        }
-    }
-    // 加载字体
-    async load(name, url) {
-        let font = this.get(name);
-        if (font) {
-            if (font.url && (font.status === 'unloaded' || font.status === 'error'))
-                return font.load();
-            return font;
-        }
-        if (!url) {
-            const config = this.fontConfigs.get(name.toLocaleLowerCase());
-            // 没有配置支持的字体，则报错
-            if (!config) {
-                console.warn(`没有支持的 ${name} 字体配置`);
-                return null;
-            }
-            url = config.url;
-        }
-        font = new JFontData(name, url);
-        this.fonts.set(name.toLocaleLowerCase(), font);
-        const f = await font.load();
-        this.emit('load', f); // 加载字本事件
-        return f;
-    }
-    // 获取已加载的字体
-    get(name) {
-        if (this.fonts) {
-            name = name.toLocaleLowerCase();
-            if (this.fonts.has(name))
-                return this.fonts.get(name);
-        }
-        return null;
-    }
-    // 检查加载的字体是否存在，存在则返回字体对象
-    check(name) {
-        const font = this.get(name);
-        return !!font;
-    }
-}
-
 /**
  * @public
  */
@@ -4524,6 +4633,7 @@ class JEditor extends JBaseComponent {
             'boxShadow': '0 0 10px 10px #ccc',
             'position': 'absolute',
             'backgroundSize': '100% 100%',
+            //transformOrigin: 'center top',         
         });
         // @ts-ignore 外层只响应Z轴旋转
         /*option.transformWatchProps = [
@@ -4657,7 +4767,11 @@ class JEditor extends JBaseComponent {
             else if (e.type === 'styleChange') {
                 // 字体发生改变，需要做check, 并加载字体生效
                 if (e.data.name === 'fontFamily' && e.data.value) {
-                    this.fonts.load(e.data.value).catch((e) => {
+                    this.fonts.load(e.data.value).then((font) => {
+                        if (!font) {
+                            console.warn(`加载字体${e.data.value}失败`);
+                        }
+                    }).catch((e) => {
                         console.error(e);
                     }); // 异步加载字体
                 }
@@ -4740,7 +4854,7 @@ class JEditor extends JBaseComponent {
     }
     // 缩放
     scale(x, y = x) {
-        if (x < 0.1 || y < 0.1)
+        if (x <= 0 || y <= 0)
             return;
         this.transform.scaleX = x;
         this.transform.scaleY = y;
@@ -4773,6 +4887,7 @@ class JEditor extends JBaseComponent {
         });
         return el;
     }
+    // 加载data渲染图形
     fromJSON(data) {
         this.clear();
         //if(typeof data === 'string') data = JSON.parse(data);
@@ -4780,6 +4895,7 @@ class JEditor extends JBaseComponent {
             this.style.apply(data.style); // 应用样式
         }
         this.resize(data.width || data.data.width, data.height || data.data.height);
+        this.name = data.name || '';
         for (const c of data.children) {
             if (!c.type)
                 continue;
@@ -4815,21 +4931,29 @@ class JEditor extends JBaseComponent {
                     transformOrigin: 'left top',
                 }
             };
-            editor = await this.create(option, data);
-        }
-        // 如果指定了宽度，则把dom缩放到指定的大小
-        if (option?.data?.width) {
-            const scale = util.toNumber(option.data.width) / util.toNumber(editor.data.width);
-            editor.scale(scale);
-        }
-        else if (option?.data?.width) {
-            const scale = util.toNumber(option.data.height) / util.toNumber(editor.data.height);
-            editor.scale(scale);
+            editor = this.create(option, data);
         }
         const dom = editor.dom;
         dom.style.position = 'relative';
         return new Promise(resolve => {
             setTimeout(() => {
+                const scale = {
+                    x: 0,
+                    y: 0
+                };
+                // 如果指定了宽度，则把dom缩放到指定的大小
+                if (editor.option?.data?.width) {
+                    scale.x = util.toNumber(editor.option.data.width) / util.toNumber(editor.data.width);
+                    scale.y = scale.x;
+                }
+                if (editor.option?.data?.height) {
+                    scale.y = util.toNumber(editor.option.data.height) / util.toNumber(editor.data.height);
+                    // 没有指定则保持比例
+                    if (scale.x === 0) {
+                        scale.x = scale.y;
+                    }
+                }
+                editor.scale(scale.x || 1, scale.y || 1);
                 resolve(editor);
             }, 200);
         });

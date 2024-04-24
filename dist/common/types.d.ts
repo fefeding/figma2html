@@ -905,7 +905,7 @@ export declare type ConvertNodeOption = {
     images?: StringKeyValue;
     getImage?: (key: string) => Promise<string>;
 };
-export type DomNodeType = 'div' | 'img' | 'span' | 'document' | 'page' | 'frame' | 'ellipse' | 'svg' | 'defs' | 'linearGradient' | 'radialGradient' | 'stop' | 'polygon' | 'mask' | 'rect' | 'line' | 'circle' | 'path';
+export type DomNodeType = 'div' | 'img' | 'span' | 'document' | 'page' | 'frame' | 'ellipse' | 'svg' | 'defs' | 'linearGradient' | 'radialGradient' | 'stop' | 'polygon' | 'mask' | 'rect' | 'line' | 'circle' | 'path' | 'var';
 export declare type SvgLinearGradientDom = {
     id: string;
     x1?: string;

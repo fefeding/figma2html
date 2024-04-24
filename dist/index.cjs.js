@@ -2992,7 +2992,7 @@ var TEXTConverter = /** @class */ (function (_super) {
                         if (!f)
                             return [3 /*break*/, 6];
                         if (!(!lastDom || lastStyleOverrides !== s)) return [3 /*break*/, 5];
-                        lastDom = this.createDomNode('span');
+                        lastDom = this.createDomNode('var');
                         lastDom.text = '';
                         lastDom.style.position = 'relative'; // 连续字符不能用绝对定位
                         style = node.styleOverrideTable[s];
@@ -3017,7 +3017,7 @@ var TEXTConverter = /** @class */ (function (_super) {
                     case 7:
                         // 还有未处理完的，则加到后面
                         if (text.length > index) {
-                            fDom = this.createDomNode('span');
+                            fDom = this.createDomNode('var');
                             fDom.text = text.substring(index);
                             dom.children.push(fDom);
                         }
@@ -3039,7 +3039,6 @@ var TEXTConverter = /** @class */ (function (_super) {
                             }
                         }
                         dom.text = '';
-                        dom.type = 'div';
                         _d.label = 8;
                     case 8:
                         // 这种方式文本宽度需要重新计算

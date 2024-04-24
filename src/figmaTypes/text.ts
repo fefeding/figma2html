@@ -47,7 +47,7 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
 
                 // 如果是连续的同样的样式文字，则组合
                 if(!lastDom || lastStyleOverrides !== s) {
-                    lastDom = this.createDomNode('span');
+                    lastDom = this.createDomNode('var');
                     lastDom.text = '';
                     lastDom.style.position = 'relative';// 连续字符不能用绝对定位
                     const style = node.styleOverrideTable[s];
@@ -62,7 +62,7 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
             }
             // 还有未处理完的，则加到后面
             if(text.length > index) {
-                const fDom = this.createDomNode('span');
+                const fDom = this.createDomNode('var');
                 fDom.text = text.substring(index);
                 dom.children.push(fDom);
             }
@@ -74,7 +74,7 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
                 }
             }
             dom.text = '';
-            dom.type = 'div';
+            //dom.type = 'div';
         }
         // 这种方式文本宽度需要重新计算
         dom.data.width = Math.max(width, util.toNumber(dom.data.width));

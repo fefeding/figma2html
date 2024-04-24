@@ -1,6 +1,6 @@
 {
   "name": "j-figma2html",
-  "version": "1.0.32",
+  "version": "1.0.33",
   "description": "figma 转 html 工具类",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
