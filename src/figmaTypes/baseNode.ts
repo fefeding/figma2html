@@ -1,4 +1,5 @@
 
+import { IFilter, DropShadowFilter, BlurFilter, ContrastFilter, BrightnessFilter, SaturateFilter, InvertFilter, SepiaFilter } from 'j-css-filters';
 import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint, TypeStyle, StringKeyValue, BlendMode, IStyleTransform } from '../common/types';
 import { util, type Point } from 'j-design-util';
 
@@ -113,6 +114,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                 boxSizing: 'border-box',
                 ...option?.style,
             } as CSSStyleDeclaration,
+            filters: new Array<IFilter>,
             type: type,
         } as DomNode; 
         return dom;
@@ -147,18 +149,29 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
     // 转换滤镜
     async convertEffects(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
         if(!node.isMaskOutline && node.effects) {
-            dom.style.filter = dom.style.filter || '';
+            //dom.style.filter = dom.style.filter || '';
             for(const effect of node.effects) {
                 if(effect.visible === false) continue;
                 switch(effect.type) {
                     case EffectType.DROP_SHADOW: 
                     case EffectType.INNER_SHADOW: {
-                        dom.style.filter += ` drop-shadow(${util.toPX(effect.offset.x)} ${util.toPX(effect.offset.y)} ${util.toPX(effect.radius)} ${util.colorToString(effect.color, 255)})`;
+                        //dom.style.filter += ` drop-shadow(${util.toPX(effect.offset.x)} ${util.toPX(effect.offset.y)} ${util.toPX(effect.radius)} ${util.colorToString(effect.color, 255)})`;
+                        dom.filters.push(new DropShadowFilter({
+                            value: {
+                                x: util.toPX(effect.offset.x),
+                                y: util.toPX(effect.offset.y),
+                                blur: util.toPX(effect.radius),
+                                color: util.colorToString(effect.color, 255)
+                            }
+                        }));
                         break;
                     }
                     case EffectType.LAYER_BLUR:
                     case EffectType.BACKGROUND_BLUR: {
-                        dom.style.filter += ` blur(${util.toPX(effect.radius)})`;
+                        //dom.style.filter += ` blur(${util.toPX(effect.radius)})`;
+                        dom.filters.push(new BlurFilter({
+                            value: util.toPX(effect.radius)
+                        }));
                         break;
                     }
                 }
@@ -266,6 +279,58 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     dom.transform.skewY = c;
 
                     dom.preserveRatio = true;
+                }
+                // 如果有滤镜，则给指定
+                if(fill.filters) {
+                    /* exposure?: number; // 曝光度 (exposure): 控制图像的明亮程度或暗度。
+                    contrast?: number; // 对比
+                    saturation?: number; // 饱和度
+                    temperature?: number; // 色温
+                    tint?: number; // 色调
+                    highlights?: number; // 调整图像中高光部分的亮度和对比度。
+                    shadows?: number; // 阴影
+                    */
+                    if(fill.filters.contrast) {
+                        dom.filters.push(new ContrastFilter({
+                            value: fill.filters.contrast
+                        }));
+                    }
+                    if(fill.filters.exposure) {
+                        const v = (fill.filters.exposure + 1)/2;
+                        dom.filters.push(new BrightnessFilter({
+                            value: v
+                        }));
+                    }
+                    if(fill.filters.saturation) {
+                        dom.filters.push(new SaturateFilter({
+                            value: fill.filters.exposure
+                        }));
+                    }
+                    if(fill.filters.temperature) {
+                        dom.filters.push(new InvertFilter({
+                            value: fill.filters.temperature
+                        }));
+                    }
+                    if(fill.filters.tint) {
+                        dom.filters.push(new SepiaFilter({
+                            value: fill.filters.tint
+                        }));
+                    }
+                    if(fill.filters.highlights) {
+                        dom.filters.push(new SaturateFilter({
+                            value: fill.filters.highlights
+                        }));
+                    }
+                    if(fill.filters.shadows) {
+                        dom.filters.push(new DropShadowFilter({
+                            value: {
+                                x: '0',
+                                y: '0',
+                                blur: fill.filters.shadows + '',
+                                color: '#000'
+                            }
+                        }));
+                    }
                 }
             }
         }

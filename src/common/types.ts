@@ -1,4 +1,6 @@
 import { type Color } from 'j-design-util';
+import { type IFilter } from 'j-css-filters';
+
 /** A string enum with value, describing the end caps of vector paths. */
 export enum StrokeCap {
     NONE = "NONE",
@@ -366,6 +368,16 @@ declare type PaintGradient_ = {
      */
     gradientStops: ColorStop[];
 };
+// Defines the image filters applied to an image paint. All values are from -1 to 1.
+declare type PaintImageFilters = {
+    exposure?: number; // 曝光度 (exposure): 控制图像的明亮程度或暗度。
+    contrast?: number; // 对比
+    saturation?: number; // 饱和度
+    temperature?: number; // 色温
+    tint?: number; // 色调
+    highlights?: number; // 调整图像中高光部分的亮度和对比度。
+    shadows?: number; // 阴影
+}
 declare type PaintImage_ = {
     /** Image scaling mode */
     scaleMode: PaintSolidScaleMode;
@@ -379,6 +391,8 @@ declare type PaintImage_ = {
     rotation: number;
     /** A reference to the GIF embedded in this node, if the image is a GIF. To download the image using this reference, use the GET file images endpoint to retrieve the mapping from image references to image URLs */
     gifRef: string;
+    // Defines what image filters have been applied to this paint, if any. If this property is not defined, no filters have been applied.
+    filters?: PaintImageFilters;
 };
 export declare type PaintSolid = {
     type: PaintType.SOLID;
@@ -1057,6 +1071,7 @@ export declare type DomNode = {
     backgroundImageUrl?: string;// figma图片id
     fill?: string;// svg 填充
     figmaData?: Node;
+    filters?: IFilter[];
 } & SvgLinearGradientDom & SvgRadialGradientDom & SvgGradientStopDom;
 
 export declare type NodeToDomOption = {

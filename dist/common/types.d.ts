@@ -1,4 +1,5 @@
 import { type Color } from 'j-design-util';
+import { type IFilter } from 'j-css-filters';
 /** A string enum with value, describing the end caps of vector paths. */
 export declare enum StrokeCap {
     NONE = "NONE",
@@ -363,6 +364,15 @@ declare type PaintGradient_ = {
      */
     gradientStops: ColorStop[];
 };
+declare type PaintImageFilters = {
+    exposure?: number;
+    contrast?: number;
+    saturation?: number;
+    temperature?: number;
+    tint?: number;
+    highlights?: number;
+    shadows?: number;
+};
 declare type PaintImage_ = {
     /** Image scaling mode */
     scaleMode: PaintSolidScaleMode;
@@ -376,6 +386,7 @@ declare type PaintImage_ = {
     rotation: number;
     /** A reference to the GIF embedded in this node, if the image is a GIF. To download the image using this reference, use the GET file images endpoint to retrieve the mapping from image references to image URLs */
     gifRef: string;
+    filters?: PaintImageFilters;
 };
 export declare type PaintSolid = {
     type: PaintType.SOLID;
@@ -1010,6 +1021,7 @@ export declare type DomNode = {
     backgroundImageUrl?: string;
     fill?: string;
     figmaData?: Node;
+    filters?: IFilter[];
 } & SvgLinearGradientDom & SvgRadialGradientDom & SvgGradientStopDom;
 export declare type NodeToDomOption = {
     getImage: (key: string) => Promise<any>;
