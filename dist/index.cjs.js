@@ -478,12 +478,47 @@ function renderSvgElement(node, option) {
 }
 function renderElement(node, option, dom) {
     return __awaiter(this, void 0, void 0, function () {
-        var img, name_1, _a, _b, child, c, e_4_1;
+        var transform, img, name_1, _a, _b, child, c, e_4_1;
         var e_4, _c;
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
                     dom = dom || j_design_util_1.default.createElement(node.type);
+                    if (node.transform) {
+                        transform = '';
+                        if (node.transform.rotateX) {
+                            transform += " rotateX(".concat(node.transform.rotateX, ")");
+                        }
+                        if (node.transform.rotateY) {
+                            transform += " rotateY(".concat(node.transform.rotateY, ")");
+                        }
+                        if (node.transform.rotateZ) {
+                            transform += " rotateZ(".concat(node.transform.rotateZ, ")");
+                        }
+                        if (node.transform.scaleX) {
+                            transform += " scaleX(".concat(node.transform.scaleX, ")");
+                        }
+                        if (node.transform.scaleY) {
+                            transform += " scaleY(".concat(node.transform.scaleY, ")");
+                        }
+                        if (node.transform.scaleZ) {
+                            transform += " scaleZ(".concat(node.transform.scaleZ, ")");
+                        }
+                        if (node.transform.translateX) {
+                            transform += " translateX(".concat(j_design_util_1.default.isNumber(node.transform.translateX) ? j_design_util_1.default.toPX(node.transform.translateX) : node.transform.translateX, ")");
+                        }
+                        if (node.transform.translateY) {
+                            transform += " translateY(".concat(j_design_util_1.default.isNumber(node.transform.translateY) ? j_design_util_1.default.toPX(node.transform.translateY) : node.transform.translateY, ")");
+                        }
+                        if (node.transform.translateZ) {
+                            transform += " translateZ(".concat(j_design_util_1.default.isNumber(node.transform.translateZ) ? j_design_util_1.default.toPX(node.transform.translateZ) : node.transform.translateZ, ")");
+                        }
+                        if (transform) {
+                            j_design_util_1.default.css(dom, {
+                                transform: transform
+                            });
+                        }
+                    }
                     // 是图片的话，在它上面套一层div
                     if (node.type === 'img') {
                         img = dom;
@@ -891,6 +926,22 @@ var __values = (this && this.__values) || function(o) {
     };
     throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BaseConverter = void 0;
 var types_1 = require("../common/types");
@@ -1093,19 +1144,19 @@ var BaseConverter = /** @class */ (function () {
     // 处理填充
     BaseConverter.prototype.convertFills = function (node, dom, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, fill, _c, img, e_3_1;
-            var e_3, _d;
-            return __generator(this, function (_e) {
-                switch (_e.label) {
+            var _a, _b, fill, _c, img, _d, _e, a, c, e, _f, b, d, f, e_3_1;
+            var e_3, _g;
+            return __generator(this, function (_h) {
+                switch (_h.label) {
                     case 0:
                         if (node.type === 'BOOLEAN_OPERATION')
                             return [2 /*return*/, dom];
                         if (!(!node.isMaskOutline && node.fills)) return [3 /*break*/, 14];
-                        _e.label = 1;
+                        _h.label = 1;
                     case 1:
-                        _e.trys.push([1, 12, 13, 14]);
+                        _h.trys.push([1, 12, 13, 14]);
                         _a = __values(node.fills), _b = _a.next();
-                        _e.label = 2;
+                        _h.label = 2;
                     case 2:
                         if (!!_b.done) return [3 /*break*/, 11];
                         fill = _b.value;
@@ -1128,24 +1179,24 @@ var BaseConverter = /** @class */ (function () {
                             dom.style.backgroundColor = j_design_util_1.util.colorToString(fill.color, 255);
                             return [3 /*break*/, 9];
                         }
-                        _e.label = 4;
+                        _h.label = 4;
                     case 4:
                         {
                             dom.style.background = this.convertLinearGradient(fill, dom, container);
                             return [3 /*break*/, 9];
                         }
-                        _e.label = 5;
+                        _h.label = 5;
                     case 5:
                         {
                             dom.style.background = this.convertRadialGradient(fill, dom, container);
                             return [3 /*break*/, 9];
                         }
-                        _e.label = 6;
+                        _h.label = 6;
                     case 6:
                         if (!(option && option.getImage)) return [3 /*break*/, 8];
                         return [4 /*yield*/, option.getImage(fill.imageRef)];
                     case 7:
-                        img = _e.sent();
+                        img = _h.sent();
                         if (img) {
                             if (dom.type === 'img') {
                                 dom.url = img;
@@ -1155,7 +1206,7 @@ var BaseConverter = /** @class */ (function () {
                             }
                         }
                         dom.backgroundImageUrl = img || fill.imageRef;
-                        _e.label = 8;
+                        _h.label = 8;
                     case 8: return [3 /*break*/, 9];
                     case 9:
                         switch (fill.scaleMode) {
@@ -1184,18 +1235,31 @@ var BaseConverter = /** @class */ (function () {
                                 break;
                             }
                         }
-                        _e.label = 10;
+                        if (dom && fill.imageTransform && fill.scaleMode === types_1.PaintSolidScaleMode.STRETCH) {
+                            if (!dom.transform)
+                                dom.transform = {};
+                            _d = __read(fill.imageTransform, 2), _e = __read(_d[0], 3), a = _e[0], c = _e[1], e = _e[2], _f = __read(_d[1], 3), b = _f[0], d = _f[1], f = _f[2];
+                            // 计算旋转角度和正弦值
+                            dom.transform.translateX = (-e * 100) + '%'; // * node.absoluteBoundingBox.width;                    
+                            dom.transform.translateY = (-f * 100) + '%'; //* node.absoluteBoundingBox.width;
+                            //dom.transform.scaleX = a;
+                            //dom.transform.scaleY = d;
+                            dom.transform.skewX = b;
+                            dom.transform.skewY = c;
+                            dom.preserveRatio = true;
+                        }
+                        _h.label = 10;
                     case 10:
                         _b = _a.next();
                         return [3 /*break*/, 2];
                     case 11: return [3 /*break*/, 14];
                     case 12:
-                        e_3_1 = _e.sent();
+                        e_3_1 = _h.sent();
                         e_3 = { error: e_3_1 };
                         return [3 /*break*/, 14];
                     case 13:
                         try {
-                            if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
+                            if (_b && !_b.done && (_g = _a.return)) _g.call(_a);
                         }
                         finally { if (e_3) throw e_3.error; }
                         return [7 /*endfinally*/];

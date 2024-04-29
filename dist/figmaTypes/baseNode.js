@@ -227,20 +227,27 @@ export class BaseConverter {
                         break;
                     }
                 }
-                /*
-                                if(dom && fill.imageTransform) {
-                                    if(!dom.transform) dom.transform = {};
-                                    const [[a, c, e], [b, d, f]] = fill.imageTransform;
-                                    // 计算旋转角度和正弦值
-                                    const rotation = Math.atan2(b, a);
-                                    const scaleX = Math.sqrt(a * a + b * b);
-                                    const scaleY = Math.sqrt(c * c + d * d);
-                                    dom.transform.translateX = e*100 + '%';
-                                    dom.transform.translateY = f*100 + '%';
-                                    dom.transform.rotateZ = rotation;
-                                    dom.transform.scaleX = scaleX;
-                                    dom.transform.scaleY = scaleY;
-                                }*/
+                if (dom && fill.imageTransform && fill.scaleMode === PaintSolidScaleMode.STRETCH) {
+                    if (!dom.transform)
+                        dom.transform = {};
+                    /**
+                     * 1. 第一个数字表示图片的水平缩放比例。
+                        2. 第二个数字表示图片的水平倾斜比例。
+                        3. 第三个数字表示图片的垂直倾斜比例。
+                        4. 第四个数字表示图片的垂直缩放比例。
+                        5. 第五个数字表示图片的水平移动量。
+                        6. 第六个数字表示图片的垂直移动量。
+                     */
+                    const [[a, c, e], [b, d, f]] = fill.imageTransform;
+                    // 计算旋转角度和正弦值
+                    dom.transform.translateX = (-e * 100) + '%'; // * node.absoluteBoundingBox.width;                    
+                    dom.transform.translateY = (-f * 100) + '%'; //* node.absoluteBoundingBox.width;
+                    //dom.transform.scaleX = a;
+                    //dom.transform.scaleY = d;
+                    dom.transform.skewX = b;
+                    dom.transform.skewY = c;
+                    dom.preserveRatio = true;
+                }
             }
         }
         return dom;

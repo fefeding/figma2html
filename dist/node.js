@@ -191,6 +191,41 @@ async function renderSvgElement(node, option) {
 }
 async function renderElement(node, option, dom) {
     dom = dom || util.createElement(node.type);
+    if (node.transform) {
+        let transform = '';
+        if (node.transform.rotateX) {
+            transform += ` rotateX(${node.transform.rotateX})`;
+        }
+        if (node.transform.rotateY) {
+            transform += ` rotateY(${node.transform.rotateY})`;
+        }
+        if (node.transform.rotateZ) {
+            transform += ` rotateZ(${node.transform.rotateZ})`;
+        }
+        if (node.transform.scaleX) {
+            transform += ` scaleX(${node.transform.scaleX})`;
+        }
+        if (node.transform.scaleY) {
+            transform += ` scaleY(${node.transform.scaleY})`;
+        }
+        if (node.transform.scaleZ) {
+            transform += ` scaleZ(${node.transform.scaleZ})`;
+        }
+        if (node.transform.translateX) {
+            transform += ` translateX(${util.isNumber(node.transform.translateX) ? util.toPX(node.transform.translateX) : node.transform.translateX})`;
+        }
+        if (node.transform.translateY) {
+            transform += ` translateY(${util.isNumber(node.transform.translateY) ? util.toPX(node.transform.translateY) : node.transform.translateY})`;
+        }
+        if (node.transform.translateZ) {
+            transform += ` translateZ(${util.isNumber(node.transform.translateZ) ? util.toPX(node.transform.translateZ) : node.transform.translateZ})`;
+        }
+        if (transform) {
+            util.css(dom, {
+                transform
+            });
+        }
+    }
     // 是图片的话，在它上面套一层div
     if (node.type === 'img') {
         let img = dom;
