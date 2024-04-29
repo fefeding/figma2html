@@ -28,7 +28,7 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
 
         await this.convertCharacterStyleOverrides(node, res, option, isSingleLine);// 处理分字样式
 
-        dom.style.width = util.toPX(dom.data.width);
+        dom.style.width = util.toPX(++dom.data.width);
         return res;
     }
 

@@ -24,7 +24,7 @@ export class TEXTConverter extends BaseConverter {
             dom.data.width = dom.bounds.width;
         }
         await this.convertCharacterStyleOverrides(node, res, option, isSingleLine); // 处理分字样式
-        dom.style.width = util.toPX(dom.data.width);
+        dom.style.width = util.toPX(++dom.data.width);
         return res;
     }
     // 解析字体多样式

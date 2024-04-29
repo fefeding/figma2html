@@ -64,7 +64,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         }
         // 裁剪超出区域
         if(node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) dom.style.overflow = 'hidden';
-
+        // 是否保持宽高比
         dom.preserveRatio = node.preserveRatio;
 
         // padding

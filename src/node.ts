@@ -1,4 +1,5 @@
 
+import util from 'j-design-util';
 import { type Node, type DomNode, type NodeConverter, type NodeToDomOption, type ConvertNodeOption, type IJElementData, ImageType } from './common/types';
 import BaseConverter from './figmaTypes/baseNode';
 import DocumentConverter from './figmaTypes/document';
@@ -55,6 +56,9 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
     }
 
     if(node.visible === false) return null;
+
+    // 已识别成图片的，不再处理成svg
+    const recType = rectType(node);
    
     const dom = ConverterMaps.BASE.createDomNode('div', {
         id: node.id,
@@ -70,7 +74,7 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
         figmaData: node,
     });   
     // 普通元素，不可当作容器
-    dom.isElement = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE', 'RECTANGLE'].includes(node.type); // || (parentNode && parentNode.clipsContent);
+    dom.isElement = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE', 'RECTANGLE'].includes(node.type) && recType !== 'img' && recType !== 'svg' && recType !== 'div'; // || (parentNode && parentNode.clipsContent);
 
     const isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
     const svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
@@ -101,8 +105,7 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
     }
     
     let converter = ConverterMaps[node.type] || ConverterMaps.BASE;
-    // 已识别成图片的，不再处理成svg
-    const recType = rectType(node);
+    
     if(recType && recType !== 'svg') {
         dom.type = recType;
         converter = ConverterMaps.BASE;
@@ -209,17 +212,39 @@ async function renderSvgElement(node: DomNode, option?: NodeToDomOption) {
 
 async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTMLElement|SVGElement) {
     
-    dom = dom || document.createElement(node.type);
+    dom = dom || util.createElement(node.type);
+
+    // 是图片的话，在它上面套一层div
+    if(node.type === 'img') {
+        let img = dom as HTMLImageElement;
+        if(node.url) img.src = node.url;
+        util.css(img, {
+            width: '100%',
+            height: '100%'
+        });
+        dom = util.createElement('div');
+        // 如果保持宽高比，则直隐去超出部分
+        if(node.preserveRatio) {
+            // 保持宽高比
+            util.css(img, {
+                height: 'auto'
+            });
+            util.css(dom, {
+                overflow: 'hidden'
+            });
+        }
+        dom.appendChild(img);
+    }
+
     if(node.style) {
         Object.assign(dom.style, node.style);
-        if(node.preserveRatio && node.type === 'img') dom.style.height = 'auto';
+        //if(node.preserveRatio && node.type === 'img') dom.style.height = 'auto';
     }
     if(node.text) {
         dom.textContent = node.text;
     }
 
-    // @ts-ignore
-    if(node.type === 'img' && node.url) dom.src = node.url;
+    
 
     if(node.visible === false) dom.style.display = 'none';
 

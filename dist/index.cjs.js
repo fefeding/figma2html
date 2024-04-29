@@ -173,6 +173,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.nodeToDom = exports.convert = void 0;
+var j_design_util_1 = __importDefault(require("j-design-util"));
 var types_1 = require("./common/types");
 var baseNode_1 = __importDefault(require("./figmaTypes/baseNode"));
 var document_1 = __importDefault(require("./figmaTypes/document"));
@@ -231,7 +232,7 @@ function rectType(item) {
 // 转node为html结构对象
 function convert(node, parentNode, page, option, container) {
     return __awaiter(this, void 0, void 0, function () {
-        var docDom, dom, isContainer, svgElements, isSvg, _a, _b, child, converter, recType, lastChildDom, _c, _d, child, parent_1, c, e_2_1;
+        var docDom, recType, dom, isContainer, svgElements, isSvg, _a, _b, child, converter, lastChildDom, _c, _d, child, parent_1, c, e_2_1;
         var e_3, _e, e_2, _f;
         return __generator(this, function (_g) {
             switch (_g.label) {
@@ -244,6 +245,7 @@ function convert(node, parentNode, page, option, container) {
                 case 2:
                     if (node.visible === false)
                         return [2 /*return*/, null];
+                    recType = rectType(node);
                     dom = ConverterMaps.BASE.createDomNode('div', {
                         id: node.id,
                         name: node.name,
@@ -258,7 +260,7 @@ function convert(node, parentNode, page, option, container) {
                         figmaData: node,
                     });
                     // 普通元素，不可当作容器
-                    dom.isElement = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE', 'RECTANGLE'].includes(node.type); // || (parentNode && parentNode.clipsContent);
+                    dom.isElement = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE', 'RECTANGLE'].includes(node.type) && recType !== 'img' && recType !== 'svg' && recType !== 'div'; // || (parentNode && parentNode.clipsContent);
                     isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
                     svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
                     isSvg = isContainer && !container;
@@ -294,7 +296,6 @@ function convert(node, parentNode, page, option, container) {
                         container = dom;
                     }
                     converter = ConverterMaps[node.type] || ConverterMaps.BASE;
-                    recType = rectType(node);
                     if (recType && recType !== 'svg') {
                         dom.type = recType;
                         converter = ConverterMaps.BASE;
@@ -477,23 +478,41 @@ function renderSvgElement(node, option) {
 }
 function renderElement(node, option, dom) {
     return __awaiter(this, void 0, void 0, function () {
-        var name_1, _a, _b, child, c, e_4_1;
+        var img, name_1, _a, _b, child, c, e_4_1;
         var e_4, _c;
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
-                    dom = dom || document.createElement(node.type);
+                    dom = dom || j_design_util_1.default.createElement(node.type);
+                    // 是图片的话，在它上面套一层div
+                    if (node.type === 'img') {
+                        img = dom;
+                        if (node.url)
+                            img.src = node.url;
+                        j_design_util_1.default.css(img, {
+                            width: '100%',
+                            height: '100%'
+                        });
+                        dom = j_design_util_1.default.createElement('div');
+                        // 如果保持宽高比，则直隐去超出部分
+                        if (node.preserveRatio) {
+                            // 保持宽高比
+                            j_design_util_1.default.css(img, {
+                                height: 'auto'
+                            });
+                            j_design_util_1.default.css(dom, {
+                                overflow: 'hidden'
+                            });
+                        }
+                        dom.appendChild(img);
+                    }
                     if (node.style) {
                         Object.assign(dom.style, node.style);
-                        if (node.preserveRatio && node.type === 'img')
-                            dom.style.height = 'auto';
+                        //if(node.preserveRatio && node.type === 'img') dom.style.height = 'auto';
                     }
                     if (node.text) {
                         dom.textContent = node.text;
                     }
-                    // @ts-ignore
-                    if (node.type === 'img' && node.url)
-                        dom.src = node.url;
                     if (node.visible === false)
                         dom.style.display = 'none';
                     if (node.attributes) {
@@ -944,6 +963,7 @@ var BaseConverter = /** @class */ (function () {
                         // 裁剪超出区域
                         if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true))
                             dom.style.overflow = 'hidden';
+                        // 是否保持宽高比
                         dom.preserveRatio = node.preserveRatio;
                         // padding
                         if (dom.type !== 'svg') {
@@ -2963,7 +2983,7 @@ var TEXTConverter = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.convertCharacterStyleOverrides(node, res, option, isSingleLine)];
                     case 2:
                         _c.sent(); // 处理分字样式
-                        dom.style.width = j_design_util_1.util.toPX(dom.data.width);
+                        dom.style.width = j_design_util_1.util.toPX(++dom.data.width);
                         return [2 /*return*/, res];
                 }
             });
