@@ -1,21 +1,13 @@
 {
   root: '/Users/jiamao/project/github/j-figma2html',
-  registry: 'https://registry.npmjs.org',
-  pkgs: [
-    {
-      name: 'j-desigin-util',
-      version: 'latest',
-      type: 'tag',
-      alias: undefined,
-      arg: [Result]
-    }
-  ],
+  registry: 'https://registry.npmmirror.com',
+  pkgs: [],
   production: false,
   cacheStrict: false,
   cacheDir: '/Users/jiamao/.npminstall_tarball',
   env: {
-    npm_config_registry: 'https://registry.npmjs.org',
-    npm_config_argv: '{"remain":[],"cooked":["--fix-bug-versions","--china","--userconfig=/Users/jiamao/.cnpmrc","--disturl=https://cdn.npmmirror.com/binaries/node","--registry=https://registry.npmjs.org","j-desigin-util"],"original":["--fix-bug-versions","--china","--userconfig=/Users/jiamao/.cnpmrc","--disturl=https://cdn.npmmirror.com/binaries/node","--registry=https://registry.npmjs.org","j-desigin-util"]}',
+    npm_config_registry: 'https://registry.npmmirror.com',
+    npm_config_argv: '{"remain":[],"cooked":["--fix-bug-versions","--china","--userconfig=/Users/jiamao/.cnpmrc","--disturl=https://cdn.npmmirror.com/binaries/node","--registry=https://registry.npmmirror.com"],"original":["--fix-bug-versions","--china","--userconfig=/Users/jiamao/.cnpmrc","--disturl=https://cdn.npmmirror.com/binaries/node","--registry=https://registry.npmmirror.com"]}',
     npm_config_user_agent: 'npminstall/7.12.0 npm/? node/v16.15.1 darwin x64',
     npm_config_cache: '/Users/jiamao/.npminstall_tarball',
     NODE: '/usr/local/bin/node',
@@ -23,7 +15,7 @@
     npm_execpath: '/usr/local/lib/node_modules/cnpm/node_modules/npminstall/bin/install.js',
     npm_config_userconfig: '/Users/jiamao/.cnpmrc',
     npm_config_disturl: 'https://cdn.npmmirror.com/binaries/node',
-    npm_config_r: 'https://registry.npmjs.org',
+    npm_config_r: 'https://registry.npmmirror.com',
     COREPACK_NPM_REGISTRY: 'https://registry.npmmirror.com',
     NODEJS_ORG_MIRROR: 'https://cdn.npmmirror.com/binaries/node',
     NVM_NODEJS_ORG_MIRROR: 'https://cdn.npmmirror.com/binaries/node',

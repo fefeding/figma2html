@@ -291,8 +291,9 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     shadows?: number; // 阴影
                     */
                     if(fill.filters.contrast) {
+                        const v = (fill.filters.contrast + 1)/2;
                         dom.filters.push(new ContrastFilter({
-                            value: fill.filters.contrast
+                            value: v
                         }));
                     }
                     if(fill.filters.exposure) {
@@ -303,7 +304,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     }
                     if(fill.filters.saturation) {
                         dom.filters.push(new SaturateFilter({
-                            value: fill.filters.exposure
+                            value: fill.filters.saturation
                         }));
                     }
                     if(fill.filters.temperature) {
