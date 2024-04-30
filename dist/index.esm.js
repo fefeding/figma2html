@@ -1611,6 +1611,7 @@ class BaseConverter {
                 ...option?.style,
             },
             filters: new Array,
+            transform: {},
             type: type,
         };
         return dom;

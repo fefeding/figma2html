@@ -1074,7 +1074,7 @@ var BaseConverter = /** @class */ (function () {
     };
     // 生成节点对象
     BaseConverter.prototype.createDomNode = function (type, option) {
-        var dom = __assign(__assign({ data: {}, attributes: {}, children: [] }, option), { style: __assign({ boxSizing: 'border-box' }, option === null || option === void 0 ? void 0 : option.style), filters: new Array, type: type });
+        var dom = __assign(__assign({ data: {}, attributes: {}, children: [] }, option), { style: __assign({ boxSizing: 'border-box' }, option === null || option === void 0 ? void 0 : option.style), filters: new Array, transform: {}, type: type });
         return dom;
     };
     // 转换style

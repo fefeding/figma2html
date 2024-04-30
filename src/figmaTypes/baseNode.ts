@@ -116,6 +116,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                 ...option?.style,
             } as CSSStyleDeclaration,
             filters: new Array<IFilter>,
+            transform: {} as IStyleTransform,
             type: type,
         } as DomNode; 
         return dom;
