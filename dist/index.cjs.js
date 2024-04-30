@@ -479,12 +479,13 @@ function renderSvgElement(node, option) {
 }
 function renderElement(node, option, dom) {
     return __awaiter(this, void 0, void 0, function () {
-        var transform, img, filters, name_1, _a, _b, child, c, e_4_1;
+        var domType, transform, img, filters, name_1, _a, _b, child, c, e_4_1;
         var e_4, _c;
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
-                    dom = dom || j_design_util_1.default.createElement(node.type);
+                    domType = node.type === 'text' ? 'div' : node.type;
+                    dom = dom || j_design_util_1.default.createElement(domType);
                     if (node.transform) {
                         transform = '';
                         if (node.transform.rotateX) {
@@ -3115,7 +3116,7 @@ var TEXTConverter = /** @class */ (function (_super) {
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
-                        dom.type = 'span';
+                        dom.type = 'text';
                         if (node.characters)
                             dom.text = dom.data.text = node.characters;
                         return [4 /*yield*/, _super.prototype.convert.call(this, node, dom, parentNode, page, option)];
@@ -3213,7 +3214,6 @@ var TEXTConverter = /** @class */ (function (_super) {
                             finally { if (e_1) throw e_1.error; }
                         }
                         dom.data.text = dom.text = '';
-                        dom.type = 'div';
                         _d.label = 8;
                     case 8:
                         // 这种方式文本宽度需要重新计算

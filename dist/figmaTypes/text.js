@@ -3,7 +3,7 @@ import { util } from 'j-design-util';
 import BaseConverter from './baseNode';
 export class TEXTConverter extends BaseConverter {
     async convert(node, dom, parentNode, page, option) {
-        dom.type = 'span';
+        dom.type = 'text';
         if (node.characters)
             dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, page, option);
@@ -71,7 +71,7 @@ export class TEXTConverter extends BaseConverter {
                 this.checkParentAndChildStyle(dom, c);
             }
             dom.data.text = dom.text = '';
-            dom.type = 'div';
+            //dom.type = 'div';
         }
         // 这种方式文本宽度需要重新计算
         dom.data.width = Math.max(width, util.toNumber(dom.data.width));

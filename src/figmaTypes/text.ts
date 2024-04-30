@@ -5,7 +5,7 @@ import BaseConverter from './baseNode';
 
 export class TEXTConverter extends BaseConverter<'TEXT'> {
     async convert(node:  Node<'TEXT'>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption) {
-        dom.type = 'span';
+        dom.type = 'text';
         if(node.characters) dom.text = dom.data.text = node.characters;
         const res = await super.convert(node, dom, parentNode, page, option);    
 
@@ -77,7 +77,7 @@ export class TEXTConverter extends BaseConverter<'TEXT'> {
                 this.checkParentAndChildStyle(dom, c);
             }
             dom.data.text = dom.text = '';
-            dom.type = 'div';
+            //dom.type = 'div';
         }
         // 这种方式文本宽度需要重新计算
         dom.data.width = Math.max(width, util.toNumber(dom.data.width));

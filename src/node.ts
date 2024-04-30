@@ -212,8 +212,8 @@ async function renderSvgElement(node: DomNode, option?: NodeToDomOption) {
 }
 
 async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTMLElement|SVGElement) {
-    
-    dom = dom || util.createElement(node.type);
+    let domType = node.type === 'text'? 'div': node.type;
+    dom = dom || util.createElement(domType);
 
     if(node.transform) {
         let transform = '';

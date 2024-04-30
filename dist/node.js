@@ -191,7 +191,8 @@ async function renderSvgElement(node, option) {
     return el;
 }
 async function renderElement(node, option, dom) {
-    dom = dom || util.createElement(node.type);
+    let domType = node.type === 'text' ? 'div' : node.type;
+    dom = dom || util.createElement(domType);
     if (node.transform) {
         let transform = '';
         if (node.transform.rotateX) {
