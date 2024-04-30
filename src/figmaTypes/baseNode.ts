@@ -140,8 +140,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         if (style.textAlignHorizontal)
             dom.style.textAlign = style.textAlignHorizontal;
         if (style.textAlignVertical)
-            dom.style.verticalAlign = style.textAlignVertical;
-        
+            dom.style.verticalAlign = style.textAlignVertical;        
 
         return dom;
     }

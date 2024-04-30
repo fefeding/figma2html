@@ -42,7 +42,7 @@ export class TEXTConverter extends BaseConverter {
                     continue;
                 // 如果是连续的同样的样式文字，则组合
                 if (!lastDom || lastStyleOverrides !== s) {
-                    lastDom = this.createDomNode('var');
+                    lastDom = this.createDomNode('span');
                     lastDom.text = '';
                     lastDom.style.position = 'relative'; // 连续字符不能用绝对定位
                     const style = node.styleOverrideTable[s];
@@ -57,19 +57,21 @@ export class TEXTConverter extends BaseConverter {
             }
             // 还有未处理完的，则加到后面
             if (text.length > index) {
-                const fDom = this.createDomNode('var');
+                const fDom = this.createDomNode('span');
                 fDom.text = text.substring(index);
                 dom.children.push(fDom);
             }
-            // 单行需要计算宽度
-            if (isSingleLine) {
-                for (const c of dom.children) {
-                    const w = this.testTextWidth(c);
+            for (const c of dom.children) {
+                // 单行需要计算宽度
+                if (isSingleLine) {
+                    const w = this.testTextWidth(c, dom);
                     width += w;
                 }
+                // 处理完样式后，需要删除可以继承父的样式
+                this.checkParentAndChildStyle(dom, c);
             }
             dom.data.text = dom.text = '';
-            //dom.type = 'div';
+            dom.type = 'div';
         }
         // 这种方式文本宽度需要重新计算
         dom.data.width = Math.max(width, util.toNumber(dom.data.width));
@@ -135,10 +137,20 @@ export class TEXTConverter extends BaseConverter {
         }
         return dom;
     }
+    // 检查父子相同的字体样式，如果子元素没有的样式，继承自父的
+    checkParentAndChildStyle(parent, child) {
+        if (!parent.style || !child.style)
+            return;
+        const checkStyles = ['color', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'font', 'letterSpacing', 'lineHeight', 'textAlign', 'verticalAlign'];
+        for (const n of checkStyles) {
+            if (parent.style[n] && !child.style[n])
+                child.style[n] = parent.style[n];
+        }
+    }
     // 测试字宽度
-    testTextWidth(dom) {
+    testTextWidth(dom, parent) {
         const span = document.createElement('span');
-        Object.assign(span.style, dom.style);
+        Object.assign(span.style, parent?.style || {}, dom.style);
         span.style.width = 'auto';
         span.style.position = 'absolute';
         span.innerText = dom.text;

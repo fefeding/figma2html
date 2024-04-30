@@ -3155,7 +3155,7 @@ var TEXTConverter = /** @class */ (function (_super) {
                         if (!f)
                             return [3 /*break*/, 6];
                         if (!(!lastDom || lastStyleOverrides !== s)) return [3 /*break*/, 5];
-                        lastDom = this.createDomNode('var');
+                        lastDom = this.createDomNode('span');
                         lastDom.text = '';
                         lastDom.style.position = 'relative'; // 连续字符不能用绝对定位
                         style = node.styleOverrideTable[s];
@@ -3180,28 +3180,31 @@ var TEXTConverter = /** @class */ (function (_super) {
                     case 7:
                         // 还有未处理完的，则加到后面
                         if (text.length > index) {
-                            fDom = this.createDomNode('var');
+                            fDom = this.createDomNode('span');
                             fDom.text = text.substring(index);
                             dom.children.push(fDom);
                         }
-                        // 单行需要计算宽度
-                        if (isSingleLine) {
-                            try {
-                                for (_a = __values(dom.children), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                    c = _b.value;
-                                    w = this.testTextWidth(c);
+                        try {
+                            for (_a = __values(dom.children), _b = _a.next(); !_b.done; _b = _a.next()) {
+                                c = _b.value;
+                                // 单行需要计算宽度
+                                if (isSingleLine) {
+                                    w = this.testTextWidth(c, dom);
                                     width += w;
                                 }
-                            }
-                            catch (e_1_1) { e_1 = { error: e_1_1 }; }
-                            finally {
-                                try {
-                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
-                                }
-                                finally { if (e_1) throw e_1.error; }
+                                // 处理完样式后，需要删除可以继承父的样式
+                                this.checkParentAndChildStyle(dom, c);
                             }
                         }
+                        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                        finally {
+                            try {
+                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            }
+                            finally { if (e_1) throw e_1.error; }
+                        }
                         dom.data.text = dom.text = '';
+                        dom.type = 'div';
                         _d.label = 8;
                     case 8:
                         // 这种方式文本宽度需要重新计算
@@ -3290,10 +3293,31 @@ var TEXTConverter = /** @class */ (function (_super) {
             });
         });
     };
+    // 检查父子相同的字体样式，如果子元素没有的样式，继承自父的
+    TEXTConverter.prototype.checkParentAndChildStyle = function (parent, child) {
+        var e_2, _a;
+        if (!parent.style || !child.style)
+            return;
+        var checkStyles = ['color', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'font', 'letterSpacing', 'lineHeight', 'textAlign', 'verticalAlign'];
+        try {
+            for (var checkStyles_1 = __values(checkStyles), checkStyles_1_1 = checkStyles_1.next(); !checkStyles_1_1.done; checkStyles_1_1 = checkStyles_1.next()) {
+                var n = checkStyles_1_1.value;
+                if (parent.style[n] && !child.style[n])
+                    child.style[n] = parent.style[n];
+            }
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (checkStyles_1_1 && !checkStyles_1_1.done && (_a = checkStyles_1.return)) _a.call(checkStyles_1);
+            }
+            finally { if (e_2) throw e_2.error; }
+        }
+    };
     // 测试字宽度
-    TEXTConverter.prototype.testTextWidth = function (dom) {
+    TEXTConverter.prototype.testTextWidth = function (dom, parent) {
         var span = document.createElement('span');
-        Object.assign(span.style, dom.style);
+        Object.assign(span.style, (parent === null || parent === void 0 ? void 0 : parent.style) || {}, dom.style);
         span.style.width = 'auto';
         span.style.position = 'absolute';
         span.innerText = dom.text;
