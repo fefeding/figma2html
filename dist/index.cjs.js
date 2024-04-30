@@ -547,7 +547,7 @@ function renderElement(node, option, dom) {
                         //if(node.preserveRatio && node.type === 'img') dom.style.height = 'auto';
                     }
                     if (node.text) {
-                        dom.textContent = node.text;
+                        dom.innerHTML = node.text.replace(/\n/g, '<br />');
                     }
                     if (node.filters) {
                         filters = new j_css_filters_1.default(dom, node.filters);

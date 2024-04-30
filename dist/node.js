@@ -254,7 +254,7 @@ async function renderElement(node, option, dom) {
         //if(node.preserveRatio && node.type === 'img') dom.style.height = 'auto';
     }
     if (node.text) {
-        dom.textContent = node.text;
+        dom.innerHTML = node.text.replace(/\n/g, '<br />');
     }
     if (node.filters) {
         const filters = new CSSFilter(dom, node.filters);
