@@ -541,6 +541,20 @@ function renderElement(node, option, dom) {
                                 overflow: 'hidden'
                             });
                         }
+                        // 当背景图片使用 cover 时，图片会被缩放以填充整个容器，同时保持图片纵横比例，以确保整个容器都被覆盖，可能造成图片的一部分被裁剪掉
+                        /*if(node.style.backgroundSize == 'cover') {
+                            const px =
+                            // 保持宽高比
+                            util.css(img, {
+                                height: 'auto'
+                            });
+                            util.css(dom, {
+                                overflow: 'hidden'
+                            });
+                        }
+                        else if(node.style.backgroundSize == 'contain') {
+                
+                        }*/
                         dom.appendChild(img);
                     }
                     if (node.style) {
@@ -1238,20 +1252,21 @@ var BaseConverter = /** @class */ (function () {
                     case 9:
                         switch (fill.scaleMode) {
                             case types_1.PaintSolidScaleMode.FILL: {
-                                dom.style.backgroundSize = 'cover';
+                                dom.data.imageSizeMode = dom.style.backgroundSize = 'cover';
                                 break;
                             }
                             case types_1.PaintSolidScaleMode.FIT: {
-                                dom.style.backgroundSize = 'contain';
+                                dom.data.imageSizeMode = dom.style.backgroundSize = 'contain';
                                 break;
                             }
                             case types_1.PaintSolidScaleMode.STRETCH: {
                                 dom.style.backgroundSize = '100% 100%';
+                                dom.data.imageSizeMode = 'stretch';
                                 break;
                             }
                             // 平铺
                             case types_1.PaintSolidScaleMode.TILE: {
-                                dom.style.backgroundRepeat = 'repeat';
+                                dom.data.imageSizeMode = dom.style.backgroundRepeat = 'repeat';
                                 break;
                             }
                         }

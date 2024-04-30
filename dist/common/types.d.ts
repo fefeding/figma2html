@@ -1000,6 +1000,7 @@ export interface IJElementData {
     zIndex?: number;
     src?: string;
     text?: string;
+    imageSizeMode?: 'stretch' | 'cover' | 'contain' | 'repeat' | '';
 }
 export declare type DomNode = {
     id: string;

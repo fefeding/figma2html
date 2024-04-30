@@ -226,20 +226,21 @@ export class BaseConverter {
                 }
                 switch (fill.scaleMode) {
                     case PaintSolidScaleMode.FILL: {
-                        dom.style.backgroundSize = 'cover';
+                        dom.data.imageSizeMode = dom.style.backgroundSize = 'cover';
                         break;
                     }
                     case PaintSolidScaleMode.FIT: {
-                        dom.style.backgroundSize = 'contain';
+                        dom.data.imageSizeMode = dom.style.backgroundSize = 'contain';
                         break;
                     }
                     case PaintSolidScaleMode.STRETCH: {
                         dom.style.backgroundSize = '100% 100%';
+                        dom.data.imageSizeMode = 'stretch';
                         break;
                     }
                     // 平铺
                     case PaintSolidScaleMode.TILE: {
-                        dom.style.backgroundRepeat = 'repeat';
+                        dom.data.imageSizeMode = dom.style.backgroundRepeat = 'repeat';
                         break;
                     }
                 }

@@ -1048,6 +1048,8 @@ export interface IJElementData {
     src?: string;
 
     text?: string;
+    // 图片大小处理方式
+    imageSizeMode?: 'stretch'|'cover'|'contain'|'repeat'|'';
 }
 
 
