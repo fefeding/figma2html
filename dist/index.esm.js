@@ -106,6 +106,19 @@ var util = {
         return Math.ceil(v * multiple);
     },
     /**
+     * 把数值转换成指定区间的值 ，  比如-1到1之间的值转换成 0-1之间的值： toNumberRange(-1, -1,1,0,1);
+     * @param v 原数值
+     * @param sMin 原数值下限
+     * @param sMax 原数值上限
+     * @param dMin 目标区间下限
+     * @param dMax 目标区间上限
+     */
+    toNumberRange(v, sMin, sMax, dMin, dMax) {
+        const p = (v - sMin) / (sMax - sMin);
+        const r = p * (dMax - dMin) + dMin;
+        return r;
+    },
+    /**
      * 把rgba颜色转为rgba()串型式
      * multiple倍数，如果是小数，则需要*255转到标准值
      */
@@ -1752,44 +1765,53 @@ class BaseConverter {
                     shadows?: number; // 阴影
                     */
                     if (fill.filters.contrast) {
-                        const v = (fill.filters.contrast + 1) / 2;
+                        const v = util.toNumberRange(fill.filters.contrast, -1, 1, 0.5, 1);
                         dom.filters.push(new ContrastFilter({
                             value: v
                         }));
                     }
                     if (fill.filters.exposure) {
-                        const v = (fill.filters.exposure + 1) / 2;
+                        const v = util.toNumberRange(fill.filters.exposure, -1, 1, 0.3, 2);
                         dom.filters.push(new BrightnessFilter({
                             value: v
                         }));
                     }
                     if (fill.filters.saturation) {
+                        const v = util.toNumberRange(fill.filters.saturation, -1, 1, 0, 2);
                         dom.filters.push(new SaturateFilter({
-                            value: fill.filters.saturation
+                            value: v
                         }));
                     }
                     if (fill.filters.temperature) {
-                        dom.filters.push(new InvertFilter({
-                            value: fill.filters.temperature
+                        const v = fill.filters.temperature; //util.toNumberRange(fill.filters.temperature, -1, 1, -Math.PI, Math.PI);
+                        dom.filters.push(new HueRotateFilter({
+                            value: util.toRad(v)
                         }));
                     }
                     if (fill.filters.tint) {
-                        dom.filters.push(new SepiaFilter({
-                            value: fill.filters.tint
+                        const v = util.toNumberRange(fill.filters.tint, -1, 1, 5, 7);
+                        dom.filters.push(new HueRotateFilter({
+                            value: util.toDeg(util.radToDeg(v))
                         }));
                     }
                     if (fill.filters.highlights) {
-                        dom.filters.push(new SaturateFilter({
-                            value: fill.filters.highlights
+                        const v = util.toNumberRange(fill.filters.highlights, -1, 1, 0.6, 1.1);
+                        dom.filters.push(new BrightnessFilter({
+                            value: v
                         }));
                     }
                     if (fill.filters.shadows) {
+                        const v = Math.abs(fill.filters.shadows);
+                        let color = `rgba(255,255,255,${v})`;
+                        if (fill.filters.shadows < 0) {
+                            color = `rgba(0,0,0,${v})`;
+                        }
                         dom.filters.push(new DropShadowFilter({
                             value: {
                                 x: '0',
                                 y: '0',
-                                blur: fill.filters.shadows + '',
-                                color: '#000'
+                                blur: '2px',
+                                color
                             }
                         }));
                     }

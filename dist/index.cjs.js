@@ -174,6 +174,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.nodeToDom = exports.convert = void 0;
 var j_design_util_1 = __importDefault(require("j-design-util"));
+var j_css_filters_1 = __importDefault(require("j-css-filters"));
 var types_1 = require("./common/types");
 var baseNode_1 = __importDefault(require("./figmaTypes/baseNode"));
 var document_1 = __importDefault(require("./figmaTypes/document"));
@@ -478,7 +479,7 @@ function renderSvgElement(node, option) {
 }
 function renderElement(node, option, dom) {
     return __awaiter(this, void 0, void 0, function () {
-        var transform, img, name_1, _a, _b, child, c, e_4_1;
+        var transform, img, filters, name_1, _a, _b, child, c, e_4_1;
         var e_4, _c;
         return __generator(this, function (_d) {
             switch (_d.label) {
@@ -547,6 +548,10 @@ function renderElement(node, option, dom) {
                     }
                     if (node.text) {
                         dom.textContent = node.text;
+                    }
+                    if (node.filters) {
+                        filters = new j_css_filters_1.default(dom, node.filters);
+                        filters.apply(); // 应用于style
                     }
                     if (node.visible === false)
                         dom.style.display = 'none';
@@ -944,6 +949,7 @@ var __read = (this && this.__read) || function (o, n) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BaseConverter = void 0;
+var j_css_filters_1 = require("j-css-filters");
 var types_1 = require("../common/types");
 var j_design_util_1 = require("j-design-util");
 var BaseConverter = /** @class */ (function () {
@@ -1067,7 +1073,7 @@ var BaseConverter = /** @class */ (function () {
     };
     // 生成节点对象
     BaseConverter.prototype.createDomNode = function (type, option) {
-        var dom = __assign(__assign({ data: {}, attributes: {}, children: [] }, option), { style: __assign({ boxSizing: 'border-box' }, option === null || option === void 0 ? void 0 : option.style), type: type });
+        var dom = __assign(__assign({ data: {}, attributes: {}, children: [] }, option), { style: __assign({ boxSizing: 'border-box' }, option === null || option === void 0 ? void 0 : option.style), filters: new Array, type: type });
         return dom;
     };
     // 转换style
@@ -1109,8 +1115,8 @@ var BaseConverter = /** @class */ (function () {
             var e_2, _c;
             return __generator(this, function (_d) {
                 if (!node.isMaskOutline && node.effects) {
-                    dom.style.filter = dom.style.filter || '';
                     try {
+                        //dom.style.filter = dom.style.filter || '';
                         for (_a = __values(node.effects), _b = _a.next(); !_b.done; _b = _a.next()) {
                             effect = _b.value;
                             if (effect.visible === false)
@@ -1118,12 +1124,23 @@ var BaseConverter = /** @class */ (function () {
                             switch (effect.type) {
                                 case types_1.EffectType.DROP_SHADOW:
                                 case types_1.EffectType.INNER_SHADOW: {
-                                    dom.style.filter += " drop-shadow(".concat(j_design_util_1.util.toPX(effect.offset.x), " ").concat(j_design_util_1.util.toPX(effect.offset.y), " ").concat(j_design_util_1.util.toPX(effect.radius), " ").concat(j_design_util_1.util.colorToString(effect.color, 255), ")");
+                                    //dom.style.filter += ` drop-shadow(${util.toPX(effect.offset.x)} ${util.toPX(effect.offset.y)} ${util.toPX(effect.radius)} ${util.colorToString(effect.color, 255)})`;
+                                    dom.filters.push(new j_css_filters_1.DropShadowFilter({
+                                        value: {
+                                            x: j_design_util_1.util.toPX(effect.offset.x),
+                                            y: j_design_util_1.util.toPX(effect.offset.y),
+                                            blur: j_design_util_1.util.toPX(effect.radius),
+                                            color: j_design_util_1.util.colorToString(effect.color, 255)
+                                        }
+                                    }));
                                     break;
                                 }
                                 case types_1.EffectType.LAYER_BLUR:
                                 case types_1.EffectType.BACKGROUND_BLUR: {
-                                    dom.style.filter += " blur(".concat(j_design_util_1.util.toPX(effect.radius), ")");
+                                    //dom.style.filter += ` blur(${util.toPX(effect.radius)})`;
+                                    dom.filters.push(new j_css_filters_1.BlurFilter({
+                                        value: j_design_util_1.util.toPX(effect.radius)
+                                    }));
                                     break;
                                 }
                             }
@@ -1144,7 +1161,7 @@ var BaseConverter = /** @class */ (function () {
     // 处理填充
     BaseConverter.prototype.convertFills = function (node, dom, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, fill, _c, img, _d, _e, a, c, e, _f, b, d, f, e_3_1;
+            var _a, _b, fill, _c, img, _d, _e, a, c, e, _f, b, d, f, v, v, v, v, v, v, v, color, e_3_1;
             var e_3, _g;
             return __generator(this, function (_h) {
                 switch (_h.label) {
@@ -1247,6 +1264,68 @@ var BaseConverter = /** @class */ (function () {
                             dom.transform.skewX = b;
                             dom.transform.skewY = c;
                             dom.preserveRatio = true;
+                        }
+                        // 如果有滤镜，则给指定
+                        if (fill.filters) {
+                            /* exposure?: number; // 曝光度 (exposure): 控制图像的明亮程度或暗度。
+                            contrast?: number; // 对比
+                            saturation?: number; // 饱和度
+                            temperature?: number; // 色温
+                            tint?: number; // 色调
+                            highlights?: number; // 调整图像中高光部分的亮度和对比度。
+                            shadows?: number; // 阴影
+                            */
+                            if (fill.filters.contrast) {
+                                v = j_design_util_1.util.toNumberRange(fill.filters.contrast, -1, 1, 0.5, 1);
+                                dom.filters.push(new j_css_filters_1.ContrastFilter({
+                                    value: v
+                                }));
+                            }
+                            if (fill.filters.exposure) {
+                                v = j_design_util_1.util.toNumberRange(fill.filters.exposure, -1, 1, 0.3, 2);
+                                dom.filters.push(new j_css_filters_1.BrightnessFilter({
+                                    value: v
+                                }));
+                            }
+                            if (fill.filters.saturation) {
+                                v = j_design_util_1.util.toNumberRange(fill.filters.saturation, -1, 1, 0, 2);
+                                dom.filters.push(new j_css_filters_1.SaturateFilter({
+                                    value: v
+                                }));
+                            }
+                            if (fill.filters.temperature) {
+                                v = fill.filters.temperature;
+                                dom.filters.push(new j_css_filters_1.HueRotateFilter({
+                                    value: j_design_util_1.util.toRad(v)
+                                }));
+                            }
+                            if (fill.filters.tint) {
+                                v = j_design_util_1.util.toNumberRange(fill.filters.tint, -1, 1, 5, 7);
+                                dom.filters.push(new j_css_filters_1.HueRotateFilter({
+                                    value: j_design_util_1.util.toDeg(j_design_util_1.util.radToDeg(v))
+                                }));
+                            }
+                            if (fill.filters.highlights) {
+                                v = j_design_util_1.util.toNumberRange(fill.filters.highlights, -1, 1, 0.6, 1.1);
+                                dom.filters.push(new j_css_filters_1.BrightnessFilter({
+                                    value: v
+                                }));
+                            }
+                            if (fill.filters.shadows) {
+                                v = Math.abs(fill.filters.shadows);
+                                color = "rgba(255,255,255,".concat(v, ")");
+                                if (fill.filters.shadows < 0) {
+                                    color = "rgba(0,0,0,".concat(v, ")");
+                                }
+                                dom.filters.push(new j_css_filters_1.DropShadowFilter({
+                                    value: {
+                                        x: '0',
+                                        y: '0',
+                                        blur: '2px',
+                                        color: color
+                                    }
+                                }));
+                            }
                         }
                         _h.label = 10;
                     case 10:

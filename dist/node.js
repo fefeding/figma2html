@@ -1,4 +1,5 @@
 import util from 'j-design-util';
+import CSSFilter from 'j-css-filters';
 import { ImageType } from './common/types';
 import BaseConverter from './figmaTypes/baseNode';
 import DocumentConverter from './figmaTypes/document';
@@ -254,6 +255,10 @@ async function renderElement(node, option, dom) {
     }
     if (node.text) {
         dom.textContent = node.text;
+    }
+    if (node.filters) {
+        const filters = new CSSFilter(dom, node.filters);
+        filters.apply(); // 应用于style
     }
     if (node.visible === false)
         dom.style.display = 'none';

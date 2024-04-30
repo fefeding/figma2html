@@ -1,5 +1,5 @@
 
-import { IFilter, DropShadowFilter, BlurFilter, ContrastFilter, BrightnessFilter, SaturateFilter, InvertFilter, SepiaFilter } from 'j-css-filters';
+import { IFilter, DropShadowFilter, BlurFilter, ContrastFilter, BrightnessFilter, SaturateFilter, InvertFilter, SepiaFilter, HueRotateFilter } from 'j-css-filters';
 import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint, TypeStyle, StringKeyValue, BlendMode, IStyleTransform } from '../common/types';
 import { util, type Point } from 'j-design-util';
 
@@ -291,44 +291,53 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     shadows?: number; // 阴影
                     */
                     if(fill.filters.contrast) {
-                        const v = (fill.filters.contrast + 1)/2;
+                        const v = util.toNumberRange(fill.filters.contrast, -1, 1, 0.5, 1);
                         dom.filters.push(new ContrastFilter({
                             value: v
                         }));
                     }
                     if(fill.filters.exposure) {
-                        const v = (fill.filters.exposure + 1)/2;
+                        const v = util.toNumberRange(fill.filters.exposure, -1, 1, 0.3, 2);
                         dom.filters.push(new BrightnessFilter({
                             value: v
                         }));
                     }
                     if(fill.filters.saturation) {
+                        const v = util.toNumberRange(fill.filters.saturation, -1, 1, 0, 2);
                         dom.filters.push(new SaturateFilter({
-                            value: fill.filters.saturation
+                            value: v
                         }));
                     }
                     if(fill.filters.temperature) {
-                        dom.filters.push(new InvertFilter({
-                            value: fill.filters.temperature
+                        const v = fill.filters.temperature;//util.toNumberRange(fill.filters.temperature, -1, 1, -Math.PI, Math.PI);
+                        dom.filters.push(new HueRotateFilter({
+                            value: util.toRad(v)
                         }));
                     }
                     if(fill.filters.tint) {
-                        dom.filters.push(new SepiaFilter({
-                            value: fill.filters.tint
+                        const v = util.toNumberRange(fill.filters.tint, -1, 1, 5, 7);
+                        dom.filters.push(new HueRotateFilter({
+                            value: util.toDeg(util.radToDeg(v))
                         }));
                     }
                     if(fill.filters.highlights) {
-                        dom.filters.push(new SaturateFilter({
-                            value: fill.filters.highlights
+                        const v = util.toNumberRange(fill.filters.highlights, -1, 1, 0.6, 1.1);
+                        dom.filters.push(new BrightnessFilter({
+                            value: v
                         }));
                     }
                     if(fill.filters.shadows) {
+                        const v = Math.abs(fill.filters.shadows);
+                        let color = `rgba(255,255,255,${v})`;
+                        if(fill.filters.shadows < 0) {
+                            color = `rgba(0,0,0,${v})`;
+                        }
                         dom.filters.push(new DropShadowFilter({
                             value: {
                                 x: '0',
                                 y: '0',
-                                blur: fill.filters.shadows + '',
-                                color: '#000'
+                                blur: '2px',
+                                color
                             }
                         }));
                     }
