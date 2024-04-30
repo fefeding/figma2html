@@ -68,7 +68,7 @@ export class TEXTConverter extends BaseConverter {
                     width += w;
                 }
                 // 处理完样式后，需要删除可以继承父的样式
-                this.checkParentAndChildStyle(dom, c);
+                this.checkParentAndChildStyleForDelete(dom, c);
             }
             dom.data.text = dom.text = '';
             //dom.type = 'div';
@@ -145,6 +145,16 @@ export class TEXTConverter extends BaseConverter {
         for (const n of checkStyles) {
             if (parent.style[n] && !child.style[n])
                 child.style[n] = parent.style[n];
+        }
+    }
+    // 检查父子相同的字体样式，从子元素移除相机的字体相关样式
+    checkParentAndChildStyleForDelete(parent, child) {
+        if (!parent.style || !child.style)
+            return;
+        const checkStyles = ['color', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'font', 'letterSpacing', 'lineHeight', 'textAlign', 'verticalAlign'];
+        for (const n of checkStyles) {
+            if (parent.style[n] == child.style[n])
+                delete child.style[n];
         }
     }
     // 测试字宽度

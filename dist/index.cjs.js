@@ -3203,7 +3203,7 @@ var TEXTConverter = /** @class */ (function (_super) {
                                     width += w;
                                 }
                                 // 处理完样式后，需要删除可以继承父的样式
-                                this.checkParentAndChildStyle(dom, c);
+                                this.checkParentAndChildStyleForDelete(dom, c);
                             }
                         }
                         catch (e_1_1) { e_1 = { error: e_1_1 }; }
@@ -3321,6 +3321,27 @@ var TEXTConverter = /** @class */ (function (_super) {
                 if (checkStyles_1_1 && !checkStyles_1_1.done && (_a = checkStyles_1.return)) _a.call(checkStyles_1);
             }
             finally { if (e_2) throw e_2.error; }
+        }
+    };
+    // 检查父子相同的字体样式，从子元素移除相机的字体相关样式
+    TEXTConverter.prototype.checkParentAndChildStyleForDelete = function (parent, child) {
+        var e_3, _a;
+        if (!parent.style || !child.style)
+            return;
+        var checkStyles = ['color', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'font', 'letterSpacing', 'lineHeight', 'textAlign', 'verticalAlign'];
+        try {
+            for (var checkStyles_2 = __values(checkStyles), checkStyles_2_1 = checkStyles_2.next(); !checkStyles_2_1.done; checkStyles_2_1 = checkStyles_2.next()) {
+                var n = checkStyles_2_1.value;
+                if (parent.style[n] == child.style[n])
+                    delete child.style[n];
+            }
+        }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        finally {
+            try {
+                if (checkStyles_2_1 && !checkStyles_2_1.done && (_a = checkStyles_2.return)) _a.call(checkStyles_2);
+            }
+            finally { if (e_3) throw e_3.error; }
         }
     };
     // 测试字宽度
