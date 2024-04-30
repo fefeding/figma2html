@@ -1015,6 +1015,7 @@ var BaseConverter = /** @class */ (function () {
                         // 旋转
                         if (node.rotation) {
                             dom.data.rotation = node.rotation;
+                            dom.transform.rotateZ = node.rotation;
                             dom.style.transform = "rotate(".concat(j_design_util_1.util.toRad(node.rotation), ")");
                         }
                         // 裁剪超出区域

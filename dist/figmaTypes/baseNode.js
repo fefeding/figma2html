@@ -56,6 +56,7 @@ export class BaseConverter {
         // 旋转
         if (node.rotation) {
             dom.data.rotation = node.rotation;
+            dom.transform.rotateZ = node.rotation;
             dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
         }
         // 裁剪超出区域
