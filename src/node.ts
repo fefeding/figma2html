@@ -270,6 +270,20 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
                 overflow: 'hidden'
             });
         }
+        // 当背景图片使用 cover 时，图片会被缩放以填充整个容器，同时保持图片纵横比例，以确保整个容器都被覆盖，可能造成图片的一部分被裁剪掉
+        /*if(node.style.backgroundSize == 'cover') {
+            const px = 
+            // 保持宽高比
+            util.css(img, {
+                height: 'auto'
+            });
+            util.css(dom, {
+                overflow: 'hidden'
+            });
+        }
+        else if(node.style.backgroundSize == 'contain') {
+
+        }*/
         dom.appendChild(img);
     }
 
