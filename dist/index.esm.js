@@ -1650,25 +1650,33 @@ class BaseConverter {
                 if (effect.visible === false)
                     continue;
                 switch (effect.type) {
-                    case EffectType.DROP_SHADOW:
-                    case EffectType.INNER_SHADOW: {
+                    case EffectType.INNER_SHADOW:
+                    case EffectType.DROP_SHADOW: {
                         //dom.style.filter += ` drop-shadow(${util.toPX(effect.offset.x)} ${util.toPX(effect.offset.y)} ${util.toPX(effect.radius)} ${util.colorToString(effect.color, 255)})`;
-                        dom.filters.push(new DropShadowFilter({
-                            value: {
-                                x: util.toPX(effect.offset.x),
-                                y: util.toPX(effect.offset.y),
-                                blur: util.toPX(effect.radius),
-                                color: util.colorToString(effect.color, 255)
-                            }
-                        }));
+                        // 如果 有spread，则加到盒子上
+                        if (effect.spread || effect.type === EffectType.INNER_SHADOW) {
+                            dom.style.boxShadow = `${util.toPX(effect.offset.x)} ${util.toPX(effect.offset.y)} ${util.toPX(effect.radius)}  ${util.toPX(effect.spread || 0)} ${util.colorToString(effect.color, 255)} ${effect.type === EffectType.INNER_SHADOW ? 'inset' : ''}`;
+                        }
+                        else {
+                            dom.filters.push(new DropShadowFilter({
+                                value: {
+                                    x: util.toPX(effect.offset.x),
+                                    y: util.toPX(effect.offset.y),
+                                    blur: util.toPX(effect.radius),
+                                    color: util.colorToString(effect.color, 255)
+                                }
+                            }));
+                        }
                         break;
                     }
-                    case EffectType.LAYER_BLUR:
-                    case EffectType.BACKGROUND_BLUR: {
+                    case EffectType.LAYER_BLUR: {
                         //dom.style.filter += ` blur(${util.toPX(effect.radius)})`;
                         dom.filters.push(new BlurFilter({
                             value: util.toPX(effect.radius)
                         }));
+                        break;
+                    }
+                    case EffectType.BACKGROUND_BLUR: {
                         break;
                     }
                 }
@@ -2804,7 +2812,7 @@ function rectType(item) {
     if (item.type !== 'RECTANGLE')
         return '';
     // 已识别成图片的，不再处理成svg
-    if (item.type === 'RECTANGLE' && item.fills && item.fills.length && item.fills[0].type === 'IMAGE') {
+    if (item.type === 'RECTANGLE' && item.fills && item.fills.length && item.fills.find(p => p.type === 'IMAGE')) {
         return 'img';
     }
     if (item.type === 'RECTANGLE' && item.exportSettings) {

@@ -34,7 +34,7 @@ const ConverterMaps = {
 function rectType(item: Node) {
     if(item.type !== 'RECTANGLE') return '';
     // 已识别成图片的，不再处理成svg
-    if(item.type === 'RECTANGLE' && item.fills && item.fills.length && item.fills[0].type === 'IMAGE') {
+    if(item.type === 'RECTANGLE' && item.fills && item.fills.length && item.fills.find(p=>p.type === 'IMAGE')) {
         return 'img';
     }
 

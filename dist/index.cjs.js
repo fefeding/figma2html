@@ -208,7 +208,7 @@ function rectType(item) {
     if (item.type !== 'RECTANGLE')
         return '';
     // 已识别成图片的，不再处理成svg
-    if (item.type === 'RECTANGLE' && item.fills && item.fills.length && item.fills[0].type === 'IMAGE') {
+    if (item.type === 'RECTANGLE' && item.fills && item.fills.length && item.fills.find(function (p) { return p.type === 'IMAGE'; })) {
         return 'img';
     }
     if (item.type === 'RECTANGLE' && item.exportSettings) {
@@ -1122,25 +1122,33 @@ var BaseConverter = /** @class */ (function () {
                             if (effect.visible === false)
                                 continue;
                             switch (effect.type) {
-                                case types_1.EffectType.DROP_SHADOW:
-                                case types_1.EffectType.INNER_SHADOW: {
+                                case types_1.EffectType.INNER_SHADOW:
+                                case types_1.EffectType.DROP_SHADOW: {
                                     //dom.style.filter += ` drop-shadow(${util.toPX(effect.offset.x)} ${util.toPX(effect.offset.y)} ${util.toPX(effect.radius)} ${util.colorToString(effect.color, 255)})`;
-                                    dom.filters.push(new j_css_filters_1.DropShadowFilter({
-                                        value: {
-                                            x: j_design_util_1.util.toPX(effect.offset.x),
-                                            y: j_design_util_1.util.toPX(effect.offset.y),
-                                            blur: j_design_util_1.util.toPX(effect.radius),
-                                            color: j_design_util_1.util.colorToString(effect.color, 255)
-                                        }
-                                    }));
+                                    // 如果 有spread，则加到盒子上
+                                    if (effect.spread || effect.type === types_1.EffectType.INNER_SHADOW) {
+                                        dom.style.boxShadow = "".concat(j_design_util_1.util.toPX(effect.offset.x), " ").concat(j_design_util_1.util.toPX(effect.offset.y), " ").concat(j_design_util_1.util.toPX(effect.radius), "  ").concat(j_design_util_1.util.toPX(effect.spread || 0), " ").concat(j_design_util_1.util.colorToString(effect.color, 255), " ").concat(effect.type === types_1.EffectType.INNER_SHADOW ? 'inset' : '');
+                                    }
+                                    else {
+                                        dom.filters.push(new j_css_filters_1.DropShadowFilter({
+                                            value: {
+                                                x: j_design_util_1.util.toPX(effect.offset.x),
+                                                y: j_design_util_1.util.toPX(effect.offset.y),
+                                                blur: j_design_util_1.util.toPX(effect.radius),
+                                                color: j_design_util_1.util.colorToString(effect.color, 255)
+                                            }
+                                        }));
+                                    }
                                     break;
                                 }
-                                case types_1.EffectType.LAYER_BLUR:
-                                case types_1.EffectType.BACKGROUND_BLUR: {
+                                case types_1.EffectType.LAYER_BLUR: {
                                     //dom.style.filter += ` blur(${util.toPX(effect.radius)})`;
                                     dom.filters.push(new j_css_filters_1.BlurFilter({
                                         value: j_design_util_1.util.toPX(effect.radius)
                                     }));
+                                    break;
+                                }
+                                case types_1.EffectType.BACKGROUND_BLUR: {
                                     break;
                                 }
                             }
