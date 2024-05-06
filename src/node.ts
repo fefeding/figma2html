@@ -257,7 +257,10 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
         if(node.url) img.src = node.url;
         util.css(img, {
             width: '100%',
-            height: '100%'
+            height: '100%',
+            position: 'absolute',
+            left: '0',
+            top: '0'
         });
         dom = util.createElement('div');
         // 如果保持宽高比，则直隐去超出部分
@@ -270,20 +273,8 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
                 overflow: 'hidden'
             });
         }
-        // 当背景图片使用 cover 时，图片会被缩放以填充整个容器，同时保持图片纵横比例，以确保整个容器都被覆盖，可能造成图片的一部分被裁剪掉
-        /*if(node.style.backgroundSize == 'cover') {
-            const px = 
-            // 保持宽高比
-            util.css(img, {
-                height: 'auto'
-            });
-            util.css(dom, {
-                overflow: 'hidden'
-            });
-        }
-        else if(node.style.backgroundSize == 'contain') {
 
-        }*/
+        setImageSize(node, img);  
         dom.appendChild(img);
     }
 
@@ -333,4 +324,59 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
         }
     }
     return dom;
+}
+
+// 根据配置设置图片大小
+function setImageSize(node: DomNode, img: HTMLImageElement) {
+    if(img.complete) {
+        // 当背景图片使用 cover 时，图片会被缩放以填充整个容器，同时保持图片纵横比例，以确保整个容器都被覆盖，可能造成图片的一部分被裁剪掉
+        switch(node.data?.imageSizeMode) {
+            // 把背景图像扩展至足够大，以使背景图像完全覆盖背景区域。背景图像的某些部分也许无法显示在背景定位区域中。
+            case 'cover': {
+                const px = img.width / util.toNumber(node.data.width);
+                const py = img.height / util.toNumber(node.data.height);
+                if(py < px) {
+                    const w = img.width / py - util.toNumber(node.data.width);
+                    img.style.height = util.toPX(node.data.height);
+                    img.style.width = 'auto';
+                    img.style.left = -w/2 + 'px';
+                }
+                else {
+                    const h = img.height / px - util.toNumber(node.data.height);
+                    img.style.width = util.toPX(node.data.width);
+                    img.style.height = 'auto';
+                    img.style.top = -h/2 + 'px';
+                }
+                break;
+            }
+            // 把图像图像扩展至最大尺寸，以使其宽度和高度完全适应内容区域。
+            case 'contain': {
+                const px = img.width / util.toNumber(node.data.width);
+                const py = img.height / util.toNumber(node.data.height);
+                if(py < px) {
+                    img.style.width = util.toPX(node.data.width);
+                    img.style.height = 'auto';
+                }
+                else {
+                    img.style.height = util.toPX(node.data.height);
+                    img.style.width = 'auto';
+                }
+            break;
+            }
+            case 'stretch': {
+                img.style.width = util.toPX(node.data.width);
+                img.style.height = util.toPX(node.data.height);
+                break;
+            }
+            case 'repeat': {
+                break;
+            }
+        }
+    }
+    else {
+        //img.data = node;
+        img.onload = function(e) {
+            setImageSize(node, this as HTMLImageElement);
+        }
+    }
 }

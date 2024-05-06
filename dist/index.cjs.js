@@ -528,7 +528,10 @@ function renderElement(node, option, dom) {
                             img.src = node.url;
                         j_design_util_1.default.css(img, {
                             width: '100%',
-                            height: '100%'
+                            height: '100%',
+                            position: 'absolute',
+                            left: '0',
+                            top: '0'
                         });
                         dom = j_design_util_1.default.createElement('div');
                         // 如果保持宽高比，则直隐去超出部分
@@ -541,20 +544,7 @@ function renderElement(node, option, dom) {
                                 overflow: 'hidden'
                             });
                         }
-                        // 当背景图片使用 cover 时，图片会被缩放以填充整个容器，同时保持图片纵横比例，以确保整个容器都被覆盖，可能造成图片的一部分被裁剪掉
-                        /*if(node.style.backgroundSize == 'cover') {
-                            const px =
-                            // 保持宽高比
-                            util.css(img, {
-                                height: 'auto'
-                            });
-                            util.css(dom, {
-                                overflow: 'hidden'
-                            });
-                        }
-                        else if(node.style.backgroundSize == 'contain') {
-                
-                        }*/
+                        setImageSize(node, img);
                         dom.appendChild(img);
                     }
                     if (node.style) {
@@ -635,6 +625,61 @@ function renderElement(node, option, dom) {
             }
         });
     });
+}
+// 根据配置设置图片大小
+function setImageSize(node, img) {
+    var _a;
+    if (img.complete) {
+        // 当背景图片使用 cover 时，图片会被缩放以填充整个容器，同时保持图片纵横比例，以确保整个容器都被覆盖，可能造成图片的一部分被裁剪掉
+        switch ((_a = node.data) === null || _a === void 0 ? void 0 : _a.imageSizeMode) {
+            // 把背景图像扩展至足够大，以使背景图像完全覆盖背景区域。背景图像的某些部分也许无法显示在背景定位区域中。
+            case 'cover': {
+                var px = img.width / j_design_util_1.default.toNumber(node.data.width);
+                var py = img.height / j_design_util_1.default.toNumber(node.data.height);
+                if (py < px) {
+                    var w = img.width / py - j_design_util_1.default.toNumber(node.data.width);
+                    img.style.height = j_design_util_1.default.toPX(node.data.height);
+                    img.style.width = 'auto';
+                    img.style.left = -w / 2 + 'px';
+                }
+                else {
+                    var h = img.height / px - j_design_util_1.default.toNumber(node.data.height);
+                    img.style.width = j_design_util_1.default.toPX(node.data.width);
+                    img.style.height = 'auto';
+                    img.style.top = -h / 2 + 'px';
+                }
+                break;
+            }
+            // 把图像图像扩展至最大尺寸，以使其宽度和高度完全适应内容区域。
+            case 'contain': {
+                var px = img.width / j_design_util_1.default.toNumber(node.data.width);
+                var py = img.height / j_design_util_1.default.toNumber(node.data.height);
+                if (py < px) {
+                    img.style.width = j_design_util_1.default.toPX(node.data.width);
+                    img.style.height = 'auto';
+                }
+                else {
+                    img.style.height = j_design_util_1.default.toPX(node.data.height);
+                    img.style.width = 'auto';
+                }
+                break;
+            }
+            case 'stretch': {
+                img.style.width = j_design_util_1.default.toPX(node.data.width);
+                img.style.height = j_design_util_1.default.toPX(node.data.height);
+                break;
+            }
+            case 'repeat': {
+                break;
+            }
+        }
+    }
+    else {
+        //img.data = node;
+        img.onload = function (e) {
+            setImageSize(node, this);
+        };
+    }
 }
 
 "use strict";

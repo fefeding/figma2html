@@ -106,6 +106,19 @@ var util = {
         return Math.ceil(v * multiple);
     },
     /**
+     * 把数值转换成指定区间的值 ，  比如-1到1之间的值转换成 0-1之间的值： toNumberRange(-1, -1,1,0,1);
+     * @param v 原数值
+     * @param sMin 原数值下限
+     * @param sMax 原数值上限
+     * @param dMin 目标区间下限
+     * @param dMax 目标区间上限
+     */
+    toNumberRange(v, sMin, sMax, dMin, dMax) {
+        const p = (v - sMin) / (sMax - sMin);
+        const r = p * (dMax - dMin) + dMin;
+        return r;
+    },
+    /**
      * 把rgba颜色转为rgba()串型式
      * multiple倍数，如果是小数，则需要*255转到标准值
      */
@@ -1354,7 +1367,7 @@ class BlurFilter extends Filter {
     displayName = '模糊';
 }
 /**
- * 亮度滤镜 value: 0-100
+ * 亮度滤镜 value: 0-1
  */
 class BrightnessFilter extends Filter {
     constructor(option) {
@@ -1450,7 +1463,7 @@ class ContrastFilter extends Filter {
     displayName = '对比度';
 }
 /**
- * 饱和度滤镜  value: 3
+ * 饱和度 0-无穷 ,一般取0-1
  */
 class SaturateFilter extends Filter {
     constructor(option) {
@@ -1466,19 +1479,19 @@ const filters = {
      */
     invert: new InvertFilter(),
     /**
-     * 亮度
+     * 模糊滤镜 value: 4px
      */
     blur: new BlurFilter(),
     /**
-     * 亮度
+     * 亮度滤镜 value: 0-1
      */
     brightness: new BrightnessFilter(),
     /**
-     * 灰度
+     * 灰度滤镜 value: 0-1
      */
     grayscale: new GrayscaleFilter(),
     /**
-     * 复古
+     * 复古滤镜 value: 0-1
      */
     sepia: new SepiaFilter(),
     /**
@@ -1498,10 +1511,24 @@ const filters = {
      */
     contrast: new ContrastFilter(),
     /**
-     * 饱和度
+     * 饱和度 0-无穷 ,一般取0-1
      */
     saturate: new SaturateFilter(),
 };
+// 获取fiter实例对象
+function get(name) {
+    if (!name)
+        return null;
+    if (filters[name])
+        return filters[name];
+    for (const key in filters) {
+        const filter = filters[key];
+        if (filter instanceof Filter && filter.name === name) {
+            return filter;
+        }
+    }
+    return null;
+}
 
 class CSSFilters {
     constructor(target, filters) {
@@ -1549,7 +1576,7 @@ class CSSFilters {
             return;
         }
         else if (typeof filter === 'string') {
-            const filterObj = filters[filter];
+            const filterObj = get(filter);
             if (!filterObj) {
                 console.error(`${filter}不存在`);
                 return;
@@ -1557,13 +1584,13 @@ class CSSFilters {
             filter = filterObj.create(option || filterObj.option);
             return this.add(filter);
         }
-        if (filter.name) {
+        /*if(filter.name) {
             const existsFilter = this.get(filter.name);
-            if (existsFilter) {
+            if(existsFilter) {
                 console.error(`${filter.displayName || filter.name}已经存在滤镜集合中，不能重复`);
                 return existsFilter;
             }
-        }
+        }*/
         if (filter instanceof Filter) {
             this.filters.push(filter);
             this.apply();
@@ -2578,13 +2605,13 @@ const editorDefaultCssContent = `.j-design-editor-container {
         box-shadow: 0 0 1px rgba(6,155,181,1);
     }
     .j-design-editor-container:hover {
-        box-shadow: 0 0 1px 1px rgba(0,0,0,0.2);
+        box-shadow: 0 0 2px 2px rgba(0,0,0,0.3);
     }
-    .j-design-editor-controller .item-skew {
-        box-shadow: 0 0 2px 2px #ccc;
-        opacity: 0.2;
+    .j-design-editor-controller .item-move,.j-design-editor-controller .item-scale {
+        box-shadow: 0 0 2px 2px #eee;
+        opacity: 0.3;
     }
-    .j-design-editor-controller .item-skew:hover {
+    .j-design-editor-controller .item-move:hover,.j-design-editor-controller .item-scale:hover {
         opacity: 0.9;
     }
     .j-design-editor-controller .item-rotate {
@@ -2593,7 +2620,25 @@ const editorDefaultCssContent = `.j-design-editor-container {
     .j-design-editor-controller .item-rotate:hover {
         opacity: 1;
     }
+    .j-design-editor-container div[contenteditable="true"]:empty:before{
+        content: ' ';
+        -webkit-tap-highlight-color:transparent;
+        -webkit-user-modify:read-write;
+        outline:none;
+        border:none;
+    }
     `;
+// 编辑器默认样式，并且不可改
+const editorDefaultStyle = {
+    'boxShadow': '0 0 10px 10px #ccc',
+    'position': 'absolute',
+    //'backgroundSize': '100% 100%',   
+    'left': '0',
+    'top': '0',
+    'right': '0',
+    'bottom': '0'
+    //transformOrigin: 'center top',         
+};
 
 const SupportEventNames = [
     'mousedown', 'mouseup', 'mouseover', 'mousemove', 'mouseout', 'mouseleave', 'mousewheel', 'click', 'dblclick', 'keydown', 'keypress', 'keyup', 'blur', 'change', 'focus', 'drag', 'dragenter', 'dragleave', 'dragover', 'dragstart', 'drop', 'contextmenu'
@@ -2833,7 +2878,7 @@ class JElementStyle extends JElementCssStyle {
     // 保存的白名单列表, 如果指定了，则不在白名单内的就不会tojson
     styleSaveMap = [];
     // 把样式应用到元素或当前对象
-    apply(data, target = this, maps = this.styleSaveMap) {
+    apply(data, target = this, maps = []) {
         target = target || this;
         for (const name of this.names) {
             if (typeof name !== 'string')
@@ -3089,6 +3134,7 @@ class JTextData extends JElementData {
 class JElement extends JEventEmitter {
     constructor(option = {}) {
         super();
+        this.componentType = new.target;
         this._id = this.id || option.id || util.uuid();
         this._type = this.type || option.type || '';
         const nodeType = option.nodeType || 'div';
@@ -3125,6 +3171,7 @@ class JElement extends JEventEmitter {
         // @ts-ignore
         if (option.className)
             this.className = option.className;
+        this.transform.apply(); // 重置一下transform
         this.bindEvent(); // 事件绑定
     }
     // 初始化一些基础属性
@@ -3231,6 +3278,10 @@ class JElement extends JEventEmitter {
         return this._dom;
     }
     /**
+     * 当前组件new指向的class，可用于复制
+     */
+    componentType;
+    /**
      * dom上的附加属性
      */
     attributes = {};
@@ -3247,7 +3298,7 @@ class JElement extends JEventEmitter {
         return this.dom.className;
     }
     set className(v) {
-        if (this.dom.classList.contains(v))
+        if (!this.dom.classList.contains(v))
             this.dom.classList.add(v);
     }
     get visible() {
@@ -3274,7 +3325,7 @@ class JElement extends JEventEmitter {
     get childrenMaxLevel() {
         let level = 0;
         for (const c of this.children) {
-            level = Math.max(c.data.zIndex, level);
+            level = Math.max(c.data?.zIndex, level);
         }
         return level;
     }
@@ -3332,7 +3383,10 @@ class JElement extends JEventEmitter {
                 child.data.zIndex = this.childrenMaxLevel + 1;
             }
             parent.dom.appendChild(child.dom);
-            parent.children.push(child);
+            if (parent === this)
+                this._children.push(child);
+            else
+                parent.children.push(child);
             this.emit('childAdded', child);
         }
         else if (child instanceof Element && child !== parent.dom) {
@@ -3353,11 +3407,45 @@ class JElement extends JEventEmitter {
         if (el.selected)
             el.selected = false;
         for (let i = this.children.length - 1; i > -1; i--) {
-            if (this.children[i] === el)
+            if (this.children[i] === el) {
                 this.children.splice(i, 1);
+                // @ts-ignore
+                delete el.parent;
+            }
         }
+    }
+    // 通过ID获取子元素
+    getChild(id) {
+        for (const child of this.children) {
+            if (child.id === id)
+                return child;
+            // 如果子元素也是一个element，则也轮循它的子元素。
+            if (child.children?.length) {
+                const el = child.getChild(id);
+                if (el)
+                    return el;
+            }
+        }
+    }
+    /**
+     * 复制当前组件
+     * @returns 当前组件同类型副本
+     */
+    clone() {
+        const option = this.toJSON();
         // @ts-ignore
-        delete el.parent;
+        delete option.id;
+        const el = new this.componentType(option);
+        return el;
+    }
+    /**
+     * 清空
+     */
+    clear() {
+        for (let i = this.children.length - 1; i >= 0; i--) {
+            const el = this.children[i];
+            this.removeChild(el);
+        }
     }
     // 转为json
     toJSON(props = [], ig = (p) => true) {
@@ -3430,7 +3518,6 @@ class JBaseComponent extends JElement {
             nodeType: 'div',
             className: 'j-design-editor-container',
         });
-        this.componentType = new.target;
         option.target = option.target || {};
         const targetOption = {
             ...(option.target || option),
@@ -3481,10 +3568,6 @@ class JBaseComponent extends JElement {
      * 是否支持移动
      */
     moveable = true;
-    /**
-     * 当前组件new指向的class，可用于复制
-     */
-    componentType;
     // 选中
     _selected = false;
     get selected() {
@@ -3597,7 +3680,7 @@ class JBaseComponent extends JElement {
         if (!(child instanceof JBaseComponent)) {
             this.target.addChild(child);
             if (child instanceof JElement) {
-                this.children.push(child);
+                this._children.push(child);
             }
             return child;
         }
@@ -3626,6 +3709,7 @@ class JBaseComponent extends JElement {
             return;
         }
         this.target.removeChild(el);
+        super.removeChild(el);
         if (el instanceof JElement) {
             el.off(SupportEventNames);
             el.off(ElementWatchEventNames);
@@ -3684,16 +3768,61 @@ class JBaseComponent extends JElement {
         }
         return obj;
     }
-    /**
-     * 复制当前组件
-     * @returns 当前组件同类型副本
-     */
-    clone() {
-        const option = this.toJSON();
+}
+
+/**
+ * @public
+ */
+class JBaseHtmlElement extends JElement {
+    constructor(option = {}) {
+        option.style = option.style || {};
+        super({
+            ...option,
+            // @ts-ignore
+            nodeType: option.type || 'div',
+        });
+        this.filters = new CSSFilters(this, option.filters); // 滤镜
+        // 属性变化映射到style
+        this.data.watch([
+            'text', 'html'
+        ], {
+            set: (item) => {
+                if (item.name === 'text') {
+                    this.dom.textContent = item.value || '';
+                }
+                else if (item.name === 'html') {
+                    this.dom.innerHTML = item.value || '';
+                }
+            },
+            get: (name) => {
+                if (name === 'text') {
+                    return this.dom.textContent;
+                }
+                else if (name === 'html') {
+                    return this.dom.innerHTML;
+                }
+            }
+        });
         // @ts-ignore
-        delete option.id;
-        const el = new this.componentType(option);
-        return el;
+        if (option.text)
+            this.data.text = option.text;
+        // @ts-ignore
+        if (option.html)
+            this.data.html = option.html;
+        this.data.on('change', (e) => {
+            this.emit('dataChange', {
+                type: 'dataChange',
+                target: this,
+                data: e
+            });
+        });
+    }
+    filters;
+    /**
+     * 类型名称
+     */
+    get typeName() {
+        return this.type;
     }
 }
 
@@ -3733,19 +3862,43 @@ class JText extends JBaseComponent {
             type: option.type || 'text',
             dataType: option.dataType || JTextData
         });
+        // 多子元素
+        if (option.children?.length) {
+            this.isChildrenMode = true;
+        }
         // 'text' 属性变化映射到 innerText
         this.data.watch([
             'text', 'fontFamily', 'fontSize'
         ], {
             set: (item) => {
-                if (item.name === 'text')
-                    this.target.dom.innerText = item.value;
+                if (item.name === 'text') {
+                    if (!this.isChildrenMode) {
+                        if (item.value?.includes('\n')) {
+                            this.isChildrenMode = true;
+                        }
+                        else {
+                            this.target.dom.textContent = item.value;
+                            return;
+                        }
+                    }
+                    if (this.isChildrenMode) {
+                        this.clear();
+                        this.target.dom.innerHTML = '';
+                    }
+                    if (item.value?.includes('\n')) {
+                        this.target.dom.innerHTML = item.value.replace(/\n/g, '<br />');
+                    }
+                    else {
+                        this.target.dom.innerHTML = item.value;
+                    }
+                }
                 else
                     this.style[item.name] = item.value;
             },
             get: (name) => {
-                if (name === 'text')
-                    return this.target.dom.innerText;
+                if (name === 'text') {
+                    return this.text;
+                }
                 else
                     return this.style[name];
             }
@@ -3770,10 +3923,11 @@ class JText extends JBaseComponent {
         this.target.on('blur', () => {
             this.closeEdit();
         });
-        JText.TextControlCache.set(this.id, this); // 缓存起来
+        //JText.TextControlCache.set(this.id, this);// 缓存起来
     }
+    isChildrenMode = false; // 是否是多子元素模式，如果是就会采用var节点处理文本
     // 所有 JText 实例的缓存
-    static TextControlCache = new Map();
+    //static TextControlCache = new Map<string, JText>();
     /**
      * 类型名称
      */
@@ -3791,6 +3945,48 @@ class JText extends JBaseComponent {
             return; // 组件不支持编辑则不处理
         util.attr(this.target.dom, 'contenteditable', v.toString());
     }
+    // 当前显示的文本
+    get text() {
+        return this.target.dom.textContent;
+    }
+    /**
+     * 文本的子元素有点特殊，因为编辑过后，可能存在 text node，需要一并处理
+     */
+    get children() {
+        if (!this.isChildrenMode)
+            return this._children;
+        const children = [];
+        for (const node of this.target.dom.childNodes) {
+            if (node.nodeName === '#text') {
+                const el = new JBaseHtmlElement({
+                    type: 'var',
+                    data: {
+                        text: node.textContent
+                    }
+                });
+                children.push(el);
+            }
+            else if (node.nodeName === 'BR') {
+                const el = new JBaseHtmlElement({
+                    type: 'br',
+                    data: {}
+                });
+                children.push(el);
+            }
+            else {
+                const id = util.attr(node, 'data-id');
+                if (id) {
+                    for (const c of this._children) {
+                        if (c.id === id) {
+                            children.push(c);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return children;
+    }
     /**
      * 进入文本编辑状态
      */
@@ -3799,8 +3995,9 @@ class JText extends JBaseComponent {
             return;
         this.editor.elementController.visible = false;
         this.contenteditable = true; // 编辑态
-        util.setRange(this.target.dom, e); // 光标位置在最后
-        this.target.dom.focus(); // 进入控件
+        const dom = (e.target || this.target.dom);
+        util.setRange(dom, e); // 光标位置在最后
+        dom.focus && dom.focus(); // 进入控件
     }
     /**
      * 退出文本编辑状态
@@ -3812,7 +4009,7 @@ class JText extends JBaseComponent {
      * 移除 JText 实例
      */
     dispose() {
-        JText.TextControlCache.delete(this.id);
+        //JText.TextControlCache.delete(this.id);
         super.dispose();
     }
 }
@@ -3829,8 +4026,7 @@ class JImage extends JBaseComponent {
     constructor(option = {}) {
         if (!option.style)
             option.style = {};
-        if (!option.style.overflow)
-            option.style.overflow = 'hidden';
+        option.style.overflow = 'hidden';
         super({
             ...option,
             nodeType: 'img',
@@ -4040,6 +4236,9 @@ class JControllerItem extends JElement {
     }
     dir = '';
     size = 0;
+    get option() {
+        return this._option;
+    }
     _isMoving = false;
     get isMoving() {
         return this._isMoving;
@@ -4070,6 +4269,7 @@ class JControllerItem extends JElement {
                 x: pos.x,
                 y: pos.y
             },
+            item: this,
             event
         });
         // 选中的是渲染层的坐标，转为控制层的
@@ -4091,10 +4291,12 @@ class JControllerItem extends JElement {
         this.isMoving = true;
         event.stopPropagation && event.stopPropagation();
         event.preventDefault && event.preventDefault();
+        this.emit('dragStart', event);
     }
     onDragEnd(event) {
         if (this.isMoving) {
             this.isMoving = false;
+            this.emit('dragEnd', event);
         }
     }
     // 计算指针
@@ -4102,6 +4304,10 @@ class JControllerItem extends JElement {
         try {
             if (!this.dir)
                 return;
+            if (this.dir === 'skew') {
+                this.style.cursor = 'move';
+                return;
+            }
             let cursor = await Cursors.get(this.dir, rotation, data);
             if (!cursor)
                 return;
@@ -4147,6 +4353,7 @@ class JControllerComponent extends JControllerItem {
             width: itemSize,
             height: itemSize * 2
         };
+        this.initMasks(); // 初始化mask
         this.createItem('l', {
             style: {
                 ...option.style.itemStyle,
@@ -4277,7 +4484,8 @@ class JControllerComponent extends JControllerItem {
                 translateX: '-50%',
             }
         });
-        this.skewItem = this.createItem('skew', {
+        // 图片操作杆
+        this.targetMoveItem = this.createItem('move', {
             size: 24,
             style: {
                 left: '50%',
@@ -4288,13 +4496,49 @@ class JControllerComponent extends JControllerItem {
                 border: '9px solid rgba(0,0,0,0.8)',
                 backgroundColor: '#fff',
                 'backgroundSize': '100%',
+                ...option.style.moveStyle,
                 //backgroundImage: option.itemIcons?.skew || ''
             },
             transform: {
                 translateX: '-50%',
                 translateY: '-50%'
             }
-        }); // 旋转块 
+        });
+        // 操作过程中不截断图片
+        let oldOverflow = '';
+        this.targetMoveItem.on('dragStart', (e) => {
+            oldOverflow = this.target.style.overflow;
+            this.target.style.overflow = 'visible';
+        }).on('dragEnd', (e) => {
+            if (oldOverflow)
+                this.target.style.overflow = oldOverflow || 'hidden';
+        });
+        // 图片缩放
+        this.targetScaleItem = this.createItem('scale', {
+            size: 15,
+            style: {
+                left: '50%',
+                top: '50%',
+                borderRadius: '50%',
+                cursor: `pointer`,
+                ...option.style.itemStyle,
+                border: '1px solid rgba(0,0,0,0.8)',
+                backgroundColor: '#fff',
+                'backgroundSize': '100%',
+                ...option.style.scaleStyle,
+            },
+        });
+        this.targetScaleItem.on('dragStart', (e) => {
+            oldOverflow = this.target.style.overflow;
+            this.target.style.overflow = 'visible';
+        }).on('dragEnd', (e) => {
+            if (oldOverflow)
+                this.target.style.overflow = oldOverflow || 'hidden';
+            // 归位
+            this.targetScaleItem.transform.translateX = 0;
+            this.targetScaleItem.transform.translateY = 0;
+            this.targetScaleItem.transform.apply();
+        });
         if (option.tipVisible !== false) {
             const tipOption = {
                 data: {
@@ -4345,8 +4589,11 @@ class JControllerComponent extends JControllerItem {
     // 鼠标指针
     cursorData;
     items = [];
+    // 遮挡层
+    masks = [];
     rotateItem;
-    skewItem;
+    targetMoveItem;
+    targetScaleItem;
     positionItem;
     sizeItem;
     target;
@@ -4377,6 +4624,10 @@ class JControllerComponent extends JControllerItem {
         item.resetCursor(this.transform.rotateZ, this.cursorData);
         return item;
     }
+    // 初始化或重置遮挡层
+    initMasks() {
+        return false;
+    }
     // 发生改变响应
     change(e) {
         if (!this.target)
@@ -4397,29 +4648,55 @@ class JControllerComponent extends JControllerItem {
         const center = this.center;
         const width = util.toNumber(this.data.width);
         const height = util.toNumber(this.data.height);
-        if (dir === 'rotate') {
-            // 编辑器坐标, 因为是在编辑器渲染区域操作，需要把坐标转到此区域再处理
-            const pos1 = this.editor.toEditorPosition(oldPosition);
-            const pos2 = this.editor.toEditorPosition(newPosition);
-            args.rotation = rotateChange(pos1, pos2, center);
-        }
-        else if (dir === 'skew') {
-            const rx = offX / width * Math.PI;
-            const ry = offY / height * Math.PI;
-            args.skew.x = ry;
-            args.skew.y = rx;
-        }
-        else if (dir === 'element') {
-            // 元素位置控制器
-            args.x = offX;
-            args.y = offY;
-        }
-        else {
-            // 根据操作参数，计算大小和偏移量
-            args = getChangeData(dir, {
-                x: offX,
-                y: offY
-            }, oldPosition, newPosition, center, this.transform.rotateZ);
+        switch (dir) {
+            case 'rotate': {
+                // 编辑器坐标, 因为是在编辑器渲染区域操作，需要把坐标转到此区域再处理
+                const pos1 = this.editor.toEditorPosition(oldPosition);
+                const pos2 = this.editor.toEditorPosition(newPosition);
+                args.rotation = rotateChange(pos1, pos2, center);
+                break;
+            }
+            case 'skew': {
+                const rx = offX / width * Math.PI;
+                const ry = offY / height * Math.PI;
+                args.skew.x = rx;
+                args.skew.y = ry;
+                break;
+            }
+            case 'element': {
+                // 元素位置控制器
+                args.x = offX;
+                args.y = offY;
+                break;
+            }
+            case 'move': {
+                const dx = util.toNumber(this.target.transform.translateX) + offX;
+                const dy = util.toNumber(this.target.transform.translateY) + offY;
+                this.target.transform.translateX = dx;
+                this.target.transform.translateY = dy;
+                this.target.transform.apply();
+                break;
+            }
+            case 'scale': {
+                if (e.item) {
+                    e.item.transform.translateX = util.toNumber(e.item.transform.translateX) + offX;
+                    e.item.transform.translateY = util.toNumber(e.item.transform.translateY) + offY;
+                    e.item.transform.apply();
+                }
+                if (offX !== 0) {
+                    const scaleX = offX / util.toNumber(this.data.width);
+                    this.target.transform.scaleX = this.target.transform.scaleY = (this.target.transform.scaleX || 0) + scaleX;
+                    this.target.transform.apply();
+                }
+                break;
+            }
+            default: {
+                // 根据操作参数，计算大小和偏移量
+                args = getChangeData(dir, {
+                    x: offX,
+                    y: offY
+                }, oldPosition, newPosition, center, this.transform.rotateZ);
+            }
         }
         // 位移 
         if (args.x || args.y) {
@@ -4447,7 +4724,7 @@ class JControllerComponent extends JControllerItem {
                 this.move(0, -offy/2);
             }*/
         }
-        // x,y旋转
+        // 目标元素移动
         if (args.skew.x || args.skew.y) {
             this.target.transform.rotateX += args.skew.x;
             this.target.transform.rotateY += args.skew.y;
@@ -4494,6 +4771,7 @@ class JControllerComponent extends JControllerItem {
         if (this.target.data.height !== height)
             this.target.data.height = height;
         this.setTip();
+        this.initMasks(); // 重新定位mask
     }
     // 移动
     move(dx, dy) {
@@ -4551,8 +4829,9 @@ class JControllerComponent extends JControllerItem {
         const itemVisible = target.editable;
         for (const item of this.items) {
             switch (item.dir) {
-                case 'skew': {
-                    item.visible = false; //itemVisible && !this.isEditor && this.target.typeName === 'image';
+                case 'scale':
+                case 'move': {
+                    item.visible = itemVisible && !this.isEditor && this.target.typeName === 'image';
                     break;
                 }
                 case 'rotate': {
@@ -4596,6 +4875,7 @@ class JControllerComponent extends JControllerItem {
         // 初始化图标
         this.resetCursor();
         this.setTip();
+        this.initMasks(); // 重新定位mask
     }
     // 显示提示信息
     setTip() {
@@ -4629,18 +4909,20 @@ class JControllerComponent extends JControllerItem {
 class JEditor extends JBaseComponent {
     constructor(option = {}) {
         option.style = option.style || {};
-        Object.assign(option.style, {
-            'boxShadow': '0 0 10px 10px #ccc',
-            'position': 'absolute',
-            'backgroundSize': '100% 100%',
-            //transformOrigin: 'center top',         
-        });
+        Object.assign(option.style, editorDefaultStyle);
         // @ts-ignore 外层只响应Z轴旋转
         /*option.transformWatchProps = [
             'rotateZ', 'scaleX', 'scaleY'
         ];*/
         option.type = option.type || 'editor';
-        super(option);
+        super({
+            ...option,
+            data: {
+                ...option.data,
+                left: 0,
+                top: 0,
+            }
+        });
         if (typeof option.container === 'string')
             option.container = document.getElementById(option.container);
         this.view = new JElement({
@@ -4651,6 +4933,7 @@ class JEditor extends JBaseComponent {
                 'position': 'relative',
                 'width': '100%',
                 'height': '100%',
+                'caretColor': 'blue',
             }
         });
         // 字体管理实例
@@ -4666,7 +4949,7 @@ class JEditor extends JBaseComponent {
             'image': JImage,
             'img': JImage,
             'text': JText,
-            'span': JText,
+            //'span': JText, 
             'svg': JSvg,
             'container': JContainer,
             'div': JContainer,
@@ -4846,10 +5129,11 @@ class JEditor extends JBaseComponent {
             'backgroundColor': '#fff',
             'backgroundImage': ''
         });
-        for (let i = this.children.length - 1; i >= 0; i--) {
+        /*for(let i=this.children.length-1;i>=0; i--) {
             const el = this.children[i];
             this.removeChild(el);
-        }
+        }*/
+        super.clear();
         this.elementController && (this.elementController.data.visible = false);
     }
     // 缩放
@@ -4876,8 +5160,14 @@ class JEditor extends JBaseComponent {
     createShape(type, option = {}) {
         const shape = typeof type === 'string' ? this.shapes.get(type) : type;
         if (!shape) {
-            console.warn(`${type}不存在的元素类型`);
-            return;
+            //console.warn(`${type}不存在的元素类型`);
+            const el = new JBaseHtmlElement({
+                ...option,
+                editor: this,
+                // @ts-ignore
+                nodeType: type
+            });
+            return el;
         }
         // @ts-ignore
         const el = new shape({
@@ -4892,7 +5182,10 @@ class JEditor extends JBaseComponent {
         this.clear();
         //if(typeof data === 'string') data = JSON.parse(data);
         if (data.style) {
-            this.style.apply(data.style); // 应用样式
+            this.style.apply({
+                ...data.style,
+                ...editorDefaultStyle
+            }); // 应用样式
         }
         this.resize(data.width || data.data.width, data.height || data.data.height);
         this.name = data.name || '';
