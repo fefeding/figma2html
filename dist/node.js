@@ -196,13 +196,13 @@ async function renderElement(node, option, dom) {
     if (node.transform) {
         let transform = '';
         if (node.transform.rotateX) {
-            transform += ` rotateX(${node.transform.rotateX})`;
+            transform += ` rotateX(${util.toRad(node.transform.rotateX)})`;
         }
         if (node.transform.rotateY) {
-            transform += ` rotateY(${node.transform.rotateY})`;
+            transform += ` rotateY(${util.toRad(node.transform.rotateY)})`;
         }
         if (node.transform.rotateZ) {
-            transform += ` rotateZ(${node.transform.rotateZ})`;
+            transform += ` rotateZ(${util.toRad(node.transform.rotateZ)})`;
         }
         if (node.transform.scaleX) {
             transform += ` scaleX(${node.transform.scaleX})`;
@@ -212,6 +212,12 @@ async function renderElement(node, option, dom) {
         }
         if (node.transform.scaleZ) {
             transform += ` scaleZ(${node.transform.scaleZ})`;
+        }
+        if (node.transform.skewX) {
+            transform += ` skewX(${util.toRad(node.transform.skewX)})`;
+        }
+        if (node.transform.skewY) {
+            transform += ` skewY(${util.toRad(node.transform.skewY)})`;
         }
         if (node.transform.translateX) {
             transform += ` translateX(${util.isNumber(node.transform.translateX) ? util.toPX(node.transform.translateX) : node.transform.translateX})`;
@@ -251,8 +257,8 @@ async function renderElement(node, option, dom) {
                 overflow: 'hidden'
             });
         }
-        setImageSize(node, img);
         dom.appendChild(img);
+        setImageSize(node, img);
     }
     if (node.style) {
         Object.assign(dom.style, node.style);
@@ -336,12 +342,16 @@ function setImageSize(node, img) {
                 const px = img.width / util.toNumber(node.data.width);
                 const py = img.height / util.toNumber(node.data.height);
                 if (py < px) {
+                    const h = img.height / px - util.toNumber(node.data.height);
                     img.style.width = util.toPX(node.data.width);
                     img.style.height = 'auto';
+                    img.style.top = -h / 2 + 'px';
                 }
                 else {
+                    const w = img.width / py - util.toNumber(node.data.width);
                     img.style.height = util.toPX(node.data.height);
                     img.style.width = 'auto';
+                    img.style.left = -w / 2 + 'px';
                 }
                 break;
             }

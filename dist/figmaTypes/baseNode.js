@@ -233,6 +233,10 @@ export class BaseConverter {
                         dom.data.imageSizeMode = dom.style.backgroundSize = 'contain';
                         break;
                     }
+                    case PaintSolidScaleMode.CROP: {
+                        dom.data.imageSizeMode = dom.style.backgroundSize = 'stretch';
+                        break;
+                    }
                     case PaintSolidScaleMode.STRETCH: {
                         dom.style.backgroundSize = '100% 100%';
                         dom.data.imageSizeMode = 'stretch';
@@ -255,21 +259,22 @@ export class BaseConverter {
                     if (!dom.transform)
                         dom.transform = {};
                     /**
-                     * 1. 第一个数字表示图片的水平缩放比例。
-                        2. 第二个数字表示图片的水平倾斜比例。
-                        3. 第三个数字表示图片的垂直倾斜比例。
-                        4. 第四个数字表示图片的垂直缩放比例。
-                        5. 第五个数字表示图片的水平移动量。
-                        6. 第六个数字表示图片的垂直移动量。
+                     * [[cos(angle), sin(angle), 0],
+                        [-sin(angle), cos(angle), 0]]
                      */
                     const [[a, c, e], [b, d, f]] = fill.imageTransform;
                     // 计算旋转角度和正弦值
-                    dom.transform.translateX = (-e * 100) + '%'; // * node.absoluteBoundingBox.width;                    
-                    dom.transform.translateY = (-f * 100) + '%'; //* node.absoluteBoundingBox.width;
-                    //dom.transform.scaleX = a;
-                    //dom.transform.scaleY = d;
-                    dom.transform.skewX = b;
-                    dom.transform.skewY = c;
+                    dom.transform.translateX = util.toPX(e); // * node.absoluteBoundingBox.width;                    
+                    dom.transform.translateY = util.toPX(f); //* node.absoluteBoundingBox.width;
+                    //dom.transform.scaleX = Math.sqrt(a*a + b*b);
+                    //dom.transform.scaleY = Math.sqrt(c*c + d*d);
+                    //dom.transform.skewX = Math.atan2(b, a);
+                    //dom.transform.skewY =  Math.atan2(b, a);
+                    // 计算旋转角度和正弦值
+                    const rotation = Math.atan2(b, a); //util.getPointCoordRotation({x: a, y: b}, {x: c, y: d}); //Math.atan2(b, a);
+                    dom.transform.rotateZ = rotation;
+                    //const scaleX = Math.sqrt(a * a + b * b);
+                    //const scaleY = Math.sqrt(c * c + d * d);
                     dom.preserveRatio = true;
                 }
                 // 如果有滤镜，则给指定

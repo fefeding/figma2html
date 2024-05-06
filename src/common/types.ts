@@ -341,6 +341,7 @@ export enum PaintType {
 export enum PaintSolidScaleMode {
     FILL = "FILL",
     FIT = "FIT",
+    CROP = "CROP",
     TILE = "TILE",
     STRETCH = "STRETCH"
 }

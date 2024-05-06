@@ -1492,6 +1492,7 @@ var PaintSolidScaleMode;
 (function (PaintSolidScaleMode) {
     PaintSolidScaleMode["FILL"] = "FILL";
     PaintSolidScaleMode["FIT"] = "FIT";
+    PaintSolidScaleMode["CROP"] = "CROP";
     PaintSolidScaleMode["TILE"] = "TILE";
     PaintSolidScaleMode["STRETCH"] = "STRETCH";
 })(PaintSolidScaleMode || (PaintSolidScaleMode = {}));
@@ -1536,8 +1537,6 @@ class BaseConverter {
                 dom.data.left = dom.bounds.x = 0;
                 dom.data.top = dom.bounds.y = 0;
             }
-            dom.style.left = util.toPX(dom.bounds.x).toString();
-            dom.style.top = util.toPX(dom.bounds.y).toString();
             dom.absoluteBoundingBox = node.absoluteBoundingBox;
         }
         // 背景色
@@ -1565,6 +1564,19 @@ class BaseConverter {
             dom.data.rotation = node.rotation;
             dom.transform.rotateZ = node.rotation;
             dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
+            // 考虑是否用 absoluteRenderBounds
+            // 因为拿到的是新长形宽高，需要求出原始升方形宽高
+            const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, dom.bounds.width, dom.bounds.height);
+            const center = {
+                x: dom.bounds.x + dom.bounds.width / 2,
+                y: dom.bounds.y + dom.bounds.height / 2
+            };
+            // 重新计算边界
+            dom.bounds.width = size.width;
+            dom.bounds.height = size.height;
+            dom.bounds.x = center.x - size.width / 2;
+            dom.bounds.y = center.y - size.height / 2;
+            console.log('rotation bounds', dom.bounds);
         }
         // 裁剪超出区域
         if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true))
@@ -1586,8 +1598,12 @@ class BaseConverter {
         await this.convertFills(node, dom, option, container); // 解析fills
         await this.convertStrokes(node, dom, option, container); // 边框
         await this.convertEffects(node, dom, option, container); // 滤镜
+        dom.data.left = dom.bounds.x;
+        dom.data.top = dom.bounds.y;
         dom.data.width = dom.bounds.width;
         dom.data.height = dom.bounds.height;
+        dom.style.left = util.toPX(dom.bounds.x).toString();
+        dom.style.top = util.toPX(dom.bounds.y).toString();
         dom.style.width = util.toPX(dom.bounds.width).toString();
         dom.style.height = util.toPX(dom.bounds.height).toString();
         // 不支持的模式，直接透明
@@ -1740,6 +1756,10 @@ class BaseConverter {
                         dom.data.imageSizeMode = dom.style.backgroundSize = 'contain';
                         break;
                     }
+                    case PaintSolidScaleMode.CROP: {
+                        dom.data.imageSizeMode = dom.style.backgroundSize = 'stretch';
+                        break;
+                    }
                     case PaintSolidScaleMode.STRETCH: {
                         dom.style.backgroundSize = '100% 100%';
                         dom.data.imageSizeMode = 'stretch';
@@ -1762,21 +1782,22 @@ class BaseConverter {
                     if (!dom.transform)
                         dom.transform = {};
                     /**
-                     * 1. 第一个数字表示图片的水平缩放比例。
-                        2. 第二个数字表示图片的水平倾斜比例。
-                        3. 第三个数字表示图片的垂直倾斜比例。
-                        4. 第四个数字表示图片的垂直缩放比例。
-                        5. 第五个数字表示图片的水平移动量。
-                        6. 第六个数字表示图片的垂直移动量。
+                     * [[cos(angle), sin(angle), 0],
+                        [-sin(angle), cos(angle), 0]]
                      */
                     const [[a, c, e], [b, d, f]] = fill.imageTransform;
                     // 计算旋转角度和正弦值
-                    dom.transform.translateX = (-e * 100) + '%'; // * node.absoluteBoundingBox.width;                    
-                    dom.transform.translateY = (-f * 100) + '%'; //* node.absoluteBoundingBox.width;
-                    //dom.transform.scaleX = a;
-                    //dom.transform.scaleY = d;
-                    dom.transform.skewX = b;
-                    dom.transform.skewY = c;
+                    dom.transform.translateX = util.toPX(e); // * node.absoluteBoundingBox.width;                    
+                    dom.transform.translateY = util.toPX(f); //* node.absoluteBoundingBox.width;
+                    //dom.transform.scaleX = Math.sqrt(a*a + b*b);
+                    //dom.transform.scaleY = Math.sqrt(c*c + d*d);
+                    //dom.transform.skewX = Math.atan2(b, a);
+                    //dom.transform.skewY =  Math.atan2(b, a);
+                    // 计算旋转角度和正弦值
+                    const rotation = Math.atan2(b, a); //util.getPointCoordRotation({x: a, y: b}, {x: c, y: d}); //Math.atan2(b, a);
+                    dom.transform.rotateZ = rotation;
+                    //const scaleX = Math.sqrt(a * a + b * b);
+                    //const scaleY = Math.sqrt(c * c + d * d);
                     dom.preserveRatio = true;
                 }
                 // 如果有滤镜，则给指定
@@ -2143,6 +2164,18 @@ class BaseConverter {
             .map((stop) => util.colorToString(stop.color, 255) + ` ${stop.position * 100}%`)
             .join(", ");
         return stopsString;
+    }
+    // 计算原始长方形宽高
+    calculateOriginalRectangleDimensions(radian, newWidth, newHeight) {
+        // 旋转后的长方形的宽和高
+        var rotatedWidth = newWidth;
+        var rotatedHeight = newHeight;
+        const cos = Math.cos(radian);
+        const sin = Math.sin(radian);
+        // 计算原始长方形的宽和高
+        var originalWidth = rotatedWidth * cos + rotatedHeight * sin;
+        var originalHeight = rotatedHeight * cos + rotatedWidth * sin;
+        return { width: originalWidth, height: originalHeight };
     }
 }
 
@@ -2987,13 +3020,13 @@ async function renderElement(node, option, dom) {
     if (node.transform) {
         let transform = '';
         if (node.transform.rotateX) {
-            transform += ` rotateX(${node.transform.rotateX})`;
+            transform += ` rotateX(${util.toRad(node.transform.rotateX)})`;
         }
         if (node.transform.rotateY) {
-            transform += ` rotateY(${node.transform.rotateY})`;
+            transform += ` rotateY(${util.toRad(node.transform.rotateY)})`;
         }
         if (node.transform.rotateZ) {
-            transform += ` rotateZ(${node.transform.rotateZ})`;
+            transform += ` rotateZ(${util.toRad(node.transform.rotateZ)})`;
         }
         if (node.transform.scaleX) {
             transform += ` scaleX(${node.transform.scaleX})`;
@@ -3003,6 +3036,12 @@ async function renderElement(node, option, dom) {
         }
         if (node.transform.scaleZ) {
             transform += ` scaleZ(${node.transform.scaleZ})`;
+        }
+        if (node.transform.skewX) {
+            transform += ` skewX(${util.toRad(node.transform.skewX)})`;
+        }
+        if (node.transform.skewY) {
+            transform += ` skewY(${util.toRad(node.transform.skewY)})`;
         }
         if (node.transform.translateX) {
             transform += ` translateX(${util.isNumber(node.transform.translateX) ? util.toPX(node.transform.translateX) : node.transform.translateX})`;
@@ -3042,8 +3081,8 @@ async function renderElement(node, option, dom) {
                 overflow: 'hidden'
             });
         }
-        setImageSize(node, img);
         dom.appendChild(img);
+        setImageSize(node, img);
     }
     if (node.style) {
         Object.assign(dom.style, node.style);
@@ -3102,37 +3141,43 @@ async function renderElement(node, option, dom) {
 // 根据配置设置图片大小
 function setImageSize(node, img) {
     if (img.complete) {
+        const width = img.naturalWidth || img.width;
+        const height = img.naturalHeight || img.height;
         // 当背景图片使用 cover 时，图片会被缩放以填充整个容器，同时保持图片纵横比例，以确保整个容器都被覆盖，可能造成图片的一部分被裁剪掉
         switch (node.data?.imageSizeMode) {
             // 把背景图像扩展至足够大，以使背景图像完全覆盖背景区域。背景图像的某些部分也许无法显示在背景定位区域中。
             case 'cover': {
-                const px = img.width / util.toNumber(node.data.width);
-                const py = img.height / util.toNumber(node.data.height);
+                const px = width / util.toNumber(node.data.width);
+                const py = height / util.toNumber(node.data.height);
                 if (py < px) {
-                    const w = img.width / py - util.toNumber(node.data.width);
+                    const w = img.width / py;
                     img.style.height = util.toPX(node.data.height);
-                    img.style.width = 'auto';
-                    img.style.left = -w / 2 + 'px';
+                    img.style.width = util.toPX(w);
+                    img.style.left = -(w - util.toNumber(node.data.width)) / 2 + 'px';
                 }
                 else {
-                    const h = img.height / px - util.toNumber(node.data.height);
+                    const h = height / px;
                     img.style.width = util.toPX(node.data.width);
-                    img.style.height = 'auto';
-                    img.style.top = -h / 2 + 'px';
+                    img.style.height = util.toPX(h);
+                    img.style.top = -(h - util.toNumber(node.data.height)) / 2 + 'px';
                 }
                 break;
             }
             // 把图像图像扩展至最大尺寸，以使其宽度和高度完全适应内容区域。
             case 'contain': {
-                const px = img.width / util.toNumber(node.data.width);
-                const py = img.height / util.toNumber(node.data.height);
+                const px = width / util.toNumber(node.data.width);
+                const py = height / util.toNumber(node.data.height);
                 if (py < px) {
+                    const h = height / px;
                     img.style.width = util.toPX(node.data.width);
-                    img.style.height = 'auto';
+                    img.style.height = util.toPX(h);
+                    img.style.top = -(h - util.toNumber(node.data.height)) / 2 + 'px';
                 }
                 else {
+                    const w = img.width / py;
                     img.style.height = util.toPX(node.data.height);
-                    img.style.width = 'auto';
+                    img.style.width = util.toPX(w);
+                    img.style.left = -(w - util.toNumber(node.data.width)) / 2 + 'px';
                 }
                 break;
             }

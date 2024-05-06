@@ -229,6 +229,7 @@ export var PaintSolidScaleMode;
 (function (PaintSolidScaleMode) {
     PaintSolidScaleMode["FILL"] = "FILL";
     PaintSolidScaleMode["FIT"] = "FIT";
+    PaintSolidScaleMode["CROP"] = "CROP";
     PaintSolidScaleMode["TILE"] = "TILE";
     PaintSolidScaleMode["STRETCH"] = "STRETCH";
 })(PaintSolidScaleMode || (PaintSolidScaleMode = {}));

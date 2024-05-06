@@ -218,13 +218,13 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
     if(node.transform) {
         let transform = '';
         if(node.transform.rotateX) {
-            transform += ` rotateX(${node.transform.rotateX})`;
+            transform += ` rotateX(${util.toRad(node.transform.rotateX)})`;
         }
         if(node.transform.rotateY) {
-            transform += ` rotateY(${node.transform.rotateY})`;
+            transform += ` rotateY(${util.toRad(node.transform.rotateY)})`;
         }
         if(node.transform.rotateZ) {
-            transform += ` rotateZ(${node.transform.rotateZ})`;
+            transform += ` rotateZ(${util.toRad(node.transform.rotateZ)})`;
         }
         if(node.transform.scaleX) {
             transform += ` scaleX(${node.transform.scaleX})`;
@@ -234,6 +234,12 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
         }
         if(node.transform.scaleZ) {
             transform += ` scaleZ(${node.transform.scaleZ})`;
+        }
+        if(node.transform.skewX) {
+            transform += ` skewX(${util.toRad(node.transform.skewX)})`;
+        }
+        if(node.transform.skewY) {
+            transform += ` skewY(${util.toRad(node.transform.skewY)})`;
         }
         if(node.transform.translateX) {
             transform += ` translateX(${util.isNumber(node.transform.translateX)?util.toPX(node.transform.translateX):node.transform.translateX})`;
@@ -273,9 +279,8 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
                 overflow: 'hidden'
             });
         }
-
-        setImageSize(node, img);  
         dom.appendChild(img);
+        setImageSize(node, img);  
     }
 
     if(node.style) {
@@ -329,37 +334,43 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
 // 根据配置设置图片大小
 function setImageSize(node: DomNode, img: HTMLImageElement) {
     if(img.complete) {
+        const width = img.naturalWidth || img.width;
+        const height = img.naturalHeight || img.height;
         // 当背景图片使用 cover 时，图片会被缩放以填充整个容器，同时保持图片纵横比例，以确保整个容器都被覆盖，可能造成图片的一部分被裁剪掉
         switch(node.data?.imageSizeMode) {
             // 把背景图像扩展至足够大，以使背景图像完全覆盖背景区域。背景图像的某些部分也许无法显示在背景定位区域中。
             case 'cover': {
-                const px = img.width / util.toNumber(node.data.width);
-                const py = img.height / util.toNumber(node.data.height);
+                const px = width / util.toNumber(node.data.width);
+                const py = height / util.toNumber(node.data.height);
                 if(py < px) {
-                    const w = img.width / py - util.toNumber(node.data.width);
+                    const w = img.width / py;
                     img.style.height = util.toPX(node.data.height);
-                    img.style.width = 'auto';
-                    img.style.left = -w/2 + 'px';
+                    img.style.width = util.toPX(w);
+                    img.style.left = -(w - util.toNumber(node.data.width))/2 + 'px';
                 }
                 else {
-                    const h = img.height / px - util.toNumber(node.data.height);
+                    const h = height / px;
                     img.style.width = util.toPX(node.data.width);
-                    img.style.height = 'auto';
-                    img.style.top = -h/2 + 'px';
+                    img.style.height = util.toPX(h);
+                    img.style.top = -(h - util.toNumber(node.data.height))/2 + 'px';
                 }
                 break;
             }
             // 把图像图像扩展至最大尺寸，以使其宽度和高度完全适应内容区域。
             case 'contain': {
-                const px = img.width / util.toNumber(node.data.width);
-                const py = img.height / util.toNumber(node.data.height);
+                const px = width / util.toNumber(node.data.width);
+                const py = height / util.toNumber(node.data.height);
                 if(py < px) {
+                    const h = height / px;
                     img.style.width = util.toPX(node.data.width);
-                    img.style.height = 'auto';
+                    img.style.height = util.toPX(h);
+                    img.style.top = -(h - util.toNumber(node.data.height))/2 + 'px';
                 }
                 else {
+                    const w = img.width / py;
                     img.style.height = util.toPX(node.data.height);
-                    img.style.width = 'auto';
+                    img.style.width = util.toPX(w);
+                    img.style.left = -(w - util.toNumber(node.data.width))/2 + 'px';
                 }
             break;
             }

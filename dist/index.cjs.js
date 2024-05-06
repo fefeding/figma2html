@@ -489,13 +489,13 @@ function renderElement(node, option, dom) {
                     if (node.transform) {
                         transform = '';
                         if (node.transform.rotateX) {
-                            transform += " rotateX(".concat(node.transform.rotateX, ")");
+                            transform += " rotateX(".concat(j_design_util_1.default.toRad(node.transform.rotateX), ")");
                         }
                         if (node.transform.rotateY) {
-                            transform += " rotateY(".concat(node.transform.rotateY, ")");
+                            transform += " rotateY(".concat(j_design_util_1.default.toRad(node.transform.rotateY), ")");
                         }
                         if (node.transform.rotateZ) {
-                            transform += " rotateZ(".concat(node.transform.rotateZ, ")");
+                            transform += " rotateZ(".concat(j_design_util_1.default.toRad(node.transform.rotateZ), ")");
                         }
                         if (node.transform.scaleX) {
                             transform += " scaleX(".concat(node.transform.scaleX, ")");
@@ -505,6 +505,12 @@ function renderElement(node, option, dom) {
                         }
                         if (node.transform.scaleZ) {
                             transform += " scaleZ(".concat(node.transform.scaleZ, ")");
+                        }
+                        if (node.transform.skewX) {
+                            transform += " skewX(".concat(j_design_util_1.default.toRad(node.transform.skewX), ")");
+                        }
+                        if (node.transform.skewY) {
+                            transform += " skewY(".concat(j_design_util_1.default.toRad(node.transform.skewY), ")");
                         }
                         if (node.transform.translateX) {
                             transform += " translateX(".concat(j_design_util_1.default.isNumber(node.transform.translateX) ? j_design_util_1.default.toPX(node.transform.translateX) : node.transform.translateX, ")");
@@ -544,8 +550,8 @@ function renderElement(node, option, dom) {
                                 overflow: 'hidden'
                             });
                         }
-                        setImageSize(node, img);
                         dom.appendChild(img);
+                        setImageSize(node, img);
                     }
                     if (node.style) {
                         Object.assign(dom.style, node.style);
@@ -655,12 +661,16 @@ function setImageSize(node, img) {
                 var px = img.width / j_design_util_1.default.toNumber(node.data.width);
                 var py = img.height / j_design_util_1.default.toNumber(node.data.height);
                 if (py < px) {
+                    var h = img.height / px - j_design_util_1.default.toNumber(node.data.height);
                     img.style.width = j_design_util_1.default.toPX(node.data.width);
                     img.style.height = 'auto';
+                    img.style.top = -h / 2 + 'px';
                 }
                 else {
+                    var w = img.width / py - j_design_util_1.default.toNumber(node.data.width);
                     img.style.height = j_design_util_1.default.toPX(node.data.height);
                     img.style.width = 'auto';
+                    img.style.left = -w / 2 + 'px';
                 }
                 break;
             }
@@ -916,6 +926,7 @@ var PaintSolidScaleMode;
 (function (PaintSolidScaleMode) {
     PaintSolidScaleMode["FILL"] = "FILL";
     PaintSolidScaleMode["FIT"] = "FIT";
+    PaintSolidScaleMode["CROP"] = "CROP";
     PaintSolidScaleMode["TILE"] = "TILE";
     PaintSolidScaleMode["STRETCH"] = "STRETCH";
 })(PaintSolidScaleMode || (exports.PaintSolidScaleMode = PaintSolidScaleMode = {}));
@@ -1230,7 +1241,7 @@ var BaseConverter = /** @class */ (function () {
     // 处理填充
     BaseConverter.prototype.convertFills = function (node, dom, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, fill, _c, img, _d, _e, a, c, e, _f, b, d, f, v, v, v, v, v, v, v, color, e_3_1;
+            var _a, _b, fill, _c, img, _d, _e, a, c, e, _f, b, d, f, rotation, v, v, v, v, v, v, v, color, e_3_1;
             var e_3, _g;
             return __generator(this, function (_h) {
                 switch (_h.label) {
@@ -1304,6 +1315,10 @@ var BaseConverter = /** @class */ (function () {
                                 dom.data.imageSizeMode = dom.style.backgroundSize = 'contain';
                                 break;
                             }
+                            case types_1.PaintSolidScaleMode.CROP: {
+                                dom.data.imageSizeMode = dom.style.backgroundSize = 'stretch';
+                                break;
+                            }
                             case types_1.PaintSolidScaleMode.STRETCH: {
                                 dom.style.backgroundSize = '100% 100%';
                                 dom.data.imageSizeMode = 'stretch';
@@ -1327,12 +1342,12 @@ var BaseConverter = /** @class */ (function () {
                                 dom.transform = {};
                             _d = __read(fill.imageTransform, 2), _e = __read(_d[0], 3), a = _e[0], c = _e[1], e = _e[2], _f = __read(_d[1], 3), b = _f[0], d = _f[1], f = _f[2];
                             // 计算旋转角度和正弦值
-                            dom.transform.translateX = (-e * 100) + '%'; // * node.absoluteBoundingBox.width;                    
-                            dom.transform.translateY = (-f * 100) + '%'; //* node.absoluteBoundingBox.width;
-                            //dom.transform.scaleX = a;
-                            //dom.transform.scaleY = d;
-                            dom.transform.skewX = b;
-                            dom.transform.skewY = c;
+                            dom.transform.translateX = j_design_util_1.util.toPX(e); // * node.absoluteBoundingBox.width;                    
+                            dom.transform.translateY = j_design_util_1.util.toPX(f); //* node.absoluteBoundingBox.width;
+                            rotation = Math.atan2(b, a);
+                            dom.transform.rotateZ = rotation;
+                            //const scaleX = Math.sqrt(a * a + b * b);
+                            //const scaleY = Math.sqrt(c * c + d * d);
                             dom.preserveRatio = true;
                         }
                         // 如果有滤镜，则给指定

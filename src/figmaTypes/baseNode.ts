@@ -32,10 +32,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             else {
                 dom.data.left = dom.bounds.x = 0;
                 dom.data.top = dom.bounds.y = 0;
-            }
-            dom.style.left = util.toPX(dom.bounds.x).toString();
-            dom.style.top = util.toPX(dom.bounds.y).toString();
-
+            } 
             dom.absoluteBoundingBox = node.absoluteBoundingBox;
         }
         // 背景色
@@ -63,6 +60,20 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             dom.data.rotation = node.rotation;
             dom.transform.rotateZ = node.rotation;
             dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
+
+            // 考虑是否用 absoluteRenderBounds
+            // 因为拿到的是新长形宽高，需要求出原始升方形宽高
+            const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, dom.bounds.width, dom.bounds.height);
+            const center = {
+                x: dom.bounds.x + dom.bounds.width/2,
+                y: dom.bounds.y + dom.bounds.height/2
+            };
+            // 重新计算边界
+            dom.bounds.width = size.width;
+            dom.bounds.height = size.height;
+            dom.bounds.x = center.x - size.width/2;
+            dom.bounds.y = center.y - size.height/2;
+            console.log('rotation bounds', dom.bounds);
         }
         // 裁剪超出区域
         if(node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) dom.style.overflow = 'hidden';
@@ -86,9 +97,13 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         await this.convertStrokes(node, dom, option, container);// 边框
         await this.convertEffects(node, dom, option, container);// 滤镜
         
-
+        dom.data.left = dom.bounds.x;
+        dom.data.top = dom.bounds.y;
         dom.data.width = dom.bounds.width;
         dom.data.height = dom.bounds.height;
+
+        dom.style.left = util.toPX(dom.bounds.x).toString();
+        dom.style.top = util.toPX(dom.bounds.y).toString();
 
         dom.style.width = util.toPX(dom.bounds.width).toString();
         dom.style.height = util.toPX(dom.bounds.height).toString();
@@ -242,6 +257,10 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                         dom.data.imageSizeMode = dom.style.backgroundSize = 'contain';
                         break;
                     }
+                    case PaintSolidScaleMode.CROP: {
+                        dom.data.imageSizeMode = dom.style.backgroundSize = 'stretch';
+                        break;
+                    }
                     case PaintSolidScaleMode.STRETCH: {
                         dom.style.backgroundSize = '100% 100%';
                         dom.data.imageSizeMode = 'stretch';
@@ -266,12 +285,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     if(!dom.transform) dom.transform = {} as IStyleTransform;
 
                     /**
-                     * 1. 第一个数字表示图片的水平缩放比例。
-                        2. 第二个数字表示图片的水平倾斜比例。
-                        3. 第三个数字表示图片的垂直倾斜比例。
-                        4. 第四个数字表示图片的垂直缩放比例。
-                        5. 第五个数字表示图片的水平移动量。
-                        6. 第六个数字表示图片的垂直移动量。
+                     * [[cos(angle), sin(angle), 0],
+                        [-sin(angle), cos(angle), 0]]
                      */
                     const [
                         [a, c, e], 
@@ -279,14 +294,21 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     ] = fill.imageTransform;
 
                     // 计算旋转角度和正弦值
-                    dom.transform.translateX = (-e * 100) + '%' // * node.absoluteBoundingBox.width;                    
-                    dom.transform.translateY = (-f * 100) + '%' //* node.absoluteBoundingBox.width;
+                    dom.transform.translateX = util.toPX(e) // * node.absoluteBoundingBox.width;                    
+                    dom.transform.translateY = util.toPX(f)  //* node.absoluteBoundingBox.width;
 
-                    //dom.transform.scaleX = a;
-                    //dom.transform.scaleY = d;
+                    //dom.transform.scaleX = Math.sqrt(a*a + b*b);
+                    //dom.transform.scaleY = Math.sqrt(c*c + d*d);
 
-                    dom.transform.skewX = b;
-                    dom.transform.skewY = c;
+                    //dom.transform.skewX = Math.atan2(b, a);
+                    //dom.transform.skewY =  Math.atan2(b, a);
+
+                    // 计算旋转角度和正弦值
+                    const rotation = Math.atan2(b, a);//util.getPointCoordRotation({x: a, y: b}, {x: c, y: d}); //Math.atan2(b, a);
+                    dom.transform.rotateZ = rotation;
+
+                    //const scaleX = Math.sqrt(a * a + b * b);
+                    //const scaleY = Math.sqrt(c * c + d * d);
 
                     dom.preserveRatio = true;
                 }
@@ -666,6 +688,20 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
           .join(", ");
         return stopsString;
       }
+
+      // 计算原始长方形宽高
+      calculateOriginalRectangleDimensions(radian: number, newWidth: number, newHeight: number) {       
+        // 旋转后的长方形的宽和高
+        var rotatedWidth = newWidth;
+        var rotatedHeight = newHeight;
+        const cos = Math.cos(radian);
+        const sin = Math.sin(radian)
+        // 计算原始长方形的宽和高
+        var originalWidth = rotatedWidth * cos + rotatedHeight * sin;
+        var originalHeight = rotatedHeight * cos + rotatedWidth * sin;
+        return { width: originalWidth,  height: originalHeight };
+    }
+    
 }
 
 export default BaseConverter;

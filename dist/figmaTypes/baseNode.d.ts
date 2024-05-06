@@ -33,5 +33,9 @@ export declare class BaseConverter<NType extends NodeType = NodeType> implements
     getRadialGradientPosition(gradientHandlePositions: Vector[]): string;
     getGradientDirection(gradientHandlePositions: Vector[]): string;
     getGradientStops(gradientStops: ColorStop[]): string | Array<DomNode>;
+    calculateOriginalRectangleDimensions(radian: number, newWidth: number, newHeight: number): {
+        width: number;
+        height: number;
+    };
 }
 export default BaseConverter;
