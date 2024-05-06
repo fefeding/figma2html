@@ -215,48 +215,6 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
     let domType = node.type === 'text'? 'div': node.type;
     dom = dom || util.createElement(domType);
 
-    if(node.transform) {
-        let transform = '';
-        if(node.transform.rotateX) {
-            transform += ` rotateX(${util.toRad(node.transform.rotateX)})`;
-        }
-        if(node.transform.rotateY) {
-            transform += ` rotateY(${util.toRad(node.transform.rotateY)})`;
-        }
-        if(node.transform.rotateZ) {
-            transform += ` rotateZ(${util.toRad(node.transform.rotateZ)})`;
-        }
-        if(node.transform.scaleX) {
-            transform += ` scaleX(${node.transform.scaleX})`;
-        }
-        if(node.transform.scaleY) {
-            transform += ` scaleY(${node.transform.scaleY})`;
-        }
-        if(node.transform.scaleZ) {
-            transform += ` scaleZ(${node.transform.scaleZ})`;
-        }
-        if(node.transform.skewX) {
-            transform += ` skewX(${util.toRad(node.transform.skewX)})`;
-        }
-        if(node.transform.skewY) {
-            transform += ` skewY(${util.toRad(node.transform.skewY)})`;
-        }
-        if(node.transform.translateX) {
-            transform += ` translateX(${util.isNumber(node.transform.translateX)?util.toPX(node.transform.translateX):node.transform.translateX})`;
-        }
-        if(node.transform.translateY) {
-            transform += ` translateY(${util.isNumber(node.transform.translateY)?util.toPX(node.transform.translateY):node.transform.translateY})`;
-        }
-        if(node.transform.translateZ) {
-            transform += ` translateZ(${util.isNumber(node.transform.translateZ)?util.toPX(node.transform.translateZ):node.transform.translateZ})`;
-        }
-        if(transform) {
-            util.css(dom, {
-                transform
-            });
-        }
-    }
-
     // 是图片的话，在它上面套一层div
     if(node.type === 'img') {
         let img = dom as HTMLImageElement;
@@ -303,6 +261,48 @@ async function renderElement(node: DomNode, option?: NodeToDomOption, dom?: HTML
             if(typeof node.attributes[name] !== 'undefined' && typeof name === 'string') {
                 dom.setAttribute(name, node.attributes[name]);
             }
+        }
+    }
+
+    if(node.transform) {
+        let transform = '';
+        if(node.transform.rotateX) {
+            transform += ` rotateX(${util.toRad(node.transform.rotateX)})`;
+        }
+        if(node.transform.rotateY) {
+            transform += ` rotateY(${util.toRad(node.transform.rotateY)})`;
+        }
+        if(node.transform.rotateZ) {
+            transform += ` rotateZ(${util.toRad(node.transform.rotateZ)})`;
+        }
+        if(node.transform.scaleX) {
+            transform += ` scaleX(${node.transform.scaleX})`;
+        }
+        if(node.transform.scaleY) {
+            transform += ` scaleY(${node.transform.scaleY})`;
+        }
+        if(node.transform.scaleZ) {
+            transform += ` scaleZ(${node.transform.scaleZ})`;
+        }
+        if(node.transform.skewX) {
+            transform += ` skewX(${util.toRad(node.transform.skewX)})`;
+        }
+        if(node.transform.skewY) {
+            transform += ` skewY(${util.toRad(node.transform.skewY)})`;
+        }
+        if(node.transform.translateX) {
+            transform += ` translateX(${util.isNumber(node.transform.translateX)?util.toPX(node.transform.translateX):node.transform.translateX})`;
+        }
+        if(node.transform.translateY) {
+            transform += ` translateY(${util.isNumber(node.transform.translateY)?util.toPX(node.transform.translateY):node.transform.translateY})`;
+        }
+        if(node.transform.translateZ) {
+            transform += ` translateZ(${util.isNumber(node.transform.translateZ)?util.toPX(node.transform.translateZ):node.transform.translateZ})`;
+        }
+        if(transform) {
+            util.css(dom, {
+                transform
+            });
         }
     }
 

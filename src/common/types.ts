@@ -897,6 +897,7 @@ export interface BaseNode<NType extends NodeType = NodeType> {
 export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & NodeTypes[NType] & {
     children?: Node<NType>[];
     absoluteBoundingBox?: Rectangle;
+    absoluteRenderBounds?: Rectangle;
     backgroundColor?: Color;
     fills?: Paint[];
     strokes?: Paint[];

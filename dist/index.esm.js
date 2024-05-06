@@ -1519,25 +1519,50 @@ class BaseConverter {
             width: 0,
             height: 0,
         };
-        if (node.absoluteBoundingBox) {
-            dom.bounds.width = node.absoluteBoundingBox.width;
-            dom.bounds.height = node.absoluteBoundingBox.height;
+        const box = node.absoluteBoundingBox || node.absoluteRenderBounds;
+        if (box) {
+            // dom 上保留原值
+            dom.absoluteBoundingBox = {
+                ...box
+            };
+            const center = {
+                x: box.x + box.width / 2,
+                y: box.y + box.height / 2
+            };
+            // 旋转
+            if (node.rotation) {
+                dom.data.rotation = node.rotation;
+                dom.transform.rotateZ = node.rotation;
+                dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
+                // 考虑是否用 absoluteRenderBounds
+                // 因为拿到的是新长形宽高，需要求出原始升方形宽高
+                const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
+                box.width = size.width;
+                box.height = size.height;
+                box.x = center.x - size.width / 2;
+                box.y = center.y - size.height / 2;
+                // 因为都是相对于整个document的坐标，这里需要用原始坐标把它还原到没有旋转前的位置。才是css中的坐标　
+                //const pos = util.rotatePoints(box, center, -dom.data.rotation);
+                //box.x = pos.x;
+                //box.y = pos.y;
+            }
+            dom.bounds.width = box.width;
+            dom.bounds.height = box.height;
             // 优先相对于页面坐标, isElement是相于它的父级的
             if (page && !dom.isElement) {
-                dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - page.absoluteBoundingBox.x;
-                dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - page.absoluteBoundingBox.y;
+                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
             }
             // 相对于父位置
             else if (parentNode && parentNode.absoluteBoundingBox) {
-                dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x;
-                dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y;
+                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
             }
             // 没有父元素，就认为约对定位为0
             else {
                 dom.data.left = dom.bounds.x = 0;
                 dom.data.top = dom.bounds.y = 0;
             }
-            dom.absoluteBoundingBox = node.absoluteBoundingBox;
         }
         // 背景色
         if (node.backgroundColor)
@@ -1559,25 +1584,6 @@ class BaseConverter {
             }
         }
         dom.style.transformOrigin = 'center center';
-        // 旋转
-        if (node.rotation) {
-            dom.data.rotation = node.rotation;
-            dom.transform.rotateZ = node.rotation;
-            dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
-            // 考虑是否用 absoluteRenderBounds
-            // 因为拿到的是新长形宽高，需要求出原始升方形宽高
-            const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, dom.bounds.width, dom.bounds.height);
-            const center = {
-                x: dom.bounds.x + dom.bounds.width / 2,
-                y: dom.bounds.y + dom.bounds.height / 2
-            };
-            // 重新计算边界
-            dom.bounds.width = size.width;
-            dom.bounds.height = size.height;
-            dom.bounds.x = center.x - size.width / 2;
-            dom.bounds.y = center.y - size.height / 2;
-            console.log('rotation bounds', dom.bounds);
-        }
         // 裁剪超出区域
         if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true))
             dom.style.overflow = 'hidden';
@@ -3017,47 +3023,6 @@ async function renderSvgElement(node, option) {
 async function renderElement(node, option, dom) {
     let domType = node.type === 'text' ? 'div' : node.type;
     dom = dom || util.createElement(domType);
-    if (node.transform) {
-        let transform = '';
-        if (node.transform.rotateX) {
-            transform += ` rotateX(${util.toRad(node.transform.rotateX)})`;
-        }
-        if (node.transform.rotateY) {
-            transform += ` rotateY(${util.toRad(node.transform.rotateY)})`;
-        }
-        if (node.transform.rotateZ) {
-            transform += ` rotateZ(${util.toRad(node.transform.rotateZ)})`;
-        }
-        if (node.transform.scaleX) {
-            transform += ` scaleX(${node.transform.scaleX})`;
-        }
-        if (node.transform.scaleY) {
-            transform += ` scaleY(${node.transform.scaleY})`;
-        }
-        if (node.transform.scaleZ) {
-            transform += ` scaleZ(${node.transform.scaleZ})`;
-        }
-        if (node.transform.skewX) {
-            transform += ` skewX(${util.toRad(node.transform.skewX)})`;
-        }
-        if (node.transform.skewY) {
-            transform += ` skewY(${util.toRad(node.transform.skewY)})`;
-        }
-        if (node.transform.translateX) {
-            transform += ` translateX(${util.isNumber(node.transform.translateX) ? util.toPX(node.transform.translateX) : node.transform.translateX})`;
-        }
-        if (node.transform.translateY) {
-            transform += ` translateY(${util.isNumber(node.transform.translateY) ? util.toPX(node.transform.translateY) : node.transform.translateY})`;
-        }
-        if (node.transform.translateZ) {
-            transform += ` translateZ(${util.isNumber(node.transform.translateZ) ? util.toPX(node.transform.translateZ) : node.transform.translateZ})`;
-        }
-        if (transform) {
-            util.css(dom, {
-                transform
-            });
-        }
-    }
     // 是图片的话，在它上面套一层div
     if (node.type === 'img') {
         let img = dom;
@@ -3102,6 +3067,47 @@ async function renderElement(node, option, dom) {
             if (typeof node.attributes[name] !== 'undefined' && typeof name === 'string') {
                 dom.setAttribute(name, node.attributes[name]);
             }
+        }
+    }
+    if (node.transform) {
+        let transform = '';
+        if (node.transform.rotateX) {
+            transform += ` rotateX(${util.toRad(node.transform.rotateX)})`;
+        }
+        if (node.transform.rotateY) {
+            transform += ` rotateY(${util.toRad(node.transform.rotateY)})`;
+        }
+        if (node.transform.rotateZ) {
+            transform += ` rotateZ(${util.toRad(node.transform.rotateZ)})`;
+        }
+        if (node.transform.scaleX) {
+            transform += ` scaleX(${node.transform.scaleX})`;
+        }
+        if (node.transform.scaleY) {
+            transform += ` scaleY(${node.transform.scaleY})`;
+        }
+        if (node.transform.scaleZ) {
+            transform += ` scaleZ(${node.transform.scaleZ})`;
+        }
+        if (node.transform.skewX) {
+            transform += ` skewX(${util.toRad(node.transform.skewX)})`;
+        }
+        if (node.transform.skewY) {
+            transform += ` skewY(${util.toRad(node.transform.skewY)})`;
+        }
+        if (node.transform.translateX) {
+            transform += ` translateX(${util.isNumber(node.transform.translateX) ? util.toPX(node.transform.translateX) : node.transform.translateX})`;
+        }
+        if (node.transform.translateY) {
+            transform += ` translateY(${util.isNumber(node.transform.translateY) ? util.toPX(node.transform.translateY) : node.transform.translateY})`;
+        }
+        if (node.transform.translateZ) {
+            transform += ` translateZ(${util.isNumber(node.transform.translateZ) ? util.toPX(node.transform.translateZ) : node.transform.translateZ})`;
+        }
+        if (transform) {
+            util.css(dom, {
+                transform
+            });
         }
     }
     if (node.name)

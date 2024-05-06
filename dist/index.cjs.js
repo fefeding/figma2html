@@ -479,54 +479,13 @@ function renderSvgElement(node, option) {
 }
 function renderElement(node, option, dom) {
     return __awaiter(this, void 0, void 0, function () {
-        var domType, transform, img, filters, name_1, _a, _b, child, c, e_4_1;
+        var domType, img, filters, name_1, transform, _a, _b, child, c, e_4_1;
         var e_4, _c;
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
                     domType = node.type === 'text' ? 'div' : node.type;
                     dom = dom || j_design_util_1.default.createElement(domType);
-                    if (node.transform) {
-                        transform = '';
-                        if (node.transform.rotateX) {
-                            transform += " rotateX(".concat(j_design_util_1.default.toRad(node.transform.rotateX), ")");
-                        }
-                        if (node.transform.rotateY) {
-                            transform += " rotateY(".concat(j_design_util_1.default.toRad(node.transform.rotateY), ")");
-                        }
-                        if (node.transform.rotateZ) {
-                            transform += " rotateZ(".concat(j_design_util_1.default.toRad(node.transform.rotateZ), ")");
-                        }
-                        if (node.transform.scaleX) {
-                            transform += " scaleX(".concat(node.transform.scaleX, ")");
-                        }
-                        if (node.transform.scaleY) {
-                            transform += " scaleY(".concat(node.transform.scaleY, ")");
-                        }
-                        if (node.transform.scaleZ) {
-                            transform += " scaleZ(".concat(node.transform.scaleZ, ")");
-                        }
-                        if (node.transform.skewX) {
-                            transform += " skewX(".concat(j_design_util_1.default.toRad(node.transform.skewX), ")");
-                        }
-                        if (node.transform.skewY) {
-                            transform += " skewY(".concat(j_design_util_1.default.toRad(node.transform.skewY), ")");
-                        }
-                        if (node.transform.translateX) {
-                            transform += " translateX(".concat(j_design_util_1.default.isNumber(node.transform.translateX) ? j_design_util_1.default.toPX(node.transform.translateX) : node.transform.translateX, ")");
-                        }
-                        if (node.transform.translateY) {
-                            transform += " translateY(".concat(j_design_util_1.default.isNumber(node.transform.translateY) ? j_design_util_1.default.toPX(node.transform.translateY) : node.transform.translateY, ")");
-                        }
-                        if (node.transform.translateZ) {
-                            transform += " translateZ(".concat(j_design_util_1.default.isNumber(node.transform.translateZ) ? j_design_util_1.default.toPX(node.transform.translateZ) : node.transform.translateZ, ")");
-                        }
-                        if (transform) {
-                            j_design_util_1.default.css(dom, {
-                                transform: transform
-                            });
-                        }
-                    }
                     // 是图片的话，在它上面套一层div
                     if (node.type === 'img') {
                         img = dom;
@@ -571,6 +530,47 @@ function renderElement(node, option, dom) {
                             if (typeof node.attributes[name_1] !== 'undefined' && typeof name_1 === 'string') {
                                 dom.setAttribute(name_1, node.attributes[name_1]);
                             }
+                        }
+                    }
+                    if (node.transform) {
+                        transform = '';
+                        if (node.transform.rotateX) {
+                            transform += " rotateX(".concat(j_design_util_1.default.toRad(node.transform.rotateX), ")");
+                        }
+                        if (node.transform.rotateY) {
+                            transform += " rotateY(".concat(j_design_util_1.default.toRad(node.transform.rotateY), ")");
+                        }
+                        if (node.transform.rotateZ) {
+                            transform += " rotateZ(".concat(j_design_util_1.default.toRad(node.transform.rotateZ), ")");
+                        }
+                        if (node.transform.scaleX) {
+                            transform += " scaleX(".concat(node.transform.scaleX, ")");
+                        }
+                        if (node.transform.scaleY) {
+                            transform += " scaleY(".concat(node.transform.scaleY, ")");
+                        }
+                        if (node.transform.scaleZ) {
+                            transform += " scaleZ(".concat(node.transform.scaleZ, ")");
+                        }
+                        if (node.transform.skewX) {
+                            transform += " skewX(".concat(j_design_util_1.default.toRad(node.transform.skewX), ")");
+                        }
+                        if (node.transform.skewY) {
+                            transform += " skewY(".concat(j_design_util_1.default.toRad(node.transform.skewY), ")");
+                        }
+                        if (node.transform.translateX) {
+                            transform += " translateX(".concat(j_design_util_1.default.isNumber(node.transform.translateX) ? j_design_util_1.default.toPX(node.transform.translateX) : node.transform.translateX, ")");
+                        }
+                        if (node.transform.translateY) {
+                            transform += " translateY(".concat(j_design_util_1.default.isNumber(node.transform.translateY) ? j_design_util_1.default.toPX(node.transform.translateY) : node.transform.translateY, ")");
+                        }
+                        if (node.transform.translateZ) {
+                            transform += " translateZ(".concat(j_design_util_1.default.isNumber(node.transform.translateZ) ? j_design_util_1.default.toPX(node.transform.translateZ) : node.transform.translateZ, ")");
+                        }
+                        if (transform) {
+                            j_design_util_1.default.css(dom, {
+                                transform: transform
+                            });
                         }
                     }
                     if (node.name)
@@ -636,41 +636,43 @@ function renderElement(node, option, dom) {
 function setImageSize(node, img) {
     var _a;
     if (img.complete) {
+        var width = img.naturalWidth || img.width;
+        var height = img.naturalHeight || img.height;
         // 当背景图片使用 cover 时，图片会被缩放以填充整个容器，同时保持图片纵横比例，以确保整个容器都被覆盖，可能造成图片的一部分被裁剪掉
         switch ((_a = node.data) === null || _a === void 0 ? void 0 : _a.imageSizeMode) {
             // 把背景图像扩展至足够大，以使背景图像完全覆盖背景区域。背景图像的某些部分也许无法显示在背景定位区域中。
             case 'cover': {
-                var px = img.width / j_design_util_1.default.toNumber(node.data.width);
-                var py = img.height / j_design_util_1.default.toNumber(node.data.height);
+                var px = width / j_design_util_1.default.toNumber(node.data.width);
+                var py = height / j_design_util_1.default.toNumber(node.data.height);
                 if (py < px) {
-                    var w = img.width / py - j_design_util_1.default.toNumber(node.data.width);
+                    var w = img.width / py;
                     img.style.height = j_design_util_1.default.toPX(node.data.height);
-                    img.style.width = 'auto';
-                    img.style.left = -w / 2 + 'px';
+                    img.style.width = j_design_util_1.default.toPX(w);
+                    img.style.left = -(w - j_design_util_1.default.toNumber(node.data.width)) / 2 + 'px';
                 }
                 else {
-                    var h = img.height / px - j_design_util_1.default.toNumber(node.data.height);
+                    var h = height / px;
                     img.style.width = j_design_util_1.default.toPX(node.data.width);
-                    img.style.height = 'auto';
-                    img.style.top = -h / 2 + 'px';
+                    img.style.height = j_design_util_1.default.toPX(h);
+                    img.style.top = -(h - j_design_util_1.default.toNumber(node.data.height)) / 2 + 'px';
                 }
                 break;
             }
             // 把图像图像扩展至最大尺寸，以使其宽度和高度完全适应内容区域。
             case 'contain': {
-                var px = img.width / j_design_util_1.default.toNumber(node.data.width);
-                var py = img.height / j_design_util_1.default.toNumber(node.data.height);
+                var px = width / j_design_util_1.default.toNumber(node.data.width);
+                var py = height / j_design_util_1.default.toNumber(node.data.height);
                 if (py < px) {
-                    var h = img.height / px - j_design_util_1.default.toNumber(node.data.height);
+                    var h = height / px;
                     img.style.width = j_design_util_1.default.toPX(node.data.width);
-                    img.style.height = 'auto';
-                    img.style.top = -h / 2 + 'px';
+                    img.style.height = j_design_util_1.default.toPX(h);
+                    img.style.top = -(h - j_design_util_1.default.toNumber(node.data.height)) / 2 + 'px';
                 }
                 else {
-                    var w = img.width / py - j_design_util_1.default.toNumber(node.data.width);
+                    var w = img.width / py;
                     img.style.height = j_design_util_1.default.toPX(node.data.height);
-                    img.style.width = 'auto';
-                    img.style.left = -w / 2 + 'px';
+                    img.style.width = j_design_util_1.default.toPX(w);
+                    img.style.left = -(w - j_design_util_1.default.toNumber(node.data.width)) / 2 + 'px';
                 }
                 break;
             }
@@ -1028,7 +1030,7 @@ var BaseConverter = /** @class */ (function () {
     }
     BaseConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, padding, v;
+            var box, center, size, _a, _b, padding, v;
             var e_1, _c;
             return __generator(this, function (_d) {
                 switch (_d.label) {
@@ -1041,27 +1043,46 @@ var BaseConverter = /** @class */ (function () {
                             width: 0,
                             height: 0,
                         };
-                        if (node.absoluteBoundingBox) {
-                            dom.bounds.width = node.absoluteBoundingBox.width;
-                            dom.bounds.height = node.absoluteBoundingBox.height;
+                        box = node.absoluteBoundingBox || node.absoluteRenderBounds;
+                        if (box) {
+                            // dom 上保留原值
+                            dom.absoluteBoundingBox = __assign({}, box);
+                            center = {
+                                x: box.x + box.width / 2,
+                                y: box.y + box.height / 2
+                            };
+                            // 旋转
+                            if (node.rotation) {
+                                dom.data.rotation = node.rotation;
+                                dom.transform.rotateZ = node.rotation;
+                                dom.style.transform = "rotate(".concat(j_design_util_1.util.toRad(node.rotation), ")");
+                                size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
+                                box.width = size.width;
+                                box.height = size.height;
+                                box.x = center.x - size.width / 2;
+                                box.y = center.y - size.height / 2;
+                                // 因为都是相对于整个document的坐标，这里需要用原始坐标把它还原到没有旋转前的位置。才是css中的坐标　
+                                //const pos = util.rotatePoints(box, center, -dom.data.rotation);
+                                //box.x = pos.x;
+                                //box.y = pos.y;
+                            }
+                            dom.bounds.width = box.width;
+                            dom.bounds.height = box.height;
                             // 优先相对于页面坐标, isElement是相于它的父级的
                             if (page && !dom.isElement) {
-                                dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - page.absoluteBoundingBox.x;
-                                dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - page.absoluteBoundingBox.y;
+                                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
+                                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
                             }
                             // 相对于父位置
                             else if (parentNode && parentNode.absoluteBoundingBox) {
-                                dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x;
-                                dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y;
+                                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
                             }
                             // 没有父元素，就认为约对定位为0
                             else {
                                 dom.data.left = dom.bounds.x = 0;
                                 dom.data.top = dom.bounds.y = 0;
                             }
-                            dom.style.left = j_design_util_1.util.toPX(dom.bounds.x).toString();
-                            dom.style.top = j_design_util_1.util.toPX(dom.bounds.y).toString();
-                            dom.absoluteBoundingBox = node.absoluteBoundingBox;
                         }
                         // 背景色
                         if (node.backgroundColor)
@@ -1083,12 +1104,6 @@ var BaseConverter = /** @class */ (function () {
                             }
                         }
                         dom.style.transformOrigin = 'center center';
-                        // 旋转
-                        if (node.rotation) {
-                            dom.data.rotation = node.rotation;
-                            dom.transform.rotateZ = node.rotation;
-                            dom.style.transform = "rotate(".concat(j_design_util_1.util.toRad(node.rotation), ")");
-                        }
                         // 裁剪超出区域
                         if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true))
                             dom.style.overflow = 'hidden';
@@ -1127,8 +1142,12 @@ var BaseConverter = /** @class */ (function () {
                         return [4 /*yield*/, this.convertEffects(node, dom, option, container)];
                     case 4:
                         _d.sent(); // 滤镜
+                        dom.data.left = dom.bounds.x;
+                        dom.data.top = dom.bounds.y;
                         dom.data.width = dom.bounds.width;
                         dom.data.height = dom.bounds.height;
+                        dom.style.left = j_design_util_1.util.toPX(dom.bounds.x).toString();
+                        dom.style.top = j_design_util_1.util.toPX(dom.bounds.y).toString();
                         dom.style.width = j_design_util_1.util.toPX(dom.bounds.width).toString();
                         dom.style.height = j_design_util_1.util.toPX(dom.bounds.height).toString();
                         // 不支持的模式，直接透明
@@ -1783,6 +1802,18 @@ var BaseConverter = /** @class */ (function () {
             .map(function (stop) { return j_design_util_1.util.colorToString(stop.color, 255) + " ".concat(stop.position * 100, "%"); })
             .join(", ");
         return stopsString;
+    };
+    // 计算原始长方形宽高
+    BaseConverter.prototype.calculateOriginalRectangleDimensions = function (radian, newWidth, newHeight) {
+        // 旋转后的长方形的宽和高
+        var rotatedWidth = newWidth;
+        var rotatedHeight = newHeight;
+        var cos = Math.cos(radian);
+        var sin = Math.sin(radian);
+        // 计算原始长方形的宽和高
+        var originalWidth = rotatedWidth * cos + rotatedHeight * sin;
+        var originalHeight = rotatedHeight * cos + rotatedWidth * sin;
+        return { width: originalWidth, height: originalHeight };
     };
     return BaseConverter;
 }());

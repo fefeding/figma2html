@@ -14,26 +14,55 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             width: 0,
             height: 0,
         };
-        if(node.absoluteBoundingBox) {
-            dom.bounds.width = node.absoluteBoundingBox.width;
-            dom.bounds.height = node.absoluteBoundingBox.height;
+
+        const box = node.absoluteBoundingBox || node.absoluteRenderBounds;
+        if(box) {
+            // dom 上保留原值
+            dom.absoluteBoundingBox = {
+                ...box
+            };
+            const center = {
+                x: box.x + box.width/2,
+                y: box.y + box.height/2
+            };
+            // 旋转
+            if(node.rotation) {
+                dom.data.rotation = node.rotation;
+                dom.transform.rotateZ = node.rotation;
+                dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
+
+                // 考虑是否用 absoluteRenderBounds
+                // 因为拿到的是新长形宽高，需要求出原始升方形宽高
+                const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
+                box.width = size.width;
+                box.height = size.height;
+                box.x = center.x - size.width/2;
+                box.y = center.y - size.height/2;
+
+                // 因为都是相对于整个document的坐标，这里需要用原始坐标把它还原到没有旋转前的位置。才是css中的坐标　
+                //const pos = util.rotatePoints(box, center, -dom.data.rotation);
+                //box.x = pos.x;
+                //box.y = pos.y;
+            }
+
+            dom.bounds.width = box.width;
+            dom.bounds.height = box.height;
 
             // 优先相对于页面坐标, isElement是相于它的父级的
             if(page && !dom.isElement) {
-                dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - page.absoluteBoundingBox.x; 
-                dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - page.absoluteBoundingBox.y; 
+                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x; 
+                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y; 
             }
             // 相对于父位置
             else if(parentNode && parentNode.absoluteBoundingBox) {
-                dom.data.left = dom.bounds.x = node.absoluteBoundingBox.x - parentNode.absoluteBoundingBox.x; 
-                dom.data.top = dom.bounds.y = node.absoluteBoundingBox.y - parentNode.absoluteBoundingBox.y; 
+                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x; 
+                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y; 
             }
             // 没有父元素，就认为约对定位为0
             else {
                 dom.data.left = dom.bounds.x = 0;
                 dom.data.top = dom.bounds.y = 0;
             } 
-            dom.absoluteBoundingBox = node.absoluteBoundingBox;
         }
         // 背景色
         if(node.backgroundColor) dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
@@ -55,26 +84,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             }
         }
         dom.style.transformOrigin = 'center center';
-        // 旋转
-        if(node.rotation) {
-            dom.data.rotation = node.rotation;
-            dom.transform.rotateZ = node.rotation;
-            dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
-
-            // 考虑是否用 absoluteRenderBounds
-            // 因为拿到的是新长形宽高，需要求出原始升方形宽高
-            const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, dom.bounds.width, dom.bounds.height);
-            const center = {
-                x: dom.bounds.x + dom.bounds.width/2,
-                y: dom.bounds.y + dom.bounds.height/2
-            };
-            // 重新计算边界
-            dom.bounds.width = size.width;
-            dom.bounds.height = size.height;
-            dom.bounds.x = center.x - size.width/2;
-            dom.bounds.y = center.y - size.height/2;
-            console.log('rotation bounds', dom.bounds);
-        }
+        
         // 裁剪超出区域
         if(node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) dom.style.overflow = 'hidden';
         // 是否保持宽高比
