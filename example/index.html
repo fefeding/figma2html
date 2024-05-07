@@ -15,7 +15,7 @@
 		#container {
 			text-align: left;
 			height: 100%;
-			margin: 10px;
+			margin: 20px;
 			position: relative;
 		}
 		#container page {
@@ -68,7 +68,7 @@
 		}
 
 		// 转换模板，并动态获取图片地址
-		const tpl = await convert(data, null, null, {
+		let tpl = await convert(data, null, null, {
 			expandToPage: true, // 是否展开
 			images,
 			async getImage(key) {
@@ -78,6 +78,15 @@
 			}
 		});
 		
+		// 如果 指定了名称
+		if(urlParams.name) {
+			const t = getTemplateByName(urlParams.name, tpl);
+			if(t) {
+				t.bounds.x = t.style.left = 0;
+				t.bounds.y = t.style.top = 0;
+				tpl = t;
+			}
+		}
 		console.log(tpl);
 
 		const container = document.getElementById('container');
@@ -91,6 +100,22 @@
 	}
 
 	renderTemplate();
+
+	// 用名称筛选出模板
+	function getTemplateByName(name, templates) {
+		if(Array.isArray(templates)) {
+			for(const tpl of templates) {
+				const res = getTemplateByName(name, tpl);
+				if(res) return res;
+			}
+		}
+		else {
+			if(templates.name === name) return templates;
+			if(templates.children) {
+				return getTemplateByName(name, templates.children);
+			}
+		}
+	}
 
 	function getUrlParams(url=location.href) {
 		const urlParams = new URLSearchParams(url.split('?')[1]);

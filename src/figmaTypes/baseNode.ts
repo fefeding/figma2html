@@ -31,12 +31,11 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                 dom.transform.rotateZ = node.rotation;
                 dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
 
-                // 考虑是否用 absoluteRenderBounds
-                // 因为拿到的是新长形宽高，需要求出原始升方形宽高
+                // 因为拿到的是新长形宽高，需要求出原始长方形宽高
                 const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
                 box.width = size.width;
                 box.height = size.height;
-                box.x = center.x - size.width/2;
+                box.x = center.x - size.width/2; 
                 box.y = center.y - size.height/2;
 
                 // 因为都是相对于整个document的坐标，这里需要用原始坐标把它还原到没有旋转前的位置。才是css中的坐标　
@@ -44,6 +43,8 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                 //box.x = pos.x;
                 //box.y = pos.y;
             }
+
+            if(dom.type === 'text' && box.height < node.style?.lineHeightPx) box.height = node.style.lineHeightPx;
 
             dom.bounds.width = box.width;
             dom.bounds.height = box.height;
@@ -701,15 +702,15 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
 
       // 计算原始长方形宽高
       calculateOriginalRectangleDimensions(radian: number, newWidth: number, newHeight: number) {       
-        // 旋转后的长方形的宽和高
-        var rotatedWidth = newWidth;
-        var rotatedHeight = newHeight;
+        // 旋转后的长方形的宽和高 newWidth newHeight
+
         const cos = Math.cos(radian);
         const sin = Math.sin(radian)
-        // 计算原始长方形的宽和高
-        var originalWidth = rotatedWidth * cos + rotatedHeight * sin;
-        var originalHeight = rotatedHeight * cos + rotatedWidth * sin;
-        return { width: originalWidth,  height: originalHeight };
+        // 解方程求原始长方形的宽度和高度
+        const w = (newWidth * Math.abs(cos) - newHeight * Math.abs(sin)) / (cos**2 - sin**2);
+        const h = (newHeight * Math.abs(cos) - newWidth * Math.abs(sin)) / (cos**2 - sin**2);
+        
+        return { width: w,  height: h };
     }
     
 }

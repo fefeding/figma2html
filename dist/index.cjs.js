@@ -1029,11 +1029,12 @@ var BaseConverter = /** @class */ (function () {
     function BaseConverter() {
     }
     BaseConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
+        var _a;
         return __awaiter(this, void 0, void 0, function () {
-            var box, center, size, _a, _b, padding, v;
-            var e_1, _c;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            var box, center, size, _b, _c, padding, v;
+            var e_1, _d;
+            return __generator(this, function (_e) {
+                switch (_e.label) {
                     case 0:
                         dom.style = dom.style || {};
                         // 位置
@@ -1066,6 +1067,8 @@ var BaseConverter = /** @class */ (function () {
                                 //box.x = pos.x;
                                 //box.y = pos.y;
                             }
+                            if (dom.type === 'text' && box.height < ((_a = node.style) === null || _a === void 0 ? void 0 : _a.lineHeightPx))
+                                box.height = node.style.lineHeightPx;
                             dom.bounds.width = box.width;
                             dom.bounds.height = box.height;
                             // 优先相对于页面坐标, isElement是相于它的父级的
@@ -1112,8 +1115,8 @@ var BaseConverter = /** @class */ (function () {
                         // padding
                         if (dom.type !== 'svg') {
                             try {
-                                for (_a = __values(['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                    padding = _b.value;
+                                for (_b = __values(['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']), _c = _b.next(); !_c.done; _c = _b.next()) {
+                                    padding = _c.value;
                                     v = node[padding];
                                     if (v) {
                                         dom.style[padding] = j_design_util_1.util.toPX(v);
@@ -1125,23 +1128,23 @@ var BaseConverter = /** @class */ (function () {
                             catch (e_1_1) { e_1 = { error: e_1_1 }; }
                             finally {
                                 try {
-                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                    if (_c && !_c.done && (_d = _b.return)) _d.call(_b);
                                 }
                                 finally { if (e_1) throw e_1.error; }
                             }
                         }
                         return [4 /*yield*/, this.convertStyle(node, dom, option, container)];
                     case 1:
-                        _d.sent();
+                        _e.sent();
                         return [4 /*yield*/, this.convertFills(node, dom, option, container)];
                     case 2:
-                        _d.sent(); // 解析fills
+                        _e.sent(); // 解析fills
                         return [4 /*yield*/, this.convertStrokes(node, dom, option, container)];
                     case 3:
-                        _d.sent(); // 边框
+                        _e.sent(); // 边框
                         return [4 /*yield*/, this.convertEffects(node, dom, option, container)];
                     case 4:
-                        _d.sent(); // 滤镜
+                        _e.sent(); // 滤镜
                         dom.data.left = dom.bounds.x;
                         dom.data.top = dom.bounds.y;
                         dom.data.width = dom.bounds.width;
@@ -1805,15 +1808,13 @@ var BaseConverter = /** @class */ (function () {
     };
     // 计算原始长方形宽高
     BaseConverter.prototype.calculateOriginalRectangleDimensions = function (radian, newWidth, newHeight) {
-        // 旋转后的长方形的宽和高
-        var rotatedWidth = newWidth;
-        var rotatedHeight = newHeight;
+        // 旋转后的长方形的宽和高 newWidth newHeight
         var cos = Math.cos(radian);
         var sin = Math.sin(radian);
-        // 计算原始长方形的宽和高
-        var originalWidth = rotatedWidth * cos + rotatedHeight * sin;
-        var originalHeight = rotatedHeight * cos + rotatedWidth * sin;
-        return { width: originalWidth, height: originalHeight };
+        // 解方程求原始长方形的宽度和高度
+        var w = (newWidth * Math.abs(cos) - newHeight * Math.abs(sin)) / (Math.pow(cos, 2) - Math.pow(sin, 2));
+        var h = (newHeight * Math.abs(cos) - newWidth * Math.abs(sin)) / (Math.pow(cos, 2) - Math.pow(sin, 2));
+        return { width: w, height: h };
     };
     return BaseConverter;
 }());
