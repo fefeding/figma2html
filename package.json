@@ -16,6 +16,10 @@
     "api": "npm run api:json && npm run api:md",
     "push": "npm publish --registry=https://registry.npmjs.org"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "devDependencies": {
     "@babel/core": "^7.23.7",
     "@babel/plugin-proposal-class-properties": "^7.10.1",
