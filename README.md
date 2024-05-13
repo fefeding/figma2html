@@ -10,7 +10,7 @@ npm i @cicctencent/figma2html
 
 # 使用
 ### 引用
-```js
+```typescript
 import { 
     convert, 
     nodeToDom, 
@@ -21,17 +21,17 @@ import {
 ```
 
 ### 获取figma信息（这块请自行调用api获取，这里只给示例）
-```js
+```typescript
 // 用文件ID，和个人token拉取数据
 data = await loadFigmaFile(fileKey, token);
 ```
 
-```js
+```typescript
 // 获取当前文件所有图片
 images = await getFigmaFileImages(fileKey, token);
 ```
 ### 转换格式到自定义格式
-```js
+```typescript
 // 转换模板，并动态获取图片地址
 const tpl = await convert(data, null, {
     images,
@@ -42,7 +42,7 @@ const tpl = await convert(data, null, {
     }
 });
 ```
-```js
+```typescript
 // 把自定义格式转为document元素结构
 const node = await nodeToDom(tpl, {});
 
