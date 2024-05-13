@@ -2,16 +2,16 @@
 工具类
 
 ```bash
-npm i j-figma2html
+npm i @cicctencent/figma2html
 ```
 
-`需要手动拼上文件id和token: https://jiamao.github.io/j-figma2html/example/index.html?fileid=&token=`
-[example](https://jiamao.github.io/j-figma2html/example/index.html)
+`需要手动拼上文件id和token: https://fefeding.github.io/figma2html/example/index.html?fileid=&token=`
+[example](https://fefeding.github.io/figma2html/example/index.html)
 
 # 使用
 ### 引用
 ```js
-import { convert, nodeToDom, loadFigmaFile, getFigmaImage, getFigmaFileImages } from "j-figma2html";
+import { convert, nodeToDom, loadFigmaFile, getFigmaImage, getFigmaFileImages } from "@cicctencent/figma2html";
 ```
 
 ### 获取figma信息（这块请自行调用api获取，这里只给示例）
