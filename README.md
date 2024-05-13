@@ -11,7 +11,13 @@ npm i @cicctencent/figma2html
 # 使用
 ### 引用
 ```js
-import { convert, nodeToDom, loadFigmaFile, getFigmaImage, getFigmaFileImages } from "@cicctencent/figma2html";
+import { 
+    convert, 
+    nodeToDom, 
+    loadFigmaFile, 
+    getFigmaImage, 
+    getFigmaFileImages 
+    } from "@cicctencent/figma2html";
 ```
 
 ### 获取figma信息（这块请自行调用api获取，这里只给示例）
