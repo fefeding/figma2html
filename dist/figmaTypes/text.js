@@ -1,5 +1,5 @@
 import { PaintType, PaintSolidScaleMode } from '../common/types';
-import { util } from 'j-design-util';
+import { util } from '@fefeding/utils';
 import BaseConverter from './baseNode';
 export class TEXTConverter extends BaseConverter {
     async convert(node, dom, parentNode, page, option) {

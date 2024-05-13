@@ -1,6 +1,6 @@
 
 import { Node, DomNode, ConvertNodeOption, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, DomNodeType, } from '../common/types';
-import { Point, util } from 'j-design-util';
+import { Point, util } from '@fefeding/utils';
 import PolygonConverter from './polygon';
 
 export class ELLIPSEConverter extends PolygonConverter<'ELLIPSE'> {

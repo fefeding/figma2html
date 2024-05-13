@@ -37,8 +37,8 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getFigmaFileImages = exports.getFigmaImage = exports.loadFigmaFile = exports.util = exports.nodeToDom = exports.convert = void 0;
-var j_design_util_1 = require("j-design-util");
-Object.defineProperty(exports, "util", { enumerable: true, get: function () { return j_design_util_1.util; } });
+var utils_1 = require("@fefeding/utils");
+Object.defineProperty(exports, "util", { enumerable: true, get: function () { return utils_1.util; } });
 var node_1 = require("./node");
 Object.defineProperty(exports, "convert", { enumerable: true, get: function () { return node_1.convert; } });
 Object.defineProperty(exports, "nodeToDom", { enumerable: true, get: function () { return node_1.nodeToDom; } });
@@ -59,7 +59,7 @@ function loadFigmaFile(fileId, token) {
                             "X-Figma-Token": token,
                         }
                     };
-                    return [4 /*yield*/, j_design_util_1.util.request(url, option)];
+                    return [4 /*yield*/, utils_1.util.request(url, option)];
                 case 1:
                     data = _a.sent();
                     return [2 /*return*/, JSON.parse(data)];
@@ -81,7 +81,7 @@ function getFigmaFileImages(fileId, token) {
                             "X-Figma-Token": token,
                         }
                     };
-                    return [4 /*yield*/, j_design_util_1.util.request(url, option)];
+                    return [4 /*yield*/, utils_1.util.request(url, option)];
                 case 1:
                     data = _a.sent();
                     images = JSON.parse(data);
@@ -106,7 +106,7 @@ function getFigmaImage(key, token, ids) {
                             "X-Figma-Token": token,
                         }
                     };
-                    return [4 /*yield*/, j_design_util_1.util.request(url, option)];
+                    return [4 /*yield*/, utils_1.util.request(url, option)];
                 case 1:
                     data = _a.sent();
                     images = JSON.parse(data);
@@ -173,8 +173,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.nodeToDom = exports.convert = void 0;
-var j_design_util_1 = __importDefault(require("j-design-util"));
-var j_css_filters_1 = __importDefault(require("j-css-filters"));
+var utils_1 = __importDefault(require("@fefeding/utils"));
+var css_filters_1 = __importDefault(require("@fefeding/css-filters"));
 var types_1 = require("./common/types");
 var baseNode_1 = __importDefault(require("./figmaTypes/baseNode"));
 var document_1 = __importDefault(require("./figmaTypes/document"));
@@ -485,27 +485,27 @@ function renderElement(node, option, dom) {
             switch (_d.label) {
                 case 0:
                     domType = node.type === 'text' ? 'div' : node.type;
-                    dom = dom || j_design_util_1.default.createElement(domType);
+                    dom = dom || utils_1.default.createElement(domType);
                     // 是图片的话，在它上面套一层div
                     if (node.type === 'img') {
                         img = dom;
                         if (node.url)
                             img.src = node.url;
-                        j_design_util_1.default.css(img, {
+                        utils_1.default.css(img, {
                             width: '100%',
                             height: '100%',
                             position: 'absolute',
                             left: '0',
                             top: '0'
                         });
-                        dom = j_design_util_1.default.createElement('div');
+                        dom = utils_1.default.createElement('div');
                         // 如果保持宽高比，则直隐去超出部分
                         if (node.preserveRatio) {
                             // 保持宽高比
-                            j_design_util_1.default.css(img, {
+                            utils_1.default.css(img, {
                                 height: 'auto'
                             });
-                            j_design_util_1.default.css(dom, {
+                            utils_1.default.css(dom, {
                                 overflow: 'hidden'
                             });
                         }
@@ -520,7 +520,7 @@ function renderElement(node, option, dom) {
                         dom.innerHTML = node.text.replace(/\n/g, '<br />');
                     }
                     if (node.filters) {
-                        filters = new j_css_filters_1.default(dom, node.filters);
+                        filters = new css_filters_1.default(dom, node.filters);
                         filters.apply(); // 应用于style
                     }
                     if (node.visible === false)
@@ -535,13 +535,13 @@ function renderElement(node, option, dom) {
                     if (node.transform) {
                         transform = '';
                         if (node.transform.rotateX) {
-                            transform += " rotateX(".concat(j_design_util_1.default.toRad(node.transform.rotateX), ")");
+                            transform += " rotateX(".concat(utils_1.default.toRad(node.transform.rotateX), ")");
                         }
                         if (node.transform.rotateY) {
-                            transform += " rotateY(".concat(j_design_util_1.default.toRad(node.transform.rotateY), ")");
+                            transform += " rotateY(".concat(utils_1.default.toRad(node.transform.rotateY), ")");
                         }
                         if (node.transform.rotateZ) {
-                            transform += " rotateZ(".concat(j_design_util_1.default.toRad(node.transform.rotateZ), ")");
+                            transform += " rotateZ(".concat(utils_1.default.toRad(node.transform.rotateZ), ")");
                         }
                         if (node.transform.scaleX) {
                             transform += " scaleX(".concat(node.transform.scaleX, ")");
@@ -553,22 +553,22 @@ function renderElement(node, option, dom) {
                             transform += " scaleZ(".concat(node.transform.scaleZ, ")");
                         }
                         if (node.transform.skewX) {
-                            transform += " skewX(".concat(j_design_util_1.default.toRad(node.transform.skewX), ")");
+                            transform += " skewX(".concat(utils_1.default.toRad(node.transform.skewX), ")");
                         }
                         if (node.transform.skewY) {
-                            transform += " skewY(".concat(j_design_util_1.default.toRad(node.transform.skewY), ")");
+                            transform += " skewY(".concat(utils_1.default.toRad(node.transform.skewY), ")");
                         }
                         if (node.transform.translateX) {
-                            transform += " translateX(".concat(j_design_util_1.default.isNumber(node.transform.translateX) ? j_design_util_1.default.toPX(node.transform.translateX) : node.transform.translateX, ")");
+                            transform += " translateX(".concat(utils_1.default.isNumber(node.transform.translateX) ? utils_1.default.toPX(node.transform.translateX) : node.transform.translateX, ")");
                         }
                         if (node.transform.translateY) {
-                            transform += " translateY(".concat(j_design_util_1.default.isNumber(node.transform.translateY) ? j_design_util_1.default.toPX(node.transform.translateY) : node.transform.translateY, ")");
+                            transform += " translateY(".concat(utils_1.default.isNumber(node.transform.translateY) ? utils_1.default.toPX(node.transform.translateY) : node.transform.translateY, ")");
                         }
                         if (node.transform.translateZ) {
-                            transform += " translateZ(".concat(j_design_util_1.default.isNumber(node.transform.translateZ) ? j_design_util_1.default.toPX(node.transform.translateZ) : node.transform.translateZ, ")");
+                            transform += " translateZ(".concat(utils_1.default.isNumber(node.transform.translateZ) ? utils_1.default.toPX(node.transform.translateZ) : node.transform.translateZ, ")");
                         }
                         if (transform) {
-                            j_design_util_1.default.css(dom, {
+                            utils_1.default.css(dom, {
                                 transform: transform
                             });
                         }
@@ -642,43 +642,43 @@ function setImageSize(node, img) {
         switch ((_a = node.data) === null || _a === void 0 ? void 0 : _a.imageSizeMode) {
             // 把背景图像扩展至足够大，以使背景图像完全覆盖背景区域。背景图像的某些部分也许无法显示在背景定位区域中。
             case 'cover': {
-                var px = width / j_design_util_1.default.toNumber(node.data.width);
-                var py = height / j_design_util_1.default.toNumber(node.data.height);
+                var px = width / utils_1.default.toNumber(node.data.width);
+                var py = height / utils_1.default.toNumber(node.data.height);
                 if (py < px) {
                     var w = img.width / py;
-                    img.style.height = j_design_util_1.default.toPX(node.data.height);
-                    img.style.width = j_design_util_1.default.toPX(w);
-                    img.style.left = -(w - j_design_util_1.default.toNumber(node.data.width)) / 2 + 'px';
+                    img.style.height = utils_1.default.toPX(node.data.height);
+                    img.style.width = utils_1.default.toPX(w);
+                    img.style.left = -(w - utils_1.default.toNumber(node.data.width)) / 2 + 'px';
                 }
                 else {
                     var h = height / px;
-                    img.style.width = j_design_util_1.default.toPX(node.data.width);
-                    img.style.height = j_design_util_1.default.toPX(h);
-                    img.style.top = -(h - j_design_util_1.default.toNumber(node.data.height)) / 2 + 'px';
+                    img.style.width = utils_1.default.toPX(node.data.width);
+                    img.style.height = utils_1.default.toPX(h);
+                    img.style.top = -(h - utils_1.default.toNumber(node.data.height)) / 2 + 'px';
                 }
                 break;
             }
             // 把图像图像扩展至最大尺寸，以使其宽度和高度完全适应内容区域。
             case 'contain': {
-                var px = width / j_design_util_1.default.toNumber(node.data.width);
-                var py = height / j_design_util_1.default.toNumber(node.data.height);
+                var px = width / utils_1.default.toNumber(node.data.width);
+                var py = height / utils_1.default.toNumber(node.data.height);
                 if (py < px) {
                     var h = height / px;
-                    img.style.width = j_design_util_1.default.toPX(node.data.width);
-                    img.style.height = j_design_util_1.default.toPX(h);
-                    img.style.top = -(h - j_design_util_1.default.toNumber(node.data.height)) / 2 + 'px';
+                    img.style.width = utils_1.default.toPX(node.data.width);
+                    img.style.height = utils_1.default.toPX(h);
+                    img.style.top = -(h - utils_1.default.toNumber(node.data.height)) / 2 + 'px';
                 }
                 else {
                     var w = img.width / py;
-                    img.style.height = j_design_util_1.default.toPX(node.data.height);
-                    img.style.width = j_design_util_1.default.toPX(w);
-                    img.style.left = -(w - j_design_util_1.default.toNumber(node.data.width)) / 2 + 'px';
+                    img.style.height = utils_1.default.toPX(node.data.height);
+                    img.style.width = utils_1.default.toPX(w);
+                    img.style.left = -(w - utils_1.default.toNumber(node.data.width)) / 2 + 'px';
                 }
                 break;
             }
             case 'stretch': {
-                img.style.width = j_design_util_1.default.toPX(node.data.width);
-                img.style.height = j_design_util_1.default.toPX(node.data.height);
+                img.style.width = utils_1.default.toPX(node.data.width);
+                img.style.height = utils_1.default.toPX(node.data.height);
                 break;
             }
             case 'repeat': {
@@ -1022,9 +1022,9 @@ var __read = (this && this.__read) || function (o, n) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BaseConverter = void 0;
-var j_css_filters_1 = require("j-css-filters");
+var css_filters_1 = require("@fefeding/css-filters");
 var types_1 = require("../common/types");
-var j_design_util_1 = require("j-design-util");
+var utils_1 = require("@fefeding/utils");
 var BaseConverter = /** @class */ (function () {
     function BaseConverter() {
     }
@@ -1056,7 +1056,7 @@ var BaseConverter = /** @class */ (function () {
                             if (node.rotation) {
                                 dom.data.rotation = node.rotation;
                                 dom.transform.rotateZ = node.rotation;
-                                dom.style.transform = "rotate(".concat(j_design_util_1.util.toRad(node.rotation), ")");
+                                dom.style.transform = "rotate(".concat(utils_1.util.toRad(node.rotation), ")");
                                 size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
                                 box.width = size.width;
                                 box.height = size.height;
@@ -1089,12 +1089,12 @@ var BaseConverter = /** @class */ (function () {
                         }
                         // 背景色
                         if (node.backgroundColor)
-                            dom.style.backgroundColor = j_design_util_1.util.colorToString(node.backgroundColor, 255);
+                            dom.style.backgroundColor = utils_1.util.colorToString(node.backgroundColor, 255);
                         if (node.cornerRadius) {
-                            dom.style.borderRadius = j_design_util_1.util.toPX(node.cornerRadius);
+                            dom.style.borderRadius = utils_1.util.toPX(node.cornerRadius);
                         }
                         else if (node.rectangleCornerRadii) {
-                            dom.style.borderRadius = node.rectangleCornerRadii.map(function (p) { return j_design_util_1.util.toPX(p); }).join(' ');
+                            dom.style.borderRadius = node.rectangleCornerRadii.map(function (p) { return utils_1.util.toPX(p); }).join(' ');
                         }
                         if (node.opacity)
                             dom.style.opacity = node.opacity.toString();
@@ -1119,7 +1119,7 @@ var BaseConverter = /** @class */ (function () {
                                     padding = _c.value;
                                     v = node[padding];
                                     if (v) {
-                                        dom.style[padding] = j_design_util_1.util.toPX(v);
+                                        dom.style[padding] = utils_1.util.toPX(v);
                                         //if(['paddingLeft', 'paddingRight'].includes(padding)) dom.bounds.width -= v;
                                         //else dom.bounds.height -= v;
                                     }
@@ -1149,10 +1149,10 @@ var BaseConverter = /** @class */ (function () {
                         dom.data.top = dom.bounds.y;
                         dom.data.width = dom.bounds.width;
                         dom.data.height = dom.bounds.height;
-                        dom.style.left = j_design_util_1.util.toPX(dom.bounds.x).toString();
-                        dom.style.top = j_design_util_1.util.toPX(dom.bounds.y).toString();
-                        dom.style.width = j_design_util_1.util.toPX(dom.bounds.width).toString();
-                        dom.style.height = j_design_util_1.util.toPX(dom.bounds.height).toString();
+                        dom.style.left = utils_1.util.toPX(dom.bounds.x).toString();
+                        dom.style.top = utils_1.util.toPX(dom.bounds.y).toString();
+                        dom.style.width = utils_1.util.toPX(dom.bounds.width).toString();
+                        dom.style.height = utils_1.util.toPX(dom.bounds.height).toString();
                         // 不支持的模式，直接透明
                         switch (node.blendMode) {
                             case types_1.BlendMode.SCREEN: {
@@ -1184,16 +1184,16 @@ var BaseConverter = /** @class */ (function () {
                 if (style.fontFamily)
                     dom.style.fontFamily = style.fontFamily;
                 if (style.fontSize)
-                    dom.style.fontSize = j_design_util_1.util.toPX(style.fontSize);
+                    dom.style.fontSize = utils_1.util.toPX(style.fontSize);
                 if (style.fontWeight)
                     dom.style.fontWeight = style.fontWeight.toString();
                 if (style.italic)
                     dom.style.fontStyle = 'italic';
                 if (typeof style.letterSpacing !== 'undefined') {
-                    dom.style.letterSpacing = j_design_util_1.util.toPX(style.letterSpacing);
+                    dom.style.letterSpacing = utils_1.util.toPX(style.letterSpacing);
                 }
                 if (style.lineHeightPx)
-                    dom.style.lineHeight = j_design_util_1.util.toPX(style.lineHeightPx);
+                    dom.style.lineHeight = utils_1.util.toPX(style.lineHeightPx);
                 if (style.textAlignHorizontal)
                     dom.style.textAlign = style.textAlignHorizontal;
                 if (style.textAlignVertical)
@@ -1221,15 +1221,15 @@ var BaseConverter = /** @class */ (function () {
                                     //dom.style.filter += ` drop-shadow(${util.toPX(effect.offset.x)} ${util.toPX(effect.offset.y)} ${util.toPX(effect.radius)} ${util.colorToString(effect.color, 255)})`;
                                     // 如果 有spread，则加到盒子上
                                     if (effect.spread || effect.type === types_1.EffectType.INNER_SHADOW) {
-                                        dom.style.boxShadow = "".concat(j_design_util_1.util.toPX(effect.offset.x), " ").concat(j_design_util_1.util.toPX(effect.offset.y), " ").concat(j_design_util_1.util.toPX(effect.radius), "  ").concat(j_design_util_1.util.toPX(effect.spread || 0), " ").concat(j_design_util_1.util.colorToString(effect.color, 255), " ").concat(effect.type === types_1.EffectType.INNER_SHADOW ? 'inset' : '');
+                                        dom.style.boxShadow = "".concat(utils_1.util.toPX(effect.offset.x), " ").concat(utils_1.util.toPX(effect.offset.y), " ").concat(utils_1.util.toPX(effect.radius), "  ").concat(utils_1.util.toPX(effect.spread || 0), " ").concat(utils_1.util.colorToString(effect.color, 255), " ").concat(effect.type === types_1.EffectType.INNER_SHADOW ? 'inset' : '');
                                     }
                                     else {
-                                        dom.filters.push(new j_css_filters_1.DropShadowFilter({
+                                        dom.filters.push(new css_filters_1.DropShadowFilter({
                                             value: {
-                                                x: j_design_util_1.util.toPX(effect.offset.x),
-                                                y: j_design_util_1.util.toPX(effect.offset.y),
-                                                blur: j_design_util_1.util.toPX(effect.radius),
-                                                color: j_design_util_1.util.colorToString(effect.color, 255)
+                                                x: utils_1.util.toPX(effect.offset.x),
+                                                y: utils_1.util.toPX(effect.offset.y),
+                                                blur: utils_1.util.toPX(effect.radius),
+                                                color: utils_1.util.colorToString(effect.color, 255)
                                             }
                                         }));
                                     }
@@ -1237,8 +1237,8 @@ var BaseConverter = /** @class */ (function () {
                                 }
                                 case types_1.EffectType.LAYER_BLUR: {
                                     //dom.style.filter += ` blur(${util.toPX(effect.radius)})`;
-                                    dom.filters.push(new j_css_filters_1.BlurFilter({
-                                        value: j_design_util_1.util.toPX(effect.radius)
+                                    dom.filters.push(new css_filters_1.BlurFilter({
+                                        value: utils_1.util.toPX(effect.radius)
                                     }));
                                     break;
                                 }
@@ -1295,7 +1295,7 @@ var BaseConverter = /** @class */ (function () {
                         {
                             if (typeof fill.opacity !== 'undefined')
                                 fill.color.a = fill.opacity;
-                            dom.style.backgroundColor = j_design_util_1.util.colorToString(fill.color, 255);
+                            dom.style.backgroundColor = utils_1.util.colorToString(fill.color, 255);
                             return [3 /*break*/, 9];
                         }
                         _h.label = 4;
@@ -1364,8 +1364,8 @@ var BaseConverter = /** @class */ (function () {
                                 dom.transform = {};
                             _d = __read(fill.imageTransform, 2), _e = __read(_d[0], 3), a = _e[0], c = _e[1], e = _e[2], _f = __read(_d[1], 3), b = _f[0], d = _f[1], f = _f[2];
                             // 计算旋转角度和正弦值
-                            dom.transform.translateX = j_design_util_1.util.toPX(e); // * node.absoluteBoundingBox.width;                    
-                            dom.transform.translateY = j_design_util_1.util.toPX(f); //* node.absoluteBoundingBox.width;
+                            dom.transform.translateX = utils_1.util.toPX(e); // * node.absoluteBoundingBox.width;                    
+                            dom.transform.translateY = utils_1.util.toPX(f); //* node.absoluteBoundingBox.width;
                             rotation = Math.atan2(b, a);
                             dom.transform.rotateZ = rotation;
                             //const scaleX = Math.sqrt(a * a + b * b);
@@ -1383,38 +1383,38 @@ var BaseConverter = /** @class */ (function () {
                             shadows?: number; // 阴影
                             */
                             if (fill.filters.contrast) {
-                                v = j_design_util_1.util.toNumberRange(fill.filters.contrast, -1, 1, 0.5, 1);
-                                dom.filters.push(new j_css_filters_1.ContrastFilter({
+                                v = utils_1.util.toNumberRange(fill.filters.contrast, -1, 1, 0.5, 1);
+                                dom.filters.push(new css_filters_1.ContrastFilter({
                                     value: v
                                 }));
                             }
                             if (fill.filters.exposure) {
-                                v = j_design_util_1.util.toNumberRange(fill.filters.exposure, -1, 1, 0.3, 2);
-                                dom.filters.push(new j_css_filters_1.BrightnessFilter({
+                                v = utils_1.util.toNumberRange(fill.filters.exposure, -1, 1, 0.3, 2);
+                                dom.filters.push(new css_filters_1.BrightnessFilter({
                                     value: v
                                 }));
                             }
                             if (fill.filters.saturation) {
-                                v = j_design_util_1.util.toNumberRange(fill.filters.saturation, -1, 1, 0, 2);
-                                dom.filters.push(new j_css_filters_1.SaturateFilter({
+                                v = utils_1.util.toNumberRange(fill.filters.saturation, -1, 1, 0, 2);
+                                dom.filters.push(new css_filters_1.SaturateFilter({
                                     value: v
                                 }));
                             }
                             if (fill.filters.temperature) {
                                 v = fill.filters.temperature;
-                                dom.filters.push(new j_css_filters_1.HueRotateFilter({
-                                    value: j_design_util_1.util.toRad(v)
+                                dom.filters.push(new css_filters_1.HueRotateFilter({
+                                    value: utils_1.util.toRad(v)
                                 }));
                             }
                             if (fill.filters.tint) {
-                                v = j_design_util_1.util.toNumberRange(fill.filters.tint, -1, 1, 5, 7);
-                                dom.filters.push(new j_css_filters_1.HueRotateFilter({
-                                    value: j_design_util_1.util.toDeg(j_design_util_1.util.radToDeg(v))
+                                v = utils_1.util.toNumberRange(fill.filters.tint, -1, 1, 5, 7);
+                                dom.filters.push(new css_filters_1.HueRotateFilter({
+                                    value: utils_1.util.toDeg(utils_1.util.radToDeg(v))
                                 }));
                             }
                             if (fill.filters.highlights) {
-                                v = j_design_util_1.util.toNumberRange(fill.filters.highlights, -1, 1, 0.6, 1.1);
-                                dom.filters.push(new j_css_filters_1.BrightnessFilter({
+                                v = utils_1.util.toNumberRange(fill.filters.highlights, -1, 1, 0.6, 1.1);
+                                dom.filters.push(new css_filters_1.BrightnessFilter({
                                     value: v
                                 }));
                             }
@@ -1424,7 +1424,7 @@ var BaseConverter = /** @class */ (function () {
                                 if (fill.filters.shadows < 0) {
                                     color = "rgba(0,0,0,".concat(v, ")");
                                 }
-                                dom.filters.push(new j_css_filters_1.DropShadowFilter({
+                                dom.filters.push(new css_filters_1.DropShadowFilter({
                                     value: {
                                         x: '0',
                                         y: '0',
@@ -1478,7 +1478,7 @@ var BaseConverter = /** @class */ (function () {
                         if (stroke.color) {
                             if (typeof stroke.opacity !== 'undefined')
                                 stroke.color.a = stroke.opacity;
-                            dom.style.outlineColor = j_design_util_1.util.colorToString(stroke.color, 255);
+                            dom.style.outlineColor = utils_1.util.colorToString(stroke.color, 255);
                         }
                         _c = stroke.type;
                         switch (_c) {
@@ -1554,9 +1554,9 @@ var BaseConverter = /** @class */ (function () {
                     case 13:
                         if (node.strokeWeight) {
                             if (dom.style.outlineColor)
-                                dom.style.outlineWidth = j_design_util_1.util.toPX(node.strokeWeight);
+                                dom.style.outlineWidth = utils_1.util.toPX(node.strokeWeight);
                             if (dom.style.borderImageSource)
-                                dom.style.borderImageWidth = j_design_util_1.util.toPX(node.strokeWeight);
+                                dom.style.borderImageWidth = utils_1.util.toPX(node.strokeWeight);
                         }
                         if (node.strokeDashes && node.strokeDashes.length) {
                             dom.style.outlineStyle = 'dashed';
@@ -1789,9 +1789,9 @@ var BaseConverter = /** @class */ (function () {
             var start = gradientHandlePositions[0];
             var end = gradientHandlePositions[1]; // Use the second handle, ignoring the last one
             // Calculate the angle in radians
-            var angleRadians = Math.PI / 2 - j_design_util_1.util.getPointCoordRotation(start, end);
+            var angleRadians = Math.PI / 2 - utils_1.util.getPointCoordRotation(start, end);
             //const angleRadians = Math.PI/2 - Math.atan2(end.y - start.y, end.x - start.x);
-            return j_design_util_1.util.toDeg(j_design_util_1.util.radToDeg(angleRadians));
+            return utils_1.util.toDeg(utils_1.util.radToDeg(angleRadians));
         }
         else {
             console.error("Insufficient handle positions for gradient calculation.");
@@ -1802,7 +1802,7 @@ var BaseConverter = /** @class */ (function () {
     BaseConverter.prototype.getGradientStops = function (gradientStops) {
         // Constructing the gradient stops string based on received data
         var stopsString = gradientStops
-            .map(function (stop) { return j_design_util_1.util.colorToString(stop.color, 255) + " ".concat(stop.position * 100, "%"); })
+            .map(function (stop) { return utils_1.util.colorToString(stop.color, 255) + " ".concat(stop.position * 100, "%"); })
             .join(", ");
         return stopsString;
     };
@@ -2544,7 +2544,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PolygonConverter = void 0;
 var types_1 = require("../common/types");
-var j_design_util_1 = require("j-design-util");
+var utils_1 = require("@fefeding/utils");
 var baseNode_1 = __importDefault(require("./baseNode"));
 var PolygonConverter = /** @class */ (function (_super) {
     __extends(PolygonConverter, _super);
@@ -2584,7 +2584,7 @@ var PolygonConverter = /** @class */ (function (_super) {
                         // 如果是蒙板
                         if (node.isMask) {
                             mask_1 = this.createDomNode('mask');
-                            mask_1.id = 'mask_' + j_design_util_1.util.uuid();
+                            mask_1.id = 'mask_' + utils_1.util.uuid();
                             defs.children.push(mask_1);
                             mask_1.children.push(polygon);
                             polygon.isMask = true;
@@ -2735,7 +2735,7 @@ var PolygonConverter = /** @class */ (function (_super) {
                         {
                             if (typeof fill.opacity !== 'undefined')
                                 fill.color.a = fill.opacity;
-                            polygon.style.fill = j_design_util_1.util.colorToString(fill.color, 255);
+                            polygon.style.fill = utils_1.util.colorToString(fill.color, 255);
                             return [3 /*break*/, 8];
                         }
                         _e.label = 4;
@@ -2804,7 +2804,7 @@ var PolygonConverter = /** @class */ (function (_super) {
                             if (stroke.color) {
                                 if (typeof stroke.opacity !== 'undefined')
                                     stroke.color.a = stroke.opacity;
-                                polygon.attributes['stroke'] = j_design_util_1.util.colorToString(stroke.color, 255);
+                                polygon.attributes['stroke'] = utils_1.util.colorToString(stroke.color, 255);
                             }
                         }
                     }
@@ -2817,9 +2817,9 @@ var PolygonConverter = /** @class */ (function (_super) {
                     }
                     if (node.strokeWeight) {
                         if (dom.style.outlineColor)
-                            dom.style.outlineWidth = j_design_util_1.util.toPX(node.strokeWeight);
+                            dom.style.outlineWidth = utils_1.util.toPX(node.strokeWeight);
                         if (dom.style.borderImageSource)
-                            dom.style.borderImageWidth = j_design_util_1.util.toPX(node.strokeWeight);
+                            dom.style.borderImageWidth = utils_1.util.toPX(node.strokeWeight);
                     }
                     if (node.strokeDashes && node.strokeDashes.length) {
                         polygon.attributes['stroke-dasharray'] = node.strokeDashes.join(',');
@@ -2849,7 +2849,7 @@ var PolygonConverter = /** @class */ (function (_super) {
             return _super.prototype.convertLinearGradient.call(this, gradient, dom, container);
         var defs = container.children[0];
         var gradientDom = this.createDomNode('linearGradient');
-        gradientDom.id = 'gradient_' + j_design_util_1.util.uuid();
+        gradientDom.id = 'gradient_' + utils_1.util.uuid();
         var handlePositions = gradient.gradientHandlePositions;
         if (handlePositions && handlePositions.length > 1) {
             gradientDom.attributes['x1'] = gradientDom.x1 = (handlePositions[0].x) * 100 + '%';
@@ -2873,7 +2873,7 @@ var PolygonConverter = /** @class */ (function (_super) {
         if (!defs)
             return '';
         var gradientDom = this.createDomNode('radialGradient');
-        gradientDom.id = 'gradient_' + j_design_util_1.util.uuid();
+        gradientDom.id = 'gradient_' + utils_1.util.uuid();
         var handlePositions = gradient.gradientHandlePositions;
         // 该字段包含三个矢量，每个矢量都是归一化对象空间中的一个位置（归一化对象空间是如果对象的边界框的左上角是（0，0），右下角是（1,1））。第一个位置对应于渐变的开始（为了计算渐变停止，值为0），第二个位置是渐变的结束（值为1），第三个手柄位置决定渐变的宽度。
         if (handlePositions && handlePositions.length > 2) {
@@ -2902,7 +2902,7 @@ var PolygonConverter = /** @class */ (function (_super) {
                 var s = gradientStops_1_1.value;
                 var stop_1 = this.createDomNode('stop');
                 stop_1.attributes['offset'] = stop_1.offset = "".concat(Math.round(s.position * 100), "%");
-                stop_1.style.stopColor = j_design_util_1.util.colorToString(s.color, 255);
+                stop_1.style.stopColor = utils_1.util.colorToString(s.color, 255);
                 stops.push(stop_1);
             }
         }
@@ -3209,7 +3209,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TEXTConverter = void 0;
 var types_1 = require("../common/types");
-var j_design_util_1 = require("j-design-util");
+var utils_1 = require("@fefeding/utils");
 var baseNode_1 = __importDefault(require("./baseNode"));
 var TEXTConverter = /** @class */ (function (_super) {
     __extends(TEXTConverter, _super);
@@ -3234,7 +3234,7 @@ var TEXTConverter = /** @class */ (function (_super) {
                         if (((_a = dom.bounds) === null || _a === void 0 ? void 0 : _a.height) < ((_b = node.style) === null || _b === void 0 ? void 0 : _b.fontSize) * 2) {
                             isSingleLine = true;
                             w = this.testTextWidth(dom);
-                            dom.data.width = Math.max(w, j_design_util_1.util.toNumber(dom.data.width));
+                            dom.data.width = Math.max(w, utils_1.util.toNumber(dom.data.width));
                         }
                         else {
                             //dom.style.minWidth = util.toPX(dom.data.width);
@@ -3243,7 +3243,7 @@ var TEXTConverter = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.convertCharacterStyleOverrides(node, res, option, isSingleLine)];
                     case 2:
                         _c.sent(); // 处理分字样式
-                        dom.style.width = j_design_util_1.util.toPX(++dom.data.width);
+                        dom.style.width = utils_1.util.toPX(++dom.data.width);
                         return [2 /*return*/, res];
                 }
             });
@@ -3324,7 +3324,7 @@ var TEXTConverter = /** @class */ (function (_super) {
                         _d.label = 8;
                     case 8:
                         // 这种方式文本宽度需要重新计算
-                        dom.data.width = Math.max(width, j_design_util_1.util.toNumber(dom.data.width));
+                        dom.data.width = Math.max(width, utils_1.util.toNumber(dom.data.width));
                         return [2 /*return*/];
                 }
             });
@@ -3349,7 +3349,7 @@ var TEXTConverter = /** @class */ (function (_super) {
                         return [3 /*break*/, 7];
                     case 1:
                         {
-                            dom.style.color = j_design_util_1.util.colorToString(fill.color, 255);
+                            dom.style.color = utils_1.util.colorToString(fill.color, 255);
                             return [3 /*break*/, 7];
                         }
                         _b.label = 2;
@@ -3462,7 +3462,7 @@ var TEXTConverter = /** @class */ (function (_super) {
         document.body.appendChild(span);
         var w = span.offsetWidth || span.clientWidth;
         if (dom.style.letterSpacing) {
-            var v = j_design_util_1.util.toNumber(dom.style.letterSpacing);
+            var v = utils_1.util.toNumber(dom.style.letterSpacing);
             w += v;
         }
         document.body.removeChild(span);

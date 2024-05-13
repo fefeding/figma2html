@@ -1,6 +1,6 @@
-import { DropShadowFilter, BlurFilter, ContrastFilter, BrightnessFilter, SaturateFilter, HueRotateFilter } from 'j-css-filters';
+import { DropShadowFilter, BlurFilter, ContrastFilter, BrightnessFilter, SaturateFilter, HueRotateFilter } from '@fefeding/css-filters';
 import { PaintType, PaintSolidScaleMode, EffectType, BlendMode } from '../common/types';
-import { util } from 'j-design-util';
+import { util } from '@fefeding/utils';
 export class BaseConverter {
     async convert(node, dom, parentNode, page, option, container) {
         dom.style = dom.style || {};

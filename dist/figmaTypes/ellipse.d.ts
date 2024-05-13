@@ -1,5 +1,5 @@
 import { Node, DomNode, ConvertNodeOption, DomNodeType } from '../common/types';
-import { Point } from 'j-design-util';
+import { Point } from '@fefeding/utils';
 import PolygonConverter from './polygon';
 export declare class ELLIPSEConverter extends PolygonConverter<'ELLIPSE'> {
     polygonName: DomNodeType;

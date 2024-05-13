@@ -1,6 +1,6 @@
 
 import { Node, DomNode, PaintType, ConvertNodeOption, PaintSolidScaleMode, TypeStyle } from '../common/types';
-import { util } from 'j-design-util';
+import { util } from '@fefeding/utils';
 import BaseConverter from './baseNode';
 
 export class TEXTConverter extends BaseConverter<'TEXT'> {

@@ -1,6 +1,6 @@
 
 import { Node, DomNode, ConvertNodeOption, PaintType, PaintSolidScaleMode, Paint, Vector, ColorStop, DomNodeType, } from '../common/types';
-import { util } from 'j-design-util';
+import { util } from '@fefeding/utils';
 import PolygonConverter from './polygon';
 
 // 五角星

@@ -1,5 +1,5 @@
 {
-  "name": "j-figma2html",
+  "name": "@cicctencent/figma2html",
   "version": "1.0.49",
   "description": "figma 转 html 工具类",
   "main": "./dist/index.js",
@@ -54,8 +54,8 @@
     "vitest": "^1.2.2"
   },
   "dependencies": {
-    "j-css-filters": "^1.0.7",
-    "j-design-util": "^1.0.38"
+    "@fefeding/css-filters": "^1.0.7",
+    "@fefeding/utils": "^1.0.38"
   },
   "author": "fefeding",
   "license": "MIT"

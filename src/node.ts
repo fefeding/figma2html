@@ -1,6 +1,6 @@
 
-import util from 'j-design-util';
-import CSSFilter from 'j-css-filters';
+import util from '@fefeding/utils';
+import CSSFilter from '@fefeding/css-filters';
 import { type Node, type DomNode, type NodeConverter, type NodeToDomOption, type ConvertNodeOption, type IJElementData, ImageType } from './common/types';
 import BaseConverter from './figmaTypes/baseNode';
 import DocumentConverter from './figmaTypes/document';

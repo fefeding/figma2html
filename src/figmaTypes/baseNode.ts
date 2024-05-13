@@ -1,7 +1,7 @@
 
-import { IFilter, DropShadowFilter, BlurFilter, ContrastFilter, BrightnessFilter, SaturateFilter, InvertFilter, SepiaFilter, HueRotateFilter } from 'j-css-filters';
+import { IFilter, DropShadowFilter, BlurFilter, ContrastFilter, BrightnessFilter, SaturateFilter, InvertFilter, SepiaFilter, HueRotateFilter } from '@fefeding/css-filters';
 import { Node, DomNode, DomNodeType, NodeType, NodeConverter, PaintType, PaintSolidScaleMode, IJElementData, Vector, ColorStop, EffectType, ConvertNodeOption, Paint, TypeStyle, StringKeyValue, BlendMode, IStyleTransform } from '../common/types';
-import { util, type Point } from 'j-design-util';
+import { util, type Point } from '@fefeding/utils';
 
 export class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
     async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode) {

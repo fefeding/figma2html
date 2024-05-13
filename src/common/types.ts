@@ -1,5 +1,5 @@
-import { type Color } from 'j-design-util';
-import { type IFilter } from 'j-css-filters';
+import { type Color } from '@fefeding/utils';
+import { type IFilter } from '@fefeding/css-filters';
 
 /** A string enum with value, describing the end caps of vector paths. */
 export enum StrokeCap {

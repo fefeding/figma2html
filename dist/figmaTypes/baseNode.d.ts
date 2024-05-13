@@ -1,5 +1,5 @@
 import { Node, DomNode, DomNodeType, NodeType, NodeConverter, Vector, ColorStop, ConvertNodeOption, Paint, TypeStyle } from '../common/types';
-import { type Point } from 'j-design-util';
+import { type Point } from '@fefeding/utils';
 export declare class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
     convert(node: Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;
     createDomNode(type: DomNodeType, option?: DomNode): DomNode;

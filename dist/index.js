@@ -1,4 +1,4 @@
-import { util } from 'j-design-util';
+import { util } from '@fefeding/utils';
 import { convert, nodeToDom } from './node';
 /**
  * 获取figma文件

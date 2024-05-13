@@ -1,5 +1,5 @@
 import { PaintType, BlendMode, } from '../common/types';
-import { util } from 'j-design-util';
+import { util } from '@fefeding/utils';
 import BaseConverter from './baseNode';
 export class PolygonConverter extends BaseConverter {
     // 多边形标签名
