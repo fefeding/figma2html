@@ -48,8 +48,36 @@ export class BaseConverter {
             }
             // 相对于父位置
             else if (parentNode && parentNode.absoluteBoundingBox) {
-                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                // 检查父节点是否有Auto Layout，以及当前节点是否参与Auto Layout
+                const parentHasAutoLayout = parentNode.layoutMode && parentNode.layoutMode !== 'NONE';
+                const hasLayoutAlign = node.layoutAlign !== undefined;
+                const hasLayoutGrow = node.layoutGrow !== undefined;
+                const hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
+                    node.layoutSizingVertical !== undefined;
+                // 如果父节点有Auto Layout，且当前节点不参与Auto Layout
+                // 使用relativeTransform来定位（绝对定位）
+                if (parentHasAutoLayout && !hasLayoutAlign && !hasLayoutGrow && !hasLayoutSizing) {
+                    if (node.relativeTransform) {
+                        // 使用relativeTransform中的位置
+                        dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
+                        dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
+                    }
+                    else {
+                        // 没有relativeTransform，使用默认计算
+                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                    }
+                }
+                else if (parentHasAutoLayout && (hasLayoutAlign || hasLayoutGrow || hasLayoutSizing)) {
+                    // 参与Auto Layout，位置由flex布局决定，设置为0
+                    dom.data.left = dom.bounds.x = 0;
+                    dom.data.top = dom.bounds.y = 0;
+                }
+                else {
+                    // 父节点没有Auto Layout，使用默认计算
+                    dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                    dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                }
             }
             // 没有父元素，就认为约对定位为0
             else {
@@ -88,9 +116,65 @@ export class BaseConverter {
                 const v = node[padding];
                 if (v) {
                     dom.style[padding] = util.toPX(v);
-                    //if(['paddingLeft', 'paddingRight'].includes(padding)) dom.bounds.width -= v;
-                    //else dom.bounds.height -= v;
                 }
+            }
+        }
+        // Auto Layout 支持
+        // @ts-ignore
+        if (node.layoutMode && node.layoutMode !== 'NONE') {
+            dom.style.display = 'flex';
+            // 布局方向
+            // @ts-ignore
+            if (node.layoutMode === 'HORIZONTAL') {
+                dom.style.flexDirection = 'row';
+                // @ts-ignore
+            }
+            else if (node.layoutMode === 'VERTICAL') {
+                dom.style.flexDirection = 'column';
+            }
+            // 主轴对齐
+            // @ts-ignore
+            if (node.primaryAxisAlignItems) {
+                // @ts-ignore
+                switch (node.primaryAxisAlignItems) {
+                    case 'MIN':
+                        // 默认，不需要设置
+                        break;
+                    case 'CENTER':
+                        dom.style.justifyContent = 'center';
+                        break;
+                    case 'MAX':
+                        dom.style.justifyContent = 'flex-end';
+                        break;
+                    case 'SPACE_BETWEEN':
+                        dom.style.justifyContent = 'space-between';
+                        break;
+                }
+            }
+            // 交叉轴对齐
+            // @ts-ignore
+            if (node.counterAxisAlignItems) {
+                // @ts-ignore
+                switch (node.counterAxisAlignItems) {
+                    case 'MIN':
+                        // 默认，不需要设置
+                        break;
+                    case 'CENTER':
+                        dom.style.alignItems = 'center';
+                        break;
+                    case 'MAX':
+                        dom.style.alignItems = 'flex-end';
+                        break;
+                    case 'BASELINE':
+                        dom.style.alignItems = 'baseline';
+                        break;
+                }
+            }
+            // 子元素间距
+            // @ts-ignore
+            if (node.itemSpacing) {
+                // @ts-ignore
+                dom.style.gap = util.toPX(node.itemSpacing);
             }
         }
         await this.convertStyle(node, dom, option, container);
@@ -105,11 +189,11 @@ export class BaseConverter {
         dom.style.top = util.toPX(dom.bounds.y).toString();
         dom.style.width = util.toPX(dom.bounds.width).toString();
         dom.style.height = util.toPX(dom.bounds.height).toString();
-        // 不支持的模式，直接透明
-        switch (node.blendMode) {
-            case BlendMode.SCREEN: {
-                dom.style.opacity = '0';
-                break;
+        // 处理混合模式
+        if (node.blendMode) {
+            const cssBlendMode = this.convertBlendMode(node.blendMode);
+            if (cssBlendMode) {
+                dom.style.mixBlendMode = cssBlendMode;
             }
         }
         return dom;
@@ -133,10 +217,7 @@ export class BaseConverter {
     }
     // 转换style
     async convertStyle(node, dom, option, container) {
-        // @ts-ignore
-        if (node.type === 'BOOLEAN_OPERATION')
-            return dom;
-        // @ts-ignore
+        // @ts-ignore - BOOLEAN_OPERATION 继承 VECTOR 的样式，应该处理
         const style = node.style || node;
         if (!style)
             return dom;
@@ -203,8 +284,6 @@ export class BaseConverter {
     }
     // 处理填充
     async convertFills(node, dom, option, container) {
-        if (node.type === 'BOOLEAN_OPERATION')
-            return dom;
         // isMaskOutline 如果为true则忽略填充样式
         if (!node.isMaskOutline && node.fills) {
             for (const fill of node.fills) {
@@ -270,11 +349,12 @@ export class BaseConverter {
                         break;
                     }
                 }
-                // 不支持的模式，直接透明
-                switch (fill.blendMode) {
-                    case BlendMode.SCREEN: {
-                        dom.style.opacity = '0';
-                        break;
+                // 处理填充的混合模式
+                if (fill.blendMode) {
+                    const cssBlendMode = this.convertBlendMode(fill.blendMode);
+                    if (cssBlendMode && cssBlendMode !== 'normal') {
+                        // 对于填充的混合模式，使用 background-blend-mode
+                        dom.style.backgroundBlendMode = cssBlendMode;
                     }
                 }
                 if (dom && fill.imageTransform && fill.scaleMode === PaintSolidScaleMode.STRETCH) {
@@ -367,8 +447,6 @@ export class BaseConverter {
     }
     // 处理边框
     async convertStrokes(node, dom, option, container) {
-        if (node.type === 'BOOLEAN_OPERATION')
-            return dom;
         if (node.strokes && node.strokes.length) {
             for (const stroke of node.strokes) {
                 if (stroke.visible === false)
@@ -439,19 +517,56 @@ export class BaseConverter {
     }
     // 是否是空的dom节点
     isEmptyDom(dom) {
+        // 有子节点，不是空
         if (dom.children && dom.children.length)
             return false;
+        // 有文本内容，不是空
         if (dom.text)
             return false;
+        // 非 div 类型（如 svg, img 等），不是空
         if (dom.type !== 'div')
             return false;
-        if (dom.style.filter)
+        // 检查样式是否有意义的内容
+        const style = dom.style;
+        // 有滤镜效果
+        if (dom.filters && dom.filters.length)
             return false;
-        if (dom.style.borderImageSource || dom.style.backgroundImage || dom.style.background)
+        if (style.filter)
             return false;
-        if (dom.style.backgroundColor && !this.isTransparentColor(dom.style.backgroundColor))
+        // 有背景相关
+        if (style.borderImageSource || style.backgroundImage || style.background)
             return false;
-        return true;
+        if (style.backgroundColor && !this.isTransparentColor(style.backgroundColor))
+            return false;
+        // 有边框
+        if (style.border || style.borderWidth || style.borderStyle || style.borderColor)
+            return false;
+        if (style.borderRadius || style.borderTopLeftRadius)
+            return false;
+        // 有阴影
+        if (style.boxShadow || style.boxShadow)
+            return false;
+        // 有变换
+        if (dom.transform && Object.keys(dom.transform).length > 0)
+            return false;
+        if (style.transform)
+            return false;
+        // 有混合模式
+        if (style.mixBlendMode && style.mixBlendMode !== 'normal')
+            return false;
+        // 有透明度设置
+        if (style.opacity !== undefined && style.opacity !== '1')
+            return false;
+        // 有明确的尺寸和位置（可能是占位元素）
+        // 如果有明确的尺寸，即使没有其他样式，也可能是有意义的
+        const hasExplicitSize = (style.width && style.width !== '0px' && style.width !== 'auto') ||
+            (style.height && style.height !== '0px' && style.height !== 'auto');
+        // 如果没有任何样式属性，认为是空
+        const hasAnyStyle = Object.keys(style).some(key => {
+            const value = style[key];
+            return value !== undefined && value !== '' && value !== 'initial' && value !== 'inherit';
+        });
+        return !hasAnyStyle;
     }
     // 是否是透明色
     isTransparentColor(color) {
@@ -674,6 +789,32 @@ export class BaseConverter {
         const w = (newWidth * Math.abs(cos) - newHeight * Math.abs(sin)) / (cos ** 2 - sin ** 2);
         const h = (newHeight * Math.abs(cos) - newWidth * Math.abs(sin)) / (cos ** 2 - sin ** 2);
         return { width: w, height: h };
+    }
+    // 转换混合模式
+    convertBlendMode(blendMode) {
+        // Figma 混合模式到 CSS mix-blend-mode 的映射
+        const blendModeMap = {
+            [BlendMode.PASS_THROUGH]: 'normal', // 仅适用于组，子元素不继承混合模式
+            [BlendMode.NORMAL]: 'normal',
+            [BlendMode.DARKEN]: 'darken',
+            [BlendMode.MULTIPLY]: 'multiply',
+            [BlendMode.LINEAR_BURN]: 'color-burn', // CSS 没有 linear-burn，用 color-burn 近似
+            [BlendMode.COLOR_BURN]: 'color-burn',
+            [BlendMode.LIGHTEN]: 'lighten',
+            [BlendMode.SCREEN]: 'screen',
+            [BlendMode.LINEAR_DODGE]: 'color-dodge', // CSS 没有 linear-dodge，用 color-dodge 近似
+            [BlendMode.COLOR_DODGE]: 'color-dodge',
+            [BlendMode.OVERLAY]: 'overlay',
+            [BlendMode.SOFT_LIGHT]: 'soft-light',
+            [BlendMode.HARD_LIGHT]: 'hard-light',
+            [BlendMode.DIFFERENCE]: 'difference',
+            [BlendMode.EXCLUSION]: 'exclusion',
+            [BlendMode.HUE]: 'hue',
+            [BlendMode.SATURATION]: 'saturation',
+            [BlendMode.COLOR]: 'color',
+            [BlendMode.LUMINOSITY]: 'luminosity',
+        };
+        return blendModeMap[blendMode] || 'normal';
     }
 }
 export default BaseConverter;

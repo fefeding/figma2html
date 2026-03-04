@@ -1,4 +1,5 @@
 
+
 import util from '@fefeding/utils';
 import CSSFilter from '@fefeding/css-filters';
 import { type Node, type DomNode, type NodeConverter, type NodeToDomOption, type ConvertNodeOption, type IJElementData, ImageType } from './common/types';
@@ -13,8 +14,15 @@ import StarConverter from './figmaTypes/star';
 import EllipseConverter from './figmaTypes/ellipse';
 import LineConverter from './figmaTypes/line';
 import RectangleConverter from './figmaTypes/rectangle';
+import VectorConverter from './figmaTypes/vector';
+import SliceConverter from './figmaTypes/slice';
+import ComponentConverter from './figmaTypes/component';
+import ComponentSetConverter from './figmaTypes/componentSet';
+import InstanceConverter from './figmaTypes/instance';
+import BooleanOperationConverter from './figmaTypes/booleanOperation';
 
 const frameConverter = new FrameConverter();
+const componentConverter = new ComponentConverter();
 const ConverterMaps = {
     'BASE': new BaseConverter(),
     'FRAME': frameConverter,
@@ -27,7 +35,13 @@ const ConverterMaps = {
     'STAR': new StarConverter(),
     'RECTANGLE': new RectangleConverter(),
     'LINE': new LineConverter(),
-    'VECTOR': new RectangleConverter(),
+    'VECTOR': new VectorConverter(),
+    'SLICE': new SliceConverter(),
+    'COMPONENT': componentConverter,
+    'COMPONENT_SET': new ComponentSetConverter(),
+    'INSTANCE': new InstanceConverter(),
+    'BOOLEAN_OPERATION': new BooleanOperationConverter(),
+    'BOOLEAN': new BooleanOperationConverter(),
 } as { [key: string]: NodeConverter};
 
 // rectange是否处理成svg，是返回svg，否则返回img或div
@@ -50,100 +64,131 @@ function rectType(item: Node) {
 
 // 转node为html结构对象
 export async function convert(node: Node, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode> {
-    // 如果是根，则返回document
-    if(node.document) {
-        const docDom = await convert(node.document, node, page, option);
-        return docDom;
-    }
-
-    if(node.visible === false) return null;
-
-    // 已识别成图片的，不再处理成svg
-    const recType = rectType(node);
-   
-    const dom = ConverterMaps.BASE.createDomNode('div', {
-        id: node.id,
-        name: node.name,
-        type: 'div',
-        visible: true,
-        data: {} as IJElementData,
-        style: {
-            // 默认采用绝对定位
-            position: 'absolute',
-        } as CSSStyleDeclaration,
-        children: [] as Array<DomNode>,
-        figmaData: node,
-    });   
-    // 普通元素，不可当作容器
-    dom.isElement = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE', 'RECTANGLE'].includes(node.type) && recType !== 'img' && recType !== 'svg' && recType !== 'div'; // || (parentNode && parentNode.clipsContent);
-
-    const isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
-    const svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
-
-    // 容器可能是SVG
-    let isSvg = isContainer && !container;
-    // 容器下所有元素都是SVG元素，则认为是svg块
-    if(isSvg && node.children && node.children.length) {
-        for(const child of node.children) {
-            if(!svgElements.includes(child.type)) {
-                isSvg = false;
-                break;
-            }
-            // 已识别成图片的，不再处理成svg
-            if(rectType(child) !== 'svg') {
-                isSvg = false;
-                break;
-            }
-        }
-    }
-    else {
-        isSvg = false;
-    }
-
-    if(isSvg) {
-        dom.type = 'svg';
-        container = dom;
-    }
-    
-    let converter = ConverterMaps[node.type] || ConverterMaps.BASE;
-    
-    if(recType && recType !== 'svg') {
-        dom.type = recType;
-        converter = ConverterMaps.BASE;
-    }
-
-    if(converter) await converter.convert(node, dom, parentNode, page, option, container);
-
-    if(!page && node.type === 'FRAME' && option?.expandToPage) page = dom;// 当前节点开始，为页面模板
-    else if(page && (!container || dom.type === 'svg')) {
-        // 没有显示意义的div不处理
-        if(!dom.isElement) page.children.push(dom);
-    } 
-
-    if(node.children && node.children.length) {
-        if(isSvg && (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN')) {
-           // if(svgElements.includes(node.children[0].type)) node.children[0].isMask = true;
+    try {
+        // 如果是根，则返回document
+        if(node.document) {
+            const docDom = await convert(node.document, node, page, option);
+            return docDom;
         }
 
-        let lastChildDom = null;
-        for(const child of node.children) {
-            let parent = container;
-            // 如果是蒙板，则加入上一个SVG元素中
-            if(child.isMask && !parent && lastChildDom?.type === 'svg') {
-                parent = lastChildDom;
+        if(node.visible === false) return null;
+
+        // 已识别成图片的，不再处理成svg
+        const recType = rectType(node);
+       
+        const dom = ConverterMaps.BASE.createDomNode('div', {
+            id: node.id,
+            name: node.name,
+            type: 'div',
+            visible: true,
+            data: {} as IJElementData,
+            style: {
+                // 默认采用绝对定位
+                position: 'absolute',
+            } as CSSStyleDeclaration,
+            children: [] as Array<DomNode>,
+            figmaData: node,
+        });   
+        // 普通元素，不可当作容器
+        dom.isElement = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE', 'RECTANGLE'].includes(node.type) && recType !== 'img' && recType !== 'svg' && recType !== 'div'; // || (parentNode && parentNode.clipsContent);
+
+        const isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
+        const svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
+
+        // 容器可能是SVG
+        let isSvg = isContainer && !container;
+        // 容器下所有元素都是SVG元素，则认为是svg块
+        if(isSvg && node.children && node.children.length) {
+            for(const child of node.children) {
+                if(!svgElements.includes(child.type)) {
+                    isSvg = false;
+                    break;
+                }
+                // 已识别成图片的，不再处理成svg
+                if(rectType(child) !== 'svg') {
+                    isSvg = false;
+                    break;
+                }
             }
-            const c = await convert(child, node, parent || page, option, parent);   
-            if(!c) continue;   
-            lastChildDom = c; 
-            if(ConverterMaps.BASE.isEmptyDom(c)) {
-                console.log('empty dom', c);
-                continue;
-            }     
-            if(!c.isMask && !dom.children.includes(c) && (!page || c.isElement)) dom.children.push(c);
         }
+        else {
+            isSvg = false;
+        }
+
+        if(isSvg) {
+            dom.type = 'svg';
+            container = dom;
+        }
+        
+        let converter = ConverterMaps[node.type];
+        
+        // 如果没有找到对应的转换器，使用基础转换器
+        if(!converter) {
+            console.warn(`[figma2html] No converter found for node type: ${node.type}, using base converter`);
+            converter = ConverterMaps.BASE;
+        }
+        
+        if(recType && recType !== 'svg') {
+            dom.type = recType;
+            converter = ConverterMaps.BASE;
+        }
+
+        await converter.convert(node, dom, parentNode, page, option, container);
+
+        if(!page && node.type === 'FRAME' && option?.expandToPage) page = dom;// 当前节点开始，为页面模板
+        else if(page && (!container || dom.type === 'svg')) {
+            // 没有显示意义的div不处理
+            if(!dom.isElement) page.children.push(dom);
+        } 
+
+        if(node.children && node.children.length) {
+            // 检查是否应该跳过子元素渲染
+            // BOOLEAN_OPERATION 有自己的 fillGeometry 时，不需要渲染子元素
+            const shouldSkipChildren = (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN') &&
+                (node as any).fillGeometry && (node as any).fillGeometry.length > 0;
+
+            if(!shouldSkipChildren) {
+                if(isSvg && (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN')) {
+                   // if(svgElements.includes(node.children[0].type)) node.children[0].isMask = true;
+                }
+
+                let lastChildDom = null;
+                for(const child of node.children) {
+                    let parent = container;
+                    // 如果是蒙板，则加入上一个SVG元素中
+                    if(child.isMask && !parent && lastChildDom?.type === 'svg') {
+                        parent = lastChildDom;
+                    }
+
+                    // 如果当前节点是 BOOLEAN_OPERATION 且有自己的填充，但没有 fillGeometry
+                    // 则标记子元素使用透明填充，让父元素的填充显示
+                    if((node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN') &&
+                       node.fills && node.fills.length > 0 &&
+                       !(node as any).fillGeometry) {
+                        (child as any)._parentFills = node.fills;
+                    }
+
+                    try {
+                        const c = await convert(child, node, parent || page, option, parent);
+                        if(!c) continue;
+                        lastChildDom = c;
+                        if(ConverterMaps.BASE.isEmptyDom(c)) {
+                            console.log('[figma2html] Empty dom skipped:', c.name || c.id);
+                            continue;
+                        }
+                        if(!c.isMask && !dom.children.includes(c) && (!page || c.isElement)) dom.children.push(c);
+                    } catch (error) {
+                        console.error(`[figma2html] Failed to convert child node ${child.name || child.id}:`, error);
+                    }
+                }
+            }
+        }
+        
+        return dom;
+    } catch (error) {
+        console.error(`[figma2html] Failed to convert node ${node.name || node.id}:`, error);
+        return null;
     }
-    
-    return dom;
 }
 
 // 把figma数据转为dom对象

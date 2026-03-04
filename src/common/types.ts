@@ -931,8 +931,40 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     effects?: Effect[];
     style?: TypeStyle;
     document?: DOCUMENT;
-
+    /** Auto Layout: Layout direction */
+    layoutMode?: 'NONE' | 'HORIZONTAL' | 'VERTICAL';
+    /** Auto Layout: Primary axis alignment */
+    primaryAxisAlignItems?: 'MIN' | 'CENTER' | 'MAX' | 'SPACE_BETWEEN';
+    /** Auto Layout: Counter axis alignment */
+    counterAxisAlignItems?: 'MIN' | 'CENTER' | 'MAX' | 'BASELINE';
+    /** Auto Layout: Item spacing */
+    itemSpacing?: number;
+    /** Auto Layout: Child layout grow */
+    layoutGrow?: number;
+    /** Auto Layout: Child layout align */
+    layoutAlign?: LayoutAlign;
 };
+
+// 类型守卫函数
+export function isNodeType(node: Node, type: NodeType): boolean {
+    return node.type === type;
+}
+
+export function hasChildren(node: Node): node is Node & { children: Node[] } {
+    return Array.isArray(node.children) && node.children.length > 0;
+}
+
+export function hasFills(node: Node): node is Node & { fills: Paint[] } {
+    return Array.isArray(node.fills) && node.fills.length > 0;
+}
+
+export function hasStrokes(node: Node): node is Node & { strokes: Paint[] } {
+    return Array.isArray(node.strokes) && node.strokes.length > 0;
+}
+
+export function hasEffects(node: Node): node is Node & { effects: Effect[] } {
+    return Array.isArray(node.effects) && node.effects.length > 0;
+}
 
 export declare type ConvertNodeOption = {
     expandToPage?: boolean;// 是否展开到页面级别的绝对定位

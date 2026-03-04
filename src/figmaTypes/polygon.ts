@@ -8,13 +8,13 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
     polygonName: DomNodeType = 'polygon';
 
     async convert(node:  Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode) {
-        let polygon = dom;
+        let polygon: DomNode;
         let defs;
         // 如果 没有生成父的svg标签，则当前dom就是，然后再生成子元素
         if(!container) {
             container = dom;
             dom.type = 'svg';
-            
+
             polygon = this.createDomNode(this.polygonName, {
                 // @ts-ignore
                 figmaData: node
@@ -26,11 +26,16 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
         }
         else {
             defs = container.children[0];
-            if(!defs) {
+            if(!defs || defs.type !== 'defs') {
                 defs = this.createDomNode('defs');
-                container.children.push(defs);
+                container.children.unshift(defs);
             }
-            polygon.type = this.polygonName;
+            // 创建新的polygon元素
+            polygon = this.createDomNode(this.polygonName, {
+                id: node.id || '',
+                // @ts-ignore
+                figmaData: node
+            });
         }
 
         // 如果是蒙板
@@ -53,6 +58,9 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
         // svg外转用定位和大小，其它样式都给子元素
         dom =  await super.convert(node, dom, parentNode, page, option, container);
         polygon.bounds = dom.bounds;
+
+        // 保存polygon引用，以便convertFills和convertStrokes使用
+        (dom as any)._polygon = polygon;
         
         const mask = this.getMask(container);
         if(node.isMask) {            
@@ -96,13 +104,37 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
     // 生成多边形路径
     createPolygonPath(dom: DomNode, node:  Node<NType>, container?: DomNode) {
         const pos = this.getPosition(dom, container);
-        const points = [
-            [pos.x, pos.y].join(','),
-            [pos.x + dom.bounds.width, pos.y].join(','),
-            [pos.x + dom.bounds.width, pos.y + dom.bounds.height].join(','),
-            [pos.x, pos.y + dom.bounds.height].join(','),
-        ];
-        dom.attributes['points'] = points.join(' ');
+        
+        // 优先使用 fillGeometry（矢量路径数据）
+        // @ts-ignore
+        if(node.fillGeometry && node.fillGeometry.length > 0) {
+            // 如果有多个路径，合并成一个
+            // @ts-ignore
+            const paths = node.fillGeometry.map(geo => geo.path).join(' ');
+            dom.attributes['d'] = paths;
+            // @ts-ignore
+            if(node.fillGeometry[0].windingRule) {
+                // @ts-ignore
+                dom.attributes['fill-rule'] = node.fillGeometry[0].windingRule.toLowerCase();
+            }
+        }
+        // 如果没有 fillGeometry，使用 strokeGeometry
+        // @ts-ignore
+        else if(node.strokeGeometry && node.strokeGeometry.length > 0) {
+            // @ts-ignore
+            const paths = node.strokeGeometry.map(geo => geo.path).join(' ');
+            dom.attributes['d'] = paths;
+            // @ts-ignore
+            if(node.strokeGeometry[0].windingRule) {
+                // @ts-ignore
+                dom.attributes['fill-rule'] = node.strokeGeometry[0].windingRule.toLowerCase();
+            }
+        }
+        // 兜底：使用边界框创建简单的矩形路径
+        else {
+            const path = `M ${pos.x} ${pos.y} L ${pos.x + dom.bounds.width} ${pos.y} L ${pos.x + dom.bounds.width} ${pos.y + dom.bounds.height} L ${pos.x} ${pos.y + dom.bounds.height} Z`;
+            dom.attributes['d'] = path;
+        }
     }
 
     // 获取蒙板
@@ -118,6 +150,9 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
 
     // 用id获取当前图形
     getPolygon(node:  Node<NType>, dom: DomNode): DomNode {
+        // 优先使用保存的polygon引用
+        if((dom as any)._polygon) return (dom as any)._polygon;
+
         if(dom.children && dom.children.length) {
             for(const child of dom.children) {
                 if(child.id === node.id || child.figmaData?.id === node.id) return child;
@@ -133,47 +168,64 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
 
     // 处理填充
     async convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
-        if(node.fills) {
-            const polygon = this.getPolygon(node, container || dom);
-            for(const fill of node.fills) {
-                if(fill.visible === false) continue;
+        const polygon = this.getPolygon(node, container || dom);
 
-                switch(fill.type) {
-                    case PaintType.SOLID: {
-                        if(typeof fill.opacity !== 'undefined') fill.color.a = fill.opacity;
-                        polygon.style.fill = util.colorToString(fill.color, 255);
-                        break;
-                    }
-                    // 线性渐变
-                    case PaintType.GRADIENT_LINEAR: {
-                        polygon.style.fill = this.convertLinearGradient(fill, dom, container);
-                        break;
-                    }
-                    // 径向性渐变
-                    case PaintType.GRADIENT_DIAMOND:
-                    case PaintType.GRADIENT_ANGULAR:
-                    case PaintType.GRADIENT_RADIAL: {
-                        polygon.style.fill = this.convertRadialGradient(fill, dom, container);
-                        break;
-                    }
-                    // 图片
-                    case PaintType.IMAGE: {
-                        await super.convertFills(node, polygon, option, container);
-                        break;
-                    }
+        // 检查父元素是否是 BOOLEAN_OPERATION 且有自己的填充
+        // 如果是，子元素应该使用透明填充，让父元素的填充显示
+        const parentFills = (node as any)._parentFills;
+        if(parentFills && parentFills.length > 0) {
+            polygon.style.fill = 'transparent';
+            return dom;
+        }
+
+        // 没有 fills 或 fills 为空数组时，设置 fill 为 none
+        if(!node.fills || node.fills.length === 0) {
+            polygon.style.fill = 'none';
+            return dom;
+        }
+
+        // 只使用第一个可见的 fill
+        // Figma 中的多个 fills 需要创建多个图层，这里简化处理
+        const visibleFill = node.fills.find(fill => fill.visible !== false);
+
+        if(visibleFill) {
+            switch(visibleFill.type) {
+                case PaintType.SOLID: {
+                    if(typeof visibleFill.opacity !== 'undefined') visibleFill.color.a = visibleFill.opacity;
+                    polygon.style.fill = util.colorToString(visibleFill.color, 255);
+                    break;
                 }
-
-                // 不支持的模式，直接透明
-                switch(fill.blendMode) {
-                    case BlendMode.SCREEN: {
-                        dom.style.opacity = '0';
-                        break;
-                    }
+                // 线性渐变
+                case PaintType.GRADIENT_LINEAR: {
+                    polygon.style.fill = this.convertLinearGradient(visibleFill, dom, container);
+                    break;
+                }
+                // 径向性渐变
+                case PaintType.GRADIENT_DIAMOND:
+                case PaintType.GRADIENT_ANGULAR:
+                case PaintType.GRADIENT_RADIAL: {
+                    polygon.style.fill = this.convertRadialGradient(visibleFill, dom, container);
+                    break;
+                }
+                // 图片
+                case PaintType.IMAGE: {
+                    await super.convertFills(node, polygon, option, container);
+                    break;
                 }
             }
-            // 默认透明
-            if(!polygon.style.fill) polygon.style.fill = 'transparent';
+
+            // 处理混合模式
+            if(visibleFill.blendMode) {
+                const cssBlendMode = this.convertBlendMode(visibleFill.blendMode);
+                if(cssBlendMode && cssBlendMode !== 'normal') {
+                    polygon.style.mixBlendMode = cssBlendMode;
+                }
+            }
         }
+
+        // 默认透明（如果没有可见的 fill）
+        if(!polygon.style.fill) polygon.style.fill = 'none';
+
         return dom;
     }
 
@@ -181,13 +233,33 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
     async convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
         const polygon = this.getPolygon(node, container || dom);
         if(node.strokes && node.strokes.length) {
-            
+
             for(const stroke of node.strokes) {
                 if(stroke.visible === false) continue;
-                if(stroke.color) {
-                    if(typeof stroke.opacity !== 'undefined') stroke.color.a = stroke.opacity;
-                    polygon.attributes['stroke'] = util.colorToString(stroke.color, 255);
-                }           
+
+                switch(stroke.type) {
+                    case PaintType.SOLID: {
+                        if(stroke.color) {
+                            if(typeof stroke.opacity !== 'undefined') stroke.color.a = stroke.opacity;
+                            polygon.attributes['stroke'] = util.colorToString(stroke.color, 255);
+                        }
+                        break;
+                    }
+                    case PaintType.GRADIENT_LINEAR: {
+                        polygon.attributes['stroke'] = this.convertLinearGradient(stroke, dom, container);
+                        break;
+                    }
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
+                    case PaintType.GRADIENT_RADIAL: {
+                        polygon.attributes['stroke'] = this.convertRadialGradient(stroke, dom, container);
+                        break;
+                    }
+                    case PaintType.IMAGE: {
+                        // 图片描边暂不支持
+                        break;
+                    }
+                }
             }
             if(node.strokeWeight) {
                 if(dom.style.outlineColor) dom.style.outlineWidth = util.toPX(node.strokeWeight);

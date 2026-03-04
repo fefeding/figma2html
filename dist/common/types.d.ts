@@ -912,6 +912,31 @@ export declare type Node<NType extends NodeType = NodeType> = BaseNode<NType> & 
     effects?: Effect[];
     style?: TypeStyle;
     document?: DOCUMENT;
+    /** Auto Layout: Layout direction */
+    layoutMode?: 'NONE' | 'HORIZONTAL' | 'VERTICAL';
+    /** Auto Layout: Primary axis alignment */
+    primaryAxisAlignItems?: 'MIN' | 'CENTER' | 'MAX' | 'SPACE_BETWEEN';
+    /** Auto Layout: Counter axis alignment */
+    counterAxisAlignItems?: 'MIN' | 'CENTER' | 'MAX' | 'BASELINE';
+    /** Auto Layout: Item spacing */
+    itemSpacing?: number;
+    /** Auto Layout: Child layout grow */
+    layoutGrow?: number;
+    /** Auto Layout: Child layout align */
+    layoutAlign?: LayoutAlign;
+};
+export declare function isNodeType(node: Node, type: NodeType): boolean;
+export declare function hasChildren(node: Node): node is Node & {
+    children: Node[];
+};
+export declare function hasFills(node: Node): node is Node & {
+    fills: Paint[];
+};
+export declare function hasStrokes(node: Node): node is Node & {
+    strokes: Paint[];
+};
+export declare function hasEffects(node: Node): node is Node & {
+    effects: Effect[];
 };
 export declare type ConvertNodeOption = {
     expandToPage?: boolean;

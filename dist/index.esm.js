@@ -473,6 +473,15 @@ var util = {
             }
             request.send(method === 'POST' ? params.join('&') : null);
         });
+    },
+    // window.requestAnimationFrame() 告诉浏览器——你希望执行一个动画，并且要求浏览器在下次重绘之前调用指定的回调函数更新动画。该方法需要传入一个回调函数作为参数，该回调函数会在浏览器下一次重绘之前执行
+    requestAnimationFrame(callback, win) {
+        let fun = win && win.requestAnimationFrame ? win.requestAnimationFrame : (typeof window !== 'undefined' && window.requestAnimationFrame ? window.requestAnimationFrame : setTimeout);
+        return fun(callback, 20);
+    },
+    cancelAnimationFrame(handler, win) {
+        let fun = win && win.cancelAnimationFrame ? win.cancelAnimationFrame : (typeof window !== 'undefined' && window.cancelAnimationFrame ? window.cancelAnimationFrame : clearTimeout);
+        return fun(handler);
     }
 };
 
@@ -1556,8 +1565,36 @@ class BaseConverter {
             }
             // 相对于父位置
             else if (parentNode && parentNode.absoluteBoundingBox) {
-                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                // 检查父节点是否有Auto Layout，以及当前节点是否参与Auto Layout
+                const parentHasAutoLayout = parentNode.layoutMode && parentNode.layoutMode !== 'NONE';
+                const hasLayoutAlign = node.layoutAlign !== undefined;
+                const hasLayoutGrow = node.layoutGrow !== undefined;
+                const hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
+                    node.layoutSizingVertical !== undefined;
+                // 如果父节点有Auto Layout，且当前节点不参与Auto Layout
+                // 使用relativeTransform来定位（绝对定位）
+                if (parentHasAutoLayout && !hasLayoutAlign && !hasLayoutGrow && !hasLayoutSizing) {
+                    if (node.relativeTransform) {
+                        // 使用relativeTransform中的位置
+                        dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
+                        dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
+                    }
+                    else {
+                        // 没有relativeTransform，使用默认计算
+                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                    }
+                }
+                else if (parentHasAutoLayout && (hasLayoutAlign || hasLayoutGrow || hasLayoutSizing)) {
+                    // 参与Auto Layout，位置由flex布局决定，设置为0
+                    dom.data.left = dom.bounds.x = 0;
+                    dom.data.top = dom.bounds.y = 0;
+                }
+                else {
+                    // 父节点没有Auto Layout，使用默认计算
+                    dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                    dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                }
             }
             // 没有父元素，就认为约对定位为0
             else {
@@ -1596,9 +1633,65 @@ class BaseConverter {
                 const v = node[padding];
                 if (v) {
                     dom.style[padding] = util.toPX(v);
-                    //if(['paddingLeft', 'paddingRight'].includes(padding)) dom.bounds.width -= v;
-                    //else dom.bounds.height -= v;
                 }
+            }
+        }
+        // Auto Layout 支持
+        // @ts-ignore
+        if (node.layoutMode && node.layoutMode !== 'NONE') {
+            dom.style.display = 'flex';
+            // 布局方向
+            // @ts-ignore
+            if (node.layoutMode === 'HORIZONTAL') {
+                dom.style.flexDirection = 'row';
+                // @ts-ignore
+            }
+            else if (node.layoutMode === 'VERTICAL') {
+                dom.style.flexDirection = 'column';
+            }
+            // 主轴对齐
+            // @ts-ignore
+            if (node.primaryAxisAlignItems) {
+                // @ts-ignore
+                switch (node.primaryAxisAlignItems) {
+                    case 'MIN':
+                        // 默认，不需要设置
+                        break;
+                    case 'CENTER':
+                        dom.style.justifyContent = 'center';
+                        break;
+                    case 'MAX':
+                        dom.style.justifyContent = 'flex-end';
+                        break;
+                    case 'SPACE_BETWEEN':
+                        dom.style.justifyContent = 'space-between';
+                        break;
+                }
+            }
+            // 交叉轴对齐
+            // @ts-ignore
+            if (node.counterAxisAlignItems) {
+                // @ts-ignore
+                switch (node.counterAxisAlignItems) {
+                    case 'MIN':
+                        // 默认，不需要设置
+                        break;
+                    case 'CENTER':
+                        dom.style.alignItems = 'center';
+                        break;
+                    case 'MAX':
+                        dom.style.alignItems = 'flex-end';
+                        break;
+                    case 'BASELINE':
+                        dom.style.alignItems = 'baseline';
+                        break;
+                }
+            }
+            // 子元素间距
+            // @ts-ignore
+            if (node.itemSpacing) {
+                // @ts-ignore
+                dom.style.gap = util.toPX(node.itemSpacing);
             }
         }
         await this.convertStyle(node, dom, option, container);
@@ -1613,11 +1706,11 @@ class BaseConverter {
         dom.style.top = util.toPX(dom.bounds.y).toString();
         dom.style.width = util.toPX(dom.bounds.width).toString();
         dom.style.height = util.toPX(dom.bounds.height).toString();
-        // 不支持的模式，直接透明
-        switch (node.blendMode) {
-            case BlendMode.SCREEN: {
-                dom.style.opacity = '0';
-                break;
+        // 处理混合模式
+        if (node.blendMode) {
+            const cssBlendMode = this.convertBlendMode(node.blendMode);
+            if (cssBlendMode) {
+                dom.style.mixBlendMode = cssBlendMode;
             }
         }
         return dom;
@@ -1641,10 +1734,7 @@ class BaseConverter {
     }
     // 转换style
     async convertStyle(node, dom, option, container) {
-        // @ts-ignore
-        if (node.type === 'BOOLEAN_OPERATION')
-            return dom;
-        // @ts-ignore
+        // @ts-ignore - BOOLEAN_OPERATION 继承 VECTOR 的样式，应该处理
         const style = node.style || node;
         if (!style)
             return dom;
@@ -1711,8 +1801,6 @@ class BaseConverter {
     }
     // 处理填充
     async convertFills(node, dom, option, container) {
-        if (node.type === 'BOOLEAN_OPERATION')
-            return dom;
         // isMaskOutline 如果为true则忽略填充样式
         if (!node.isMaskOutline && node.fills) {
             for (const fill of node.fills) {
@@ -1778,11 +1866,12 @@ class BaseConverter {
                         break;
                     }
                 }
-                // 不支持的模式，直接透明
-                switch (fill.blendMode) {
-                    case BlendMode.SCREEN: {
-                        dom.style.opacity = '0';
-                        break;
+                // 处理填充的混合模式
+                if (fill.blendMode) {
+                    const cssBlendMode = this.convertBlendMode(fill.blendMode);
+                    if (cssBlendMode && cssBlendMode !== 'normal') {
+                        // 对于填充的混合模式，使用 background-blend-mode
+                        dom.style.backgroundBlendMode = cssBlendMode;
                     }
                 }
                 if (dom && fill.imageTransform && fill.scaleMode === PaintSolidScaleMode.STRETCH) {
@@ -1875,8 +1964,6 @@ class BaseConverter {
     }
     // 处理边框
     async convertStrokes(node, dom, option, container) {
-        if (node.type === 'BOOLEAN_OPERATION')
-            return dom;
         if (node.strokes && node.strokes.length) {
             for (const stroke of node.strokes) {
                 if (stroke.visible === false)
@@ -1947,19 +2034,56 @@ class BaseConverter {
     }
     // 是否是空的dom节点
     isEmptyDom(dom) {
+        // 有子节点，不是空
         if (dom.children && dom.children.length)
             return false;
+        // 有文本内容，不是空
         if (dom.text)
             return false;
+        // 非 div 类型（如 svg, img 等），不是空
         if (dom.type !== 'div')
             return false;
-        if (dom.style.filter)
+        // 检查样式是否有意义的内容
+        const style = dom.style;
+        // 有滤镜效果
+        if (dom.filters && dom.filters.length)
             return false;
-        if (dom.style.borderImageSource || dom.style.backgroundImage || dom.style.background)
+        if (style.filter)
             return false;
-        if (dom.style.backgroundColor && !this.isTransparentColor(dom.style.backgroundColor))
+        // 有背景相关
+        if (style.borderImageSource || style.backgroundImage || style.background)
             return false;
-        return true;
+        if (style.backgroundColor && !this.isTransparentColor(style.backgroundColor))
+            return false;
+        // 有边框
+        if (style.border || style.borderWidth || style.borderStyle || style.borderColor)
+            return false;
+        if (style.borderRadius || style.borderTopLeftRadius)
+            return false;
+        // 有阴影
+        if (style.boxShadow || style.boxShadow)
+            return false;
+        // 有变换
+        if (dom.transform && Object.keys(dom.transform).length > 0)
+            return false;
+        if (style.transform)
+            return false;
+        // 有混合模式
+        if (style.mixBlendMode && style.mixBlendMode !== 'normal')
+            return false;
+        // 有透明度设置
+        if (style.opacity !== undefined && style.opacity !== '1')
+            return false;
+        // 有明确的尺寸和位置（可能是占位元素）
+        // 如果有明确的尺寸，即使没有其他样式，也可能是有意义的
+        (style.width && style.width !== '0px' && style.width !== 'auto') ||
+            (style.height && style.height !== '0px' && style.height !== 'auto');
+        // 如果没有任何样式属性，认为是空
+        const hasAnyStyle = Object.keys(style).some(key => {
+            const value = style[key];
+            return value !== undefined && value !== '' && value !== 'initial' && value !== 'inherit';
+        });
+        return !hasAnyStyle;
     }
     // 是否是透明色
     isTransparentColor(color) {
@@ -2182,6 +2306,32 @@ class BaseConverter {
         const h = (newHeight * Math.abs(cos) - newWidth * Math.abs(sin)) / (cos ** 2 - sin ** 2);
         return { width: w, height: h };
     }
+    // 转换混合模式
+    convertBlendMode(blendMode) {
+        // Figma 混合模式到 CSS mix-blend-mode 的映射
+        const blendModeMap = {
+            [BlendMode.PASS_THROUGH]: 'normal', // 仅适用于组，子元素不继承混合模式
+            [BlendMode.NORMAL]: 'normal',
+            [BlendMode.DARKEN]: 'darken',
+            [BlendMode.MULTIPLY]: 'multiply',
+            [BlendMode.LINEAR_BURN]: 'color-burn', // CSS 没有 linear-burn，用 color-burn 近似
+            [BlendMode.COLOR_BURN]: 'color-burn',
+            [BlendMode.LIGHTEN]: 'lighten',
+            [BlendMode.SCREEN]: 'screen',
+            [BlendMode.LINEAR_DODGE]: 'color-dodge', // CSS 没有 linear-dodge，用 color-dodge 近似
+            [BlendMode.COLOR_DODGE]: 'color-dodge',
+            [BlendMode.OVERLAY]: 'overlay',
+            [BlendMode.SOFT_LIGHT]: 'soft-light',
+            [BlendMode.HARD_LIGHT]: 'hard-light',
+            [BlendMode.DIFFERENCE]: 'difference',
+            [BlendMode.EXCLUSION]: 'exclusion',
+            [BlendMode.HUE]: 'hue',
+            [BlendMode.SATURATION]: 'saturation',
+            [BlendMode.COLOR]: 'color',
+            [BlendMode.LUMINOSITY]: 'luminosity',
+        };
+        return blendModeMap[blendMode] || 'normal';
+    }
 }
 
 class DocumentConverter extends BaseConverter {
@@ -2201,7 +2351,7 @@ class PageConverter extends BaseConverter {
 }
 
 class FRAMEConverter extends BaseConverter {
-    async convert(node, dom, parentNode, page, option) {
+    async convert(node, dom, parentNode, page, option, container) {
         if (parentNode && parentNode.type === 'CANVAS') {
             dom.style.overflow = 'hidden';
             if (parentNode && !parentNode.absoluteBoundingBox) {
@@ -2223,7 +2373,51 @@ class FRAMEConverter extends BaseConverter {
                 }
             }
         }
-        return super.convert(node, dom, parentNode, page, option);
+        // Auto Layout 子元素的额外处理
+        // 如果父元素有 Auto Layout，检查子元素是否参与 Auto Layout
+        // 子元素只有在有 layoutAlign 或 layoutGrow 属性时才参与 Auto Layout
+        // 否则应该保持绝对定位（使用 relativeTransform）
+        if (parentNode && parentNode.layoutMode && parentNode.layoutMode !== 'NONE') {
+            const hasLayoutAlign = node.layoutAlign !== undefined;
+            const hasLayoutGrow = node.layoutGrow !== undefined;
+            const hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
+                node.layoutSizingVertical !== undefined;
+            // 只有当子元素有 Auto Layout 相关属性时，才让它参与 flexbox 布局
+            // 否则保持绝对定位
+            if (hasLayoutAlign || hasLayoutGrow || hasLayoutSizing) {
+                // 移除绝对定位，让 flexbox 布局生效
+                dom.style.position = 'relative';
+                dom.style.left = '';
+                dom.style.top = '';
+                // 处理 layoutGrow（flex-grow）
+                if (hasLayoutGrow) {
+                    dom.style.flexGrow = node.layoutGrow.toString();
+                }
+                // 处理 layoutAlign（align-self）
+                if (hasLayoutAlign) {
+                    switch (node.layoutAlign) {
+                        case 'INHERIT':
+                            // 继承父元素，不需要设置
+                            break;
+                        case 'STRETCH':
+                            dom.style.alignSelf = 'stretch';
+                            break;
+                        case 'MIN':
+                            dom.style.alignSelf = 'flex-start';
+                            break;
+                        case 'CENTER':
+                            dom.style.alignSelf = 'center';
+                            break;
+                        case 'MAX':
+                            dom.style.alignSelf = 'flex-end';
+                            break;
+                    }
+                }
+            }
+            // 没有 Auto Layout 属性的子元素保持绝对定位
+            // 它们的位置由 relativeTransform 决定
+        }
+        return super.convert(node, dom, parentNode, page, option, container);
     }
 }
 
@@ -2406,7 +2600,7 @@ class PolygonConverter extends BaseConverter {
     // 多边形标签名
     polygonName = 'polygon';
     async convert(node, dom, parentNode, page, option, container) {
-        let polygon = dom;
+        let polygon;
         let defs;
         // 如果 没有生成父的svg标签，则当前dom就是，然后再生成子元素
         if (!container) {
@@ -2422,11 +2616,16 @@ class PolygonConverter extends BaseConverter {
         }
         else {
             defs = container.children[0];
-            if (!defs) {
+            if (!defs || defs.type !== 'defs') {
                 defs = this.createDomNode('defs');
-                container.children.push(defs);
+                container.children.unshift(defs);
             }
-            polygon.type = this.polygonName;
+            // 创建新的polygon元素
+            polygon = this.createDomNode(this.polygonName, {
+                id: node.id || '',
+                // @ts-ignore
+                figmaData: node
+            });
         }
         // 如果是蒙板
         if (node.isMask) {
@@ -2447,6 +2646,8 @@ class PolygonConverter extends BaseConverter {
         // svg外转用定位和大小，其它样式都给子元素
         dom = await super.convert(node, dom, parentNode, page, option, container);
         polygon.bounds = dom.bounds;
+        // 保存polygon引用，以便convertFills和convertStrokes使用
+        dom._polygon = polygon;
         const mask = this.getMask(container);
         if (node.isMask) {
             if (mask) {
@@ -2484,13 +2685,36 @@ class PolygonConverter extends BaseConverter {
     // 生成多边形路径
     createPolygonPath(dom, node, container) {
         const pos = this.getPosition(dom, container);
-        const points = [
-            [pos.x, pos.y].join(','),
-            [pos.x + dom.bounds.width, pos.y].join(','),
-            [pos.x + dom.bounds.width, pos.y + dom.bounds.height].join(','),
-            [pos.x, pos.y + dom.bounds.height].join(','),
-        ];
-        dom.attributes['points'] = points.join(' ');
+        // 优先使用 fillGeometry（矢量路径数据）
+        // @ts-ignore
+        if (node.fillGeometry && node.fillGeometry.length > 0) {
+            // 如果有多个路径，合并成一个
+            // @ts-ignore
+            const paths = node.fillGeometry.map(geo => geo.path).join(' ');
+            dom.attributes['d'] = paths;
+            // @ts-ignore
+            if (node.fillGeometry[0].windingRule) {
+                // @ts-ignore
+                dom.attributes['fill-rule'] = node.fillGeometry[0].windingRule.toLowerCase();
+            }
+        }
+        // 如果没有 fillGeometry，使用 strokeGeometry
+        // @ts-ignore
+        else if (node.strokeGeometry && node.strokeGeometry.length > 0) {
+            // @ts-ignore
+            const paths = node.strokeGeometry.map(geo => geo.path).join(' ');
+            dom.attributes['d'] = paths;
+            // @ts-ignore
+            if (node.strokeGeometry[0].windingRule) {
+                // @ts-ignore
+                dom.attributes['fill-rule'] = node.strokeGeometry[0].windingRule.toLowerCase();
+            }
+        }
+        // 兜底：使用边界框创建简单的矩形路径
+        else {
+            const path = `M ${pos.x} ${pos.y} L ${pos.x + dom.bounds.width} ${pos.y} L ${pos.x + dom.bounds.width} ${pos.y + dom.bounds.height} L ${pos.x} ${pos.y + dom.bounds.height} Z`;
+            dom.attributes['d'] = path;
+        }
     }
     // 获取蒙板
     getMask(container) {
@@ -2505,6 +2729,9 @@ class PolygonConverter extends BaseConverter {
     }
     // 用id获取当前图形
     getPolygon(node, dom) {
+        // 优先使用保存的polygon引用
+        if (dom._polygon)
+            return dom._polygon;
         if (dom.children && dom.children.length) {
             for (const child of dom.children) {
                 if (child.id === node.id || child.figmaData?.id === node.id)
@@ -2521,48 +2748,59 @@ class PolygonConverter extends BaseConverter {
     }
     // 处理填充
     async convertFills(node, dom, option, container) {
-        if (node.fills) {
-            const polygon = this.getPolygon(node, container || dom);
-            for (const fill of node.fills) {
-                if (fill.visible === false)
-                    continue;
-                switch (fill.type) {
-                    case PaintType.SOLID: {
-                        if (typeof fill.opacity !== 'undefined')
-                            fill.color.a = fill.opacity;
-                        polygon.style.fill = util.colorToString(fill.color, 255);
-                        break;
-                    }
-                    // 线性渐变
-                    case PaintType.GRADIENT_LINEAR: {
-                        polygon.style.fill = this.convertLinearGradient(fill, dom, container);
-                        break;
-                    }
-                    // 径向性渐变
-                    case PaintType.GRADIENT_DIAMOND:
-                    case PaintType.GRADIENT_ANGULAR:
-                    case PaintType.GRADIENT_RADIAL: {
-                        polygon.style.fill = this.convertRadialGradient(fill, dom, container);
-                        break;
-                    }
-                    // 图片
-                    case PaintType.IMAGE: {
-                        await super.convertFills(node, polygon, option, container);
-                        break;
-                    }
+        const polygon = this.getPolygon(node, container || dom);
+        // 检查父元素是否是 BOOLEAN_OPERATION 且有自己的填充
+        // 如果是，子元素应该使用透明填充，让父元素的填充显示
+        const parentFills = node._parentFills;
+        if (parentFills && parentFills.length > 0) {
+            polygon.style.fill = 'transparent';
+            return dom;
+        }
+        // 没有 fills 或 fills 为空数组时，设置 fill 为 none
+        if (!node.fills || node.fills.length === 0) {
+            polygon.style.fill = 'none';
+            return dom;
+        }
+        // 只使用第一个可见的 fill
+        // Figma 中的多个 fills 需要创建多个图层，这里简化处理
+        const visibleFill = node.fills.find(fill => fill.visible !== false);
+        if (visibleFill) {
+            switch (visibleFill.type) {
+                case PaintType.SOLID: {
+                    if (typeof visibleFill.opacity !== 'undefined')
+                        visibleFill.color.a = visibleFill.opacity;
+                    polygon.style.fill = util.colorToString(visibleFill.color, 255);
+                    break;
                 }
-                // 不支持的模式，直接透明
-                switch (fill.blendMode) {
-                    case BlendMode.SCREEN: {
-                        dom.style.opacity = '0';
-                        break;
-                    }
+                // 线性渐变
+                case PaintType.GRADIENT_LINEAR: {
+                    polygon.style.fill = this.convertLinearGradient(visibleFill, dom, container);
+                    break;
+                }
+                // 径向性渐变
+                case PaintType.GRADIENT_DIAMOND:
+                case PaintType.GRADIENT_ANGULAR:
+                case PaintType.GRADIENT_RADIAL: {
+                    polygon.style.fill = this.convertRadialGradient(visibleFill, dom, container);
+                    break;
+                }
+                // 图片
+                case PaintType.IMAGE: {
+                    await super.convertFills(node, polygon, option, container);
+                    break;
                 }
             }
-            // 默认透明
-            if (!polygon.style.fill)
-                polygon.style.fill = 'transparent';
+            // 处理混合模式
+            if (visibleFill.blendMode) {
+                const cssBlendMode = this.convertBlendMode(visibleFill.blendMode);
+                if (cssBlendMode && cssBlendMode !== 'normal') {
+                    polygon.style.mixBlendMode = cssBlendMode;
+                }
+            }
         }
+        // 默认透明（如果没有可见的 fill）
+        if (!polygon.style.fill)
+            polygon.style.fill = 'none';
         return dom;
     }
     // 处理边框
@@ -2572,10 +2810,29 @@ class PolygonConverter extends BaseConverter {
             for (const stroke of node.strokes) {
                 if (stroke.visible === false)
                     continue;
-                if (stroke.color) {
-                    if (typeof stroke.opacity !== 'undefined')
-                        stroke.color.a = stroke.opacity;
-                    polygon.attributes['stroke'] = util.colorToString(stroke.color, 255);
+                switch (stroke.type) {
+                    case PaintType.SOLID: {
+                        if (stroke.color) {
+                            if (typeof stroke.opacity !== 'undefined')
+                                stroke.color.a = stroke.opacity;
+                            polygon.attributes['stroke'] = util.colorToString(stroke.color, 255);
+                        }
+                        break;
+                    }
+                    case PaintType.GRADIENT_LINEAR: {
+                        polygon.attributes['stroke'] = this.convertLinearGradient(stroke, dom, container);
+                        break;
+                    }
+                    case PaintType.GRADIENT_DIAMOND:
+                    case PaintType.GRADIENT_ANGULAR:
+                    case PaintType.GRADIENT_RADIAL: {
+                        polygon.attributes['stroke'] = this.convertRadialGradient(stroke, dom, container);
+                        break;
+                    }
+                    case PaintType.IMAGE: {
+                        // 图片描边暂不支持
+                        break;
+                    }
                 }
             }
             if (node.strokeWeight) {
@@ -2843,7 +3100,280 @@ class RECTANGLEConverter extends PolygonConverter {
     }
 }
 
+class VECTORConverter extends PolygonConverter {
+    // VECTOR 使用 path 元素
+    polygonName = 'path';
+    async convert(node, dom, parentNode, page, option, container) {
+        return super.convert(node, dom, parentNode, page, option, container);
+    }
+}
+
+/**
+ * SLICE 节点转换器
+ * 切片节点主要用于导出，在 HTML 中通常不需要渲染
+ * 但如果需要显示，可以创建一个带边框的占位区域
+ */
+class SLICEConverter extends BaseConverter {
+    async convert(node, dom, parentNode, page, option, container) {
+        // 切片节点通常不渲染，只保留位置和大小信息
+        dom.style.border = '1px dashed #ccc';
+        dom.style.backgroundColor = 'transparent';
+        // 可以添加一个标签标识这是切片
+        dom.attributes = dom.attributes || {};
+        dom.attributes['data-slice'] = 'true';
+        // 如果有导出设置，记录格式信息
+        if (node.exportSettings && node.exportSettings.length > 0) {
+            const formats = node.exportSettings.map(s => s.format).join(',');
+            dom.attributes['data-export-formats'] = formats;
+        }
+        return super.convert(node, dom, parentNode, page, option, container);
+    }
+}
+
+/**
+ * COMPONENT 节点转换器
+ * 组件节点本质上和 FRAME 类似，但包含组件特有的属性
+ */
+class COMPONENTConverter extends BaseConverter {
+    async convert(node, dom, parentNode, page, option, container) {
+        // 标记为组件
+        dom.attributes = dom.attributes || {};
+        dom.attributes['data-component'] = 'true';
+        // 组件和 Frame 类似，使用相同的基本转换逻辑
+        // 处理边界框和定位
+        dom.bounds = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+        };
+        const box = node.absoluteBoundingBox || node.absoluteRenderBounds;
+        if (box) {
+            dom.absoluteBoundingBox = {
+                ...box
+            };
+            dom.bounds.width = box.width;
+            dom.bounds.height = box.height;
+            if (page && !dom.isElement) {
+                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
+            }
+            else if (parentNode && parentNode.absoluteBoundingBox) {
+                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+            }
+            else {
+                dom.data.left = dom.bounds.x = 0;
+                dom.data.top = dom.bounds.y = 0;
+            }
+        }
+        // 处理背景色
+        if (node.backgroundColor)
+            dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
+        // 处理圆角
+        if (node.cornerRadius) {
+            dom.style.borderRadius = util.toPX(node.cornerRadius);
+        }
+        else if (node.rectangleCornerRadii) {
+            dom.style.borderRadius = node.rectangleCornerRadii.map(p => util.toPX(p)).join(' ');
+        }
+        // 处理透明度
+        if (node.opacity)
+            dom.style.opacity = node.opacity.toString();
+        dom.style.transformOrigin = 'center center';
+        // 裁剪超出区域
+        if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) {
+            dom.style.overflow = 'hidden';
+        }
+        // 是否保持宽高比
+        dom.preserveRatio = node.preserveRatio;
+        // 调用基类的样式转换方法
+        await this.convertStyle(node, dom, option, container);
+        await this.convertFills(node, dom, option, container);
+        await this.convertStrokes(node, dom, option, container);
+        await this.convertEffects(node, dom, option, container);
+        dom.data.left = dom.bounds.x;
+        dom.data.top = dom.bounds.y;
+        dom.data.width = dom.bounds.width;
+        dom.data.height = dom.bounds.height;
+        dom.style.left = util.toPX(dom.bounds.x).toString();
+        dom.style.top = util.toPX(dom.bounds.y).toString();
+        dom.style.width = util.toPX(dom.bounds.width).toString();
+        dom.style.height = util.toPX(dom.bounds.height).toString();
+        // 处理混合模式
+        if (node.blendMode) {
+            const cssBlendMode = this.convertBlendMode(node.blendMode);
+            if (cssBlendMode) {
+                dom.style.mixBlendMode = cssBlendMode;
+            }
+        }
+        return dom;
+    }
+}
+
+/**
+ * COMPONENT_SET 节点转换器
+ * 组件集用于管理组件的变体（variants）
+ */
+class COMPONENT_SETConverter extends BaseConverter {
+    async convert(node, dom, parentNode, page, option, container) {
+        // 标记为组件集
+        dom.attributes = dom.attributes || {};
+        dom.attributes['data-component-set'] = 'true';
+        // 组件集和 Frame 类似，使用相同的基本转换逻辑
+        dom.bounds = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+        };
+        const box = node.absoluteBoundingBox || node.absoluteRenderBounds;
+        if (box) {
+            dom.absoluteBoundingBox = {
+                ...box
+            };
+            dom.bounds.width = box.width;
+            dom.bounds.height = box.height;
+            if (page && !dom.isElement) {
+                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
+            }
+            else if (parentNode && parentNode.absoluteBoundingBox) {
+                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+            }
+            else {
+                dom.data.left = dom.bounds.x = 0;
+                dom.data.top = dom.bounds.y = 0;
+            }
+        }
+        if (node.backgroundColor)
+            dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
+        if (node.cornerRadius) {
+            dom.style.borderRadius = util.toPX(node.cornerRadius);
+        }
+        else if (node.rectangleCornerRadii) {
+            dom.style.borderRadius = node.rectangleCornerRadii.map(p => util.toPX(p)).join(' ');
+        }
+        if (node.opacity)
+            dom.style.opacity = node.opacity.toString();
+        dom.style.transformOrigin = 'center center';
+        if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) {
+            dom.style.overflow = 'hidden';
+        }
+        dom.preserveRatio = node.preserveRatio;
+        await this.convertStyle(node, dom, option, container);
+        await this.convertFills(node, dom, option, container);
+        await this.convertStrokes(node, dom, option, container);
+        await this.convertEffects(node, dom, option, container);
+        dom.data.left = dom.bounds.x;
+        dom.data.top = dom.bounds.y;
+        dom.data.width = dom.bounds.width;
+        dom.data.height = dom.bounds.height;
+        dom.style.left = util.toPX(dom.bounds.x).toString();
+        dom.style.top = util.toPX(dom.bounds.y).toString();
+        dom.style.width = util.toPX(dom.bounds.width).toString();
+        dom.style.height = util.toPX(dom.bounds.height).toString();
+        if (node.blendMode) {
+            const cssBlendMode = this.convertBlendMode(node.blendMode);
+            if (cssBlendMode) {
+                dom.style.mixBlendMode = cssBlendMode;
+            }
+        }
+        return dom;
+    }
+}
+
+/**
+ * INSTANCE 节点转换器
+ * 组件实例会继承主组件的样式，但可以有自己的覆盖
+ */
+class INSTANCEConverter extends BaseConverter {
+    async convert(node, dom, parentNode, page, option, container) {
+        // 标记为组件实例
+        dom.attributes = dom.attributes || {};
+        dom.attributes['data-instance'] = 'true';
+        // 记录引用的主组件 ID
+        if (node.componentId) {
+            dom.attributes['data-component-id'] = node.componentId;
+        }
+        // 组件实例和 Frame 类似，Figma API 返回的实例数据已经包含了主组件的样式覆盖
+        dom.bounds = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+        };
+        const box = node.absoluteBoundingBox || node.absoluteRenderBounds;
+        if (box) {
+            dom.absoluteBoundingBox = {
+                ...box
+            };
+            dom.bounds.width = box.width;
+            dom.bounds.height = box.height;
+            if (page && !dom.isElement) {
+                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
+            }
+            else if (parentNode && parentNode.absoluteBoundingBox) {
+                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+            }
+            else {
+                dom.data.left = dom.bounds.x = 0;
+                dom.data.top = dom.bounds.y = 0;
+            }
+        }
+        if (node.backgroundColor)
+            dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
+        if (node.cornerRadius) {
+            dom.style.borderRadius = util.toPX(node.cornerRadius);
+        }
+        else if (node.rectangleCornerRadii) {
+            dom.style.borderRadius = node.rectangleCornerRadii.map(p => util.toPX(p)).join(' ');
+        }
+        if (node.opacity)
+            dom.style.opacity = node.opacity.toString();
+        dom.style.transformOrigin = 'center center';
+        if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) {
+            dom.style.overflow = 'hidden';
+        }
+        dom.preserveRatio = node.preserveRatio;
+        await this.convertStyle(node, dom, option, container);
+        await this.convertFills(node, dom, option, container);
+        await this.convertStrokes(node, dom, option, container);
+        await this.convertEffects(node, dom, option, container);
+        dom.data.left = dom.bounds.x;
+        dom.data.top = dom.bounds.y;
+        dom.data.width = dom.bounds.width;
+        dom.data.height = dom.bounds.height;
+        dom.style.left = util.toPX(dom.bounds.x).toString();
+        dom.style.top = util.toPX(dom.bounds.y).toString();
+        dom.style.width = util.toPX(dom.bounds.width).toString();
+        dom.style.height = util.toPX(dom.bounds.height).toString();
+        if (node.blendMode) {
+            const cssBlendMode = this.convertBlendMode(node.blendMode);
+            if (cssBlendMode) {
+                dom.style.mixBlendMode = cssBlendMode;
+            }
+        }
+        return dom;
+    }
+}
+
+class BooleanOperationConverter extends PolygonConverter {
+    // 使用 path 元素
+    polygonName = 'path';
+    async convert(node, dom, parentNode, page, option, container) {
+        // BOOLEAN_OPERATION 有自己的 fillGeometry（合并后的形状）
+        // 应该使用这个形状，而不是依赖子元素
+        // 子元素的渲染在 node.ts 中根据 fillGeometry 的存在来判断是否跳过
+        return super.convert(node, dom, parentNode, page, option, container);
+    }
+}
+
 const frameConverter = new FRAMEConverter();
+const componentConverter = new COMPONENTConverter();
 const ConverterMaps = {
     'BASE': new BaseConverter(),
     'FRAME': frameConverter,
@@ -2856,7 +3386,13 @@ const ConverterMaps = {
     'STAR': new StarConverter(),
     'RECTANGLE': new RECTANGLEConverter(),
     'LINE': new LINEConverter(),
-    'VECTOR': new RECTANGLEConverter(),
+    'VECTOR': new VECTORConverter(),
+    'SLICE': new SLICEConverter(),
+    'COMPONENT': componentConverter,
+    'COMPONENT_SET': new COMPONENT_SETConverter(),
+    'INSTANCE': new INSTANCEConverter(),
+    'BOOLEAN_OPERATION': new BooleanOperationConverter(),
+    'BOOLEAN': new BooleanOperationConverter(),
 };
 // rectange是否处理成svg，是返回svg，否则返回img或div
 function rectType(item) {
@@ -2877,91 +3413,121 @@ function rectType(item) {
 }
 // 转node为html结构对象
 async function convert(node, parentNode, page, option, container) {
-    // 如果是根，则返回document
-    if (node.document) {
-        const docDom = await convert(node.document, node, page, option);
-        return docDom;
-    }
-    if (node.visible === false)
-        return null;
-    // 已识别成图片的，不再处理成svg
-    const recType = rectType(node);
-    const dom = ConverterMaps.BASE.createDomNode('div', {
-        id: node.id,
-        name: node.name,
-        type: 'div',
-        visible: true,
-        data: {},
-        style: {
-            // 默认采用绝对定位
-            position: 'absolute',
-        },
-        children: [],
-        figmaData: node,
-    });
-    // 普通元素，不可当作容器
-    dom.isElement = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE', 'RECTANGLE'].includes(node.type) && recType !== 'img' && recType !== 'svg' && recType !== 'div'; // || (parentNode && parentNode.clipsContent);
-    const isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
-    const svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
-    // 容器可能是SVG
-    let isSvg = isContainer && !container;
-    // 容器下所有元素都是SVG元素，则认为是svg块
-    if (isSvg && node.children && node.children.length) {
-        for (const child of node.children) {
-            if (!svgElements.includes(child.type)) {
-                isSvg = false;
-                break;
-            }
-            // 已识别成图片的，不再处理成svg
-            if (rectType(child) !== 'svg') {
-                isSvg = false;
-                break;
+    try {
+        // 如果是根，则返回document
+        if (node.document) {
+            const docDom = await convert(node.document, node, page, option);
+            return docDom;
+        }
+        if (node.visible === false)
+            return null;
+        // 已识别成图片的，不再处理成svg
+        const recType = rectType(node);
+        const dom = ConverterMaps.BASE.createDomNode('div', {
+            id: node.id,
+            name: node.name,
+            type: 'div',
+            visible: true,
+            data: {},
+            style: {
+                // 默认采用绝对定位
+                position: 'absolute',
+            },
+            children: [],
+            figmaData: node,
+        });
+        // 普通元素，不可当作容器
+        dom.isElement = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'SLICE', 'RECTANGLE'].includes(node.type) && recType !== 'img' && recType !== 'svg' && recType !== 'div'; // || (parentNode && parentNode.clipsContent);
+        const isContainer = ['GROUP', 'FRAME', 'CANVAS', 'BOOLEAN', 'BOOLEAN_OPERATION'].includes(node.type);
+        const svgElements = ['VECTOR', 'STAR', 'LINE', 'ELLIPSE', 'REGULAR_POLYGON', 'RECTANGLE'];
+        // 容器可能是SVG
+        let isSvg = isContainer && !container;
+        // 容器下所有元素都是SVG元素，则认为是svg块
+        if (isSvg && node.children && node.children.length) {
+            for (const child of node.children) {
+                if (!svgElements.includes(child.type)) {
+                    isSvg = false;
+                    break;
+                }
+                // 已识别成图片的，不再处理成svg
+                if (rectType(child) !== 'svg') {
+                    isSvg = false;
+                    break;
+                }
             }
         }
-    }
-    else {
-        isSvg = false;
-    }
-    if (isSvg) {
-        dom.type = 'svg';
-        container = dom;
-    }
-    let converter = ConverterMaps[node.type] || ConverterMaps.BASE;
-    if (recType && recType !== 'svg') {
-        dom.type = recType;
-        converter = ConverterMaps.BASE;
-    }
-    if (converter)
+        else {
+            isSvg = false;
+        }
+        if (isSvg) {
+            dom.type = 'svg';
+            container = dom;
+        }
+        let converter = ConverterMaps[node.type];
+        // 如果没有找到对应的转换器，使用基础转换器
+        if (!converter) {
+            console.warn(`[figma2html] No converter found for node type: ${node.type}, using base converter`);
+            converter = ConverterMaps.BASE;
+        }
+        if (recType && recType !== 'svg') {
+            dom.type = recType;
+            converter = ConverterMaps.BASE;
+        }
         await converter.convert(node, dom, parentNode, page, option, container);
-    if (!page && node.type === 'FRAME' && option?.expandToPage)
-        page = dom; // 当前节点开始，为页面模板
-    else if (page && (!container || dom.type === 'svg')) {
-        // 没有显示意义的div不处理
-        if (!dom.isElement)
-            page.children.push(dom);
-    }
-    if (node.children && node.children.length) {
-        if (isSvg && (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN')) ;
-        let lastChildDom = null;
-        for (const child of node.children) {
-            let parent = container;
-            // 如果是蒙板，则加入上一个SVG元素中
-            if (child.isMask && !parent && lastChildDom?.type === 'svg') {
-                parent = lastChildDom;
-            }
-            const c = await convert(child, node, parent || page, option, parent);
-            if (!c)
-                continue;
-            lastChildDom = c;
-            if (ConverterMaps.BASE.isEmptyDom(c)) {
-                console.log('empty dom', c);
-                continue;
-            }
-            if (!c.isMask && !dom.children.includes(c) && (!page || c.isElement))
-                dom.children.push(c);
+        if (!page && node.type === 'FRAME' && option?.expandToPage)
+            page = dom; // 当前节点开始，为页面模板
+        else if (page && (!container || dom.type === 'svg')) {
+            // 没有显示意义的div不处理
+            if (!dom.isElement)
+                page.children.push(dom);
         }
+        if (node.children && node.children.length) {
+            // 检查是否应该跳过子元素渲染
+            // BOOLEAN_OPERATION 有自己的 fillGeometry 时，不需要渲染子元素
+            const shouldSkipChildren = (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN') &&
+                node.fillGeometry && node.fillGeometry.length > 0;
+            if (!shouldSkipChildren) {
+                if (isSvg && (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN')) {
+                    // if(svgElements.includes(node.children[0].type)) node.children[0].isMask = true;
+                }
+                let lastChildDom = null;
+                for (const child of node.children) {
+                    let parent = container;
+                    // 如果是蒙板，则加入上一个SVG元素中
+                    if (child.isMask && !parent && lastChildDom?.type === 'svg') {
+                        parent = lastChildDom;
+                    }
+                    // 如果当前节点是 BOOLEAN_OPERATION 且有自己的填充，但没有 fillGeometry
+                    // 则标记子元素使用透明填充，让父元素的填充显示
+                    if ((node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN') &&
+                        node.fills && node.fills.length > 0 &&
+                        !node.fillGeometry) {
+                        child._parentFills = node.fills;
+                    }
+                    try {
+                        const c = await convert(child, node, parent || page, option, parent);
+                        if (!c)
+                            continue;
+                        lastChildDom = c;
+                        if (ConverterMaps.BASE.isEmptyDom(c)) {
+                            console.log('[figma2html] Empty dom skipped:', c.name || c.id);
+                            continue;
+                        }
+                        if (!c.isMask && !dom.children.includes(c) && (!page || c.isElement))
+                            dom.children.push(c);
+                    }
+                    catch (error) {
+                        console.error(`[figma2html] Failed to convert child node ${child.name || child.id}:`, error);
+                    }
+                }
+            }
+        }
+        return dom;
     }
-    return dom;
+    catch (error) {
+        console.error(`[figma2html] Failed to convert node ${node.name || node.id}:`, error);
+        return null;
+    }
 }
 // 把figma数据转为dom对象
 async function nodeToDom(node, option) {
@@ -3207,42 +3773,92 @@ function setImageSize(node, img) {
  * @param token
  */
 async function loadFigmaFile(fileId, token) {
-    const url = `https://api.figma.com/v1/files/${fileId}`;
+    if (!fileId) {
+        throw new Error('[figma2html] fileId is required');
+    }
+    if (!token) {
+        throw new Error('[figma2html] token is required');
+    }
+    // 添加 geometry=paths 参数以获取矢量路径数据
+    const url = `https://api.figma.com/v1/files/${fileId}?geometry=paths`;
     const option = {
         headers: {
             "X-Figma-Token": token,
         }
     };
-    const data = await util.request(url, option);
-    return JSON.parse(data);
+    try {
+        const data = await util.request(url, option);
+        const parsed = JSON.parse(data);
+        // 检查 API 错误
+        if (parsed.err) {
+            throw new Error(`[figma2html] Figma API error: ${parsed.err}`);
+        }
+        return parsed;
+    }
+    catch (error) {
+        console.error('[figma2html] Failed to load Figma file:', error);
+        throw error;
+    }
 }
 // 获取文件所有图片
 async function getFigmaFileImages(fileId, token) {
+    if (!fileId) {
+        console.warn('[figma2html] fileId is required for getFigmaFileImages');
+        return {};
+    }
+    if (!token) {
+        console.warn('[figma2html] token is required for getFigmaFileImages');
+        return {};
+    }
     const url = `https://api.figma.com/v1/files/${fileId}/images`;
     const option = {
         headers: {
             "X-Figma-Token": token,
         }
     };
-    const data = await util.request(url, option);
-    const images = JSON.parse(data);
-    if (images.meta && images.meta.images)
-        return images.meta.images;
-    return {};
+    try {
+        const data = await util.request(url, option);
+        const images = JSON.parse(data);
+        if (images.err) {
+            console.error('[figma2html] Figma API error:', images.err);
+            return {};
+        }
+        if (images.meta && images.meta.images)
+            return images.meta.images;
+        return {};
+    }
+    catch (error) {
+        console.error('[figma2html] Failed to get Figma file images:', error);
+        return {};
+    }
 }
 // 获取图片
 async function getFigmaImage(key, token, ids) {
+    if (!key || !token || !ids) {
+        console.warn('[figma2html] key, token and ids are required for getFigmaImage');
+        return {};
+    }
     const url = `https://api.figma.com/v1/images/${key}?ids=${encodeURIComponent(ids)}`;
     const option = {
         headers: {
             "X-Figma-Token": token,
         }
     };
-    const data = await util.request(url, option);
-    const images = JSON.parse(data);
-    if (images.meta && images.meta.images)
-        return images.meta.images;
-    return images;
+    try {
+        const data = await util.request(url, option);
+        const images = JSON.parse(data);
+        if (images.err) {
+            console.error('[figma2html] Figma API error:', images.err);
+            return {};
+        }
+        if (images.meta && images.meta.images)
+            return images.meta.images;
+        return images;
+    }
+    catch (error) {
+        console.error('[figma2html] Failed to get Figma image:', error);
+        return {};
+    }
 }
 
 export { convert, convert as default, getFigmaFileImages, getFigmaImage, loadFigmaFile, nodeToDom, util };

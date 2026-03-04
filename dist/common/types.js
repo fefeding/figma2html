@@ -245,3 +245,19 @@ export var LineTypes;
     LineTypes["UNORDERED"] = "UNORDERED";
     LineTypes["NONE"] = "NONE";
 })(LineTypes || (LineTypes = {}));
+// 类型守卫函数
+export function isNodeType(node, type) {
+    return node.type === type;
+}
+export function hasChildren(node) {
+    return Array.isArray(node.children) && node.children.length > 0;
+}
+export function hasFills(node) {
+    return Array.isArray(node.fills) && node.fills.length > 0;
+}
+export function hasStrokes(node) {
+    return Array.isArray(node.strokes) && node.strokes.length > 0;
+}
+export function hasEffects(node) {
+    return Array.isArray(node.effects) && node.effects.length > 0;
+}

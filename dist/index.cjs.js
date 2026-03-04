@@ -9,8 +9,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -36,7 +36,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getFigmaFileImages = exports.getFigmaImage = exports.loadFigmaFile = exports.util = exports.nodeToDom = exports.convert = void 0;
+exports.util = exports.nodeToDom = exports.convert = void 0;
+exports.loadFigmaFile = loadFigmaFile;
+exports.getFigmaImage = getFigmaImage;
+exports.getFigmaFileImages = getFigmaFileImages;
 var utils_1 = require("@fefeding/utils");
 Object.defineProperty(exports, "util", { enumerable: true, get: function () { return utils_1.util; } });
 var node_1 = require("./node");
@@ -49,75 +52,127 @@ Object.defineProperty(exports, "nodeToDom", { enumerable: true, get: function ()
  */
 function loadFigmaFile(fileId, token) {
     return __awaiter(this, void 0, void 0, function () {
-        var url, option, data;
+        var url, option, data, parsed, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    url = "https://api.figma.com/v1/files/".concat(fileId);
+                    if (!fileId) {
+                        throw new Error('[figma2html] fileId is required');
+                    }
+                    if (!token) {
+                        throw new Error('[figma2html] token is required');
+                    }
+                    url = "https://api.figma.com/v1/files/".concat(fileId, "?geometry=paths");
                     option = {
                         headers: {
                             "X-Figma-Token": token,
                         }
                     };
-                    return [4 /*yield*/, utils_1.util.request(url, option)];
+                    _a.label = 1;
                 case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, utils_1.util.request(url, option)];
+                case 2:
                     data = _a.sent();
-                    return [2 /*return*/, JSON.parse(data)];
+                    parsed = JSON.parse(data);
+                    // 检查 API 错误
+                    if (parsed.err) {
+                        throw new Error("[figma2html] Figma API error: ".concat(parsed.err));
+                    }
+                    return [2 /*return*/, parsed];
+                case 3:
+                    error_1 = _a.sent();
+                    console.error('[figma2html] Failed to load Figma file:', error_1);
+                    throw error_1;
+                case 4: return [2 /*return*/];
             }
         });
     });
 }
-exports.loadFigmaFile = loadFigmaFile;
 // 获取文件所有图片
 function getFigmaFileImages(fileId, token) {
     return __awaiter(this, void 0, void 0, function () {
-        var url, option, data, images;
+        var url, option, data, images, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
+                    if (!fileId) {
+                        console.warn('[figma2html] fileId is required for getFigmaFileImages');
+                        return [2 /*return*/, {}];
+                    }
+                    if (!token) {
+                        console.warn('[figma2html] token is required for getFigmaFileImages');
+                        return [2 /*return*/, {}];
+                    }
                     url = "https://api.figma.com/v1/files/".concat(fileId, "/images");
                     option = {
                         headers: {
                             "X-Figma-Token": token,
                         }
                     };
-                    return [4 /*yield*/, utils_1.util.request(url, option)];
+                    _a.label = 1;
                 case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, utils_1.util.request(url, option)];
+                case 2:
                     data = _a.sent();
                     images = JSON.parse(data);
+                    if (images.err) {
+                        console.error('[figma2html] Figma API error:', images.err);
+                        return [2 /*return*/, {}];
+                    }
                     if (images.meta && images.meta.images)
                         return [2 /*return*/, images.meta.images];
                     return [2 /*return*/, {}];
+                case 3:
+                    error_2 = _a.sent();
+                    console.error('[figma2html] Failed to get Figma file images:', error_2);
+                    return [2 /*return*/, {}];
+                case 4: return [2 /*return*/];
             }
         });
     });
 }
-exports.getFigmaFileImages = getFigmaFileImages;
 // 获取图片
 function getFigmaImage(key, token, ids) {
     return __awaiter(this, void 0, void 0, function () {
-        var url, option, data, images;
+        var url, option, data, images, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
+                    if (!key || !token || !ids) {
+                        console.warn('[figma2html] key, token and ids are required for getFigmaImage');
+                        return [2 /*return*/, {}];
+                    }
                     url = "https://api.figma.com/v1/images/".concat(key, "?ids=").concat(encodeURIComponent(ids));
                     option = {
                         headers: {
                             "X-Figma-Token": token,
                         }
                     };
-                    return [4 /*yield*/, utils_1.util.request(url, option)];
+                    _a.label = 1;
                 case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, utils_1.util.request(url, option)];
+                case 2:
                     data = _a.sent();
                     images = JSON.parse(data);
+                    if (images.err) {
+                        console.error('[figma2html] Figma API error:', images.err);
+                        return [2 /*return*/, {}];
+                    }
                     if (images.meta && images.meta.images)
                         return [2 /*return*/, images.meta.images];
                     return [2 /*return*/, images];
+                case 3:
+                    error_3 = _a.sent();
+                    console.error('[figma2html] Failed to get Figma image:', error_3);
+                    return [2 /*return*/, {}];
+                case 4: return [2 /*return*/];
             }
         });
     });
 }
-exports.getFigmaImage = getFigmaImage;
 exports.default = node_1.convert;
 
 "use strict";
@@ -131,8 +186,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -172,7 +227,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.nodeToDom = exports.convert = void 0;
+exports.convert = convert;
+exports.nodeToDom = nodeToDom;
 var utils_1 = __importDefault(require("@fefeding/utils"));
 var css_filters_1 = __importDefault(require("@fefeding/css-filters"));
 var types_1 = require("./common/types");
@@ -187,7 +243,14 @@ var star_1 = __importDefault(require("./figmaTypes/star"));
 var ellipse_1 = __importDefault(require("./figmaTypes/ellipse"));
 var line_1 = __importDefault(require("./figmaTypes/line"));
 var rectangle_1 = __importDefault(require("./figmaTypes/rectangle"));
+var vector_1 = __importDefault(require("./figmaTypes/vector"));
+var slice_1 = __importDefault(require("./figmaTypes/slice"));
+var component_1 = __importDefault(require("./figmaTypes/component"));
+var componentSet_1 = __importDefault(require("./figmaTypes/componentSet"));
+var instance_1 = __importDefault(require("./figmaTypes/instance"));
+var booleanOperation_1 = __importDefault(require("./figmaTypes/booleanOperation"));
 var frameConverter = new frame_1.default();
+var componentConverter = new component_1.default();
 var ConverterMaps = {
     'BASE': new baseNode_1.default(),
     'FRAME': frameConverter,
@@ -200,7 +263,13 @@ var ConverterMaps = {
     'STAR': new star_1.default(),
     'RECTANGLE': new rectangle_1.default(),
     'LINE': new line_1.default(),
-    'VECTOR': new rectangle_1.default(),
+    'VECTOR': new vector_1.default(),
+    'SLICE': new slice_1.default(),
+    'COMPONENT': componentConverter,
+    'COMPONENT_SET': new componentSet_1.default(),
+    'INSTANCE': new instance_1.default(),
+    'BOOLEAN_OPERATION': new booleanOperation_1.default(),
+    'BOOLEAN': new booleanOperation_1.default(),
 };
 // rectange是否处理成svg，是返回svg，否则返回img或div
 function rectType(item) {
@@ -233,11 +302,12 @@ function rectType(item) {
 // 转node为html结构对象
 function convert(node, parentNode, page, option, container) {
     return __awaiter(this, void 0, void 0, function () {
-        var docDom, recType, dom, isContainer, svgElements, isSvg, _a, _b, child, converter, lastChildDom, _c, _d, child, parent_1, c, e_2_1;
+        var docDom, recType, dom, isContainer, svgElements, isSvg, _a, _b, child, converter, shouldSkipChildren, lastChildDom, _c, _d, child, parent_1, c, error_1, e_2_1, error_2;
         var e_3, _e, e_2, _f;
         return __generator(this, function (_g) {
             switch (_g.label) {
                 case 0:
+                    _g.trys.push([0, 14, , 15]);
                     if (!node.document) return [3 /*break*/, 2];
                     return [4 /*yield*/, convert(node.document, node, page, option)];
                 case 1:
@@ -296,17 +366,19 @@ function convert(node, parentNode, page, option, container) {
                         dom.type = 'svg';
                         container = dom;
                     }
-                    converter = ConverterMaps[node.type] || ConverterMaps.BASE;
+                    converter = ConverterMaps[node.type];
+                    // 如果没有找到对应的转换器，使用基础转换器
+                    if (!converter) {
+                        console.warn("[figma2html] No converter found for node type: ".concat(node.type, ", using base converter"));
+                        converter = ConverterMaps.BASE;
+                    }
                     if (recType && recType !== 'svg') {
                         dom.type = recType;
                         converter = ConverterMaps.BASE;
                     }
-                    if (!converter) return [3 /*break*/, 4];
                     return [4 /*yield*/, converter.convert(node, dom, parentNode, page, option, container)];
                 case 3:
                     _g.sent();
-                    _g.label = 4;
-                case 4:
                     if (!page && node.type === 'FRAME' && (option === null || option === void 0 ? void 0 : option.expandToPage))
                         page = dom; // 当前节点开始，为页面模板
                     else if (page && (!container || dom.type === 'svg')) {
@@ -314,57 +386,78 @@ function convert(node, parentNode, page, option, container) {
                         if (!dom.isElement)
                             page.children.push(dom);
                     }
-                    if (!(node.children && node.children.length)) return [3 /*break*/, 12];
+                    if (!(node.children && node.children.length)) return [3 /*break*/, 13];
+                    shouldSkipChildren = (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN') &&
+                        node.fillGeometry && node.fillGeometry.length > 0;
+                    if (!!shouldSkipChildren) return [3 /*break*/, 13];
                     if (isSvg && (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN')) {
                         // if(svgElements.includes(node.children[0].type)) node.children[0].isMask = true;
                     }
                     lastChildDom = null;
+                    _g.label = 4;
+                case 4:
+                    _g.trys.push([4, 11, 12, 13]);
+                    _c = __values(node.children), _d = _c.next();
                     _g.label = 5;
                 case 5:
-                    _g.trys.push([5, 10, 11, 12]);
-                    _c = __values(node.children), _d = _c.next();
-                    _g.label = 6;
-                case 6:
-                    if (!!_d.done) return [3 /*break*/, 9];
+                    if (!!_d.done) return [3 /*break*/, 10];
                     child = _d.value;
                     parent_1 = container;
                     // 如果是蒙板，则加入上一个SVG元素中
                     if (child.isMask && !parent_1 && (lastChildDom === null || lastChildDom === void 0 ? void 0 : lastChildDom.type) === 'svg') {
                         parent_1 = lastChildDom;
                     }
+                    // 如果当前节点是 BOOLEAN_OPERATION 且有自己的填充，但没有 fillGeometry
+                    // 则标记子元素使用透明填充，让父元素的填充显示
+                    if ((node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN') &&
+                        node.fills && node.fills.length > 0 &&
+                        !node.fillGeometry) {
+                        child._parentFills = node.fills;
+                    }
+                    _g.label = 6;
+                case 6:
+                    _g.trys.push([6, 8, , 9]);
                     return [4 /*yield*/, convert(child, node, parent_1 || page, option, parent_1)];
                 case 7:
                     c = _g.sent();
                     if (!c)
-                        return [3 /*break*/, 8];
+                        return [3 /*break*/, 9];
                     lastChildDom = c;
                     if (ConverterMaps.BASE.isEmptyDom(c)) {
-                        console.log('empty dom', c);
-                        return [3 /*break*/, 8];
+                        console.log('[figma2html] Empty dom skipped:', c.name || c.id);
+                        return [3 /*break*/, 9];
                     }
                     if (!c.isMask && !dom.children.includes(c) && (!page || c.isElement))
                         dom.children.push(c);
-                    _g.label = 8;
+                    return [3 /*break*/, 9];
                 case 8:
+                    error_1 = _g.sent();
+                    console.error("[figma2html] Failed to convert child node ".concat(child.name || child.id, ":"), error_1);
+                    return [3 /*break*/, 9];
+                case 9:
                     _d = _c.next();
-                    return [3 /*break*/, 6];
-                case 9: return [3 /*break*/, 12];
-                case 10:
+                    return [3 /*break*/, 5];
+                case 10: return [3 /*break*/, 13];
+                case 11:
                     e_2_1 = _g.sent();
                     e_2 = { error: e_2_1 };
-                    return [3 /*break*/, 12];
-                case 11:
+                    return [3 /*break*/, 13];
+                case 12:
                     try {
                         if (_d && !_d.done && (_f = _c.return)) _f.call(_c);
                     }
                     finally { if (e_2) throw e_2.error; }
                     return [7 /*endfinally*/];
-                case 12: return [2 /*return*/, dom];
+                case 13: return [2 /*return*/, dom];
+                case 14:
+                    error_2 = _g.sent();
+                    console.error("[figma2html] Failed to convert node ".concat(node.name || node.id, ":"), error_2);
+                    return [2 /*return*/, null];
+                case 15: return [2 /*return*/];
             }
         });
     });
 }
-exports.convert = convert;
 // 把figma数据转为dom对象
 function nodeToDom(node, option) {
     return __awaiter(this, void 0, void 0, function () {
@@ -404,7 +497,6 @@ function nodeToDom(node, option) {
         });
     });
 }
-exports.nodeToDom = nodeToDom;
 function renderDocument(node, option) {
     return __awaiter(this, void 0, void 0, function () {
         var doc;
@@ -697,6 +789,11 @@ function setImageSize(node, img) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LineTypes = exports.PathWindingRule = exports.PaintSolidScaleMode = exports.PaintType = exports.EffectType = exports.AxisSizingMode = exports.MaskType = exports.LayoutGridAlignment = exports.LayoutGridPattern = exports.LayoutAlign = exports.LayoutConstraintHorizontal = exports.LayoutConstraintVertical = exports.EasingType = exports.BlendMode = exports.ConstrainType = exports.LineHeightUnit = exports.TextAutoResize = exports.TextDecoration = exports.TextCase = exports.BooleanOperationType = exports.ImageType = exports.StrokeJoin = exports.StrokeAlign = exports.StrokeCap = void 0;
+exports.isNodeType = isNodeType;
+exports.hasChildren = hasChildren;
+exports.hasFills = hasFills;
+exports.hasStrokes = hasStrokes;
+exports.hasEffects = hasEffects;
 /** A string enum with value, describing the end caps of vector paths. */
 var StrokeCap;
 (function (StrokeCap) {
@@ -944,6 +1041,22 @@ var LineTypes;
     LineTypes["UNORDERED"] = "UNORDERED";
     LineTypes["NONE"] = "NONE";
 })(LineTypes || (exports.LineTypes = LineTypes = {}));
+// 类型守卫函数
+function isNodeType(node, type) {
+    return node.type === type;
+}
+function hasChildren(node) {
+    return Array.isArray(node.children) && node.children.length > 0;
+}
+function hasFills(node) {
+    return Array.isArray(node.fills) && node.fills.length > 0;
+}
+function hasStrokes(node) {
+    return Array.isArray(node.strokes) && node.strokes.length > 0;
+}
+function hasEffects(node) {
+    return Array.isArray(node.effects) && node.effects.length > 0;
+}
 
 "use strict";
 var __assign = (this && this.__assign) || function () {
@@ -967,8 +1080,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -1029,10 +1142,10 @@ var BaseConverter = /** @class */ (function () {
     function BaseConverter() {
     }
     BaseConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
-        var _a;
         return __awaiter(this, void 0, void 0, function () {
-            var box, center, size, _b, _c, padding, v;
-            var e_1, _d;
+            var box, center, size, parentHasAutoLayout, hasLayoutAlign, hasLayoutGrow, hasLayoutSizing, _a, _b, padding, v, cssBlendMode;
+            var e_1, _c;
+            var _d;
             return __generator(this, function (_e) {
                 switch (_e.label) {
                     case 0:
@@ -1067,7 +1180,7 @@ var BaseConverter = /** @class */ (function () {
                                 //box.x = pos.x;
                                 //box.y = pos.y;
                             }
-                            if (dom.type === 'text' && box.height < ((_a = node.style) === null || _a === void 0 ? void 0 : _a.lineHeightPx))
+                            if (dom.type === 'text' && box.height < ((_d = node.style) === null || _d === void 0 ? void 0 : _d.lineHeightPx))
                                 box.height = node.style.lineHeightPx;
                             dom.bounds.width = box.width;
                             dom.bounds.height = box.height;
@@ -1078,8 +1191,35 @@ var BaseConverter = /** @class */ (function () {
                             }
                             // 相对于父位置
                             else if (parentNode && parentNode.absoluteBoundingBox) {
-                                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                                parentHasAutoLayout = parentNode.layoutMode && parentNode.layoutMode !== 'NONE';
+                                hasLayoutAlign = node.layoutAlign !== undefined;
+                                hasLayoutGrow = node.layoutGrow !== undefined;
+                                hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
+                                    node.layoutSizingVertical !== undefined;
+                                // 如果父节点有Auto Layout，且当前节点不参与Auto Layout
+                                // 使用relativeTransform来定位（绝对定位）
+                                if (parentHasAutoLayout && !hasLayoutAlign && !hasLayoutGrow && !hasLayoutSizing) {
+                                    if (node.relativeTransform) {
+                                        // 使用relativeTransform中的位置
+                                        dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
+                                        dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
+                                    }
+                                    else {
+                                        // 没有relativeTransform，使用默认计算
+                                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                                    }
+                                }
+                                else if (parentHasAutoLayout && (hasLayoutAlign || hasLayoutGrow || hasLayoutSizing)) {
+                                    // 参与Auto Layout，位置由flex布局决定，设置为0
+                                    dom.data.left = dom.bounds.x = 0;
+                                    dom.data.top = dom.bounds.y = 0;
+                                }
+                                else {
+                                    // 父节点没有Auto Layout，使用默认计算
+                                    dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                                    dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                                }
                             }
                             // 没有父元素，就认为约对定位为0
                             else {
@@ -1115,22 +1255,78 @@ var BaseConverter = /** @class */ (function () {
                         // padding
                         if (dom.type !== 'svg') {
                             try {
-                                for (_b = __values(['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']), _c = _b.next(); !_c.done; _c = _b.next()) {
-                                    padding = _c.value;
+                                for (_a = __values(['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom']), _b = _a.next(); !_b.done; _b = _a.next()) {
+                                    padding = _b.value;
                                     v = node[padding];
                                     if (v) {
                                         dom.style[padding] = utils_1.util.toPX(v);
-                                        //if(['paddingLeft', 'paddingRight'].includes(padding)) dom.bounds.width -= v;
-                                        //else dom.bounds.height -= v;
                                     }
                                 }
                             }
                             catch (e_1_1) { e_1 = { error: e_1_1 }; }
                             finally {
                                 try {
-                                    if (_c && !_c.done && (_d = _b.return)) _d.call(_b);
+                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                                 }
                                 finally { if (e_1) throw e_1.error; }
+                            }
+                        }
+                        // Auto Layout 支持
+                        // @ts-ignore
+                        if (node.layoutMode && node.layoutMode !== 'NONE') {
+                            dom.style.display = 'flex';
+                            // 布局方向
+                            // @ts-ignore
+                            if (node.layoutMode === 'HORIZONTAL') {
+                                dom.style.flexDirection = 'row';
+                                // @ts-ignore
+                            }
+                            else if (node.layoutMode === 'VERTICAL') {
+                                dom.style.flexDirection = 'column';
+                            }
+                            // 主轴对齐
+                            // @ts-ignore
+                            if (node.primaryAxisAlignItems) {
+                                // @ts-ignore
+                                switch (node.primaryAxisAlignItems) {
+                                    case 'MIN':
+                                        // 默认，不需要设置
+                                        break;
+                                    case 'CENTER':
+                                        dom.style.justifyContent = 'center';
+                                        break;
+                                    case 'MAX':
+                                        dom.style.justifyContent = 'flex-end';
+                                        break;
+                                    case 'SPACE_BETWEEN':
+                                        dom.style.justifyContent = 'space-between';
+                                        break;
+                                }
+                            }
+                            // 交叉轴对齐
+                            // @ts-ignore
+                            if (node.counterAxisAlignItems) {
+                                // @ts-ignore
+                                switch (node.counterAxisAlignItems) {
+                                    case 'MIN':
+                                        // 默认，不需要设置
+                                        break;
+                                    case 'CENTER':
+                                        dom.style.alignItems = 'center';
+                                        break;
+                                    case 'MAX':
+                                        dom.style.alignItems = 'flex-end';
+                                        break;
+                                    case 'BASELINE':
+                                        dom.style.alignItems = 'baseline';
+                                        break;
+                                }
+                            }
+                            // 子元素间距
+                            // @ts-ignore
+                            if (node.itemSpacing) {
+                                // @ts-ignore
+                                dom.style.gap = utils_1.util.toPX(node.itemSpacing);
                             }
                         }
                         return [4 /*yield*/, this.convertStyle(node, dom, option, container)];
@@ -1153,11 +1349,11 @@ var BaseConverter = /** @class */ (function () {
                         dom.style.top = utils_1.util.toPX(dom.bounds.y).toString();
                         dom.style.width = utils_1.util.toPX(dom.bounds.width).toString();
                         dom.style.height = utils_1.util.toPX(dom.bounds.height).toString();
-                        // 不支持的模式，直接透明
-                        switch (node.blendMode) {
-                            case types_1.BlendMode.SCREEN: {
-                                dom.style.opacity = '0';
-                                break;
+                        // 处理混合模式
+                        if (node.blendMode) {
+                            cssBlendMode = this.convertBlendMode(node.blendMode);
+                            if (cssBlendMode) {
+                                dom.style.mixBlendMode = cssBlendMode;
                             }
                         }
                         return [2 /*return*/, dom];
@@ -1175,9 +1371,6 @@ var BaseConverter = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             var style;
             return __generator(this, function (_a) {
-                // @ts-ignore
-                if (node.type === 'BOOLEAN_OPERATION')
-                    return [2 /*return*/, dom];
                 style = node.style || node;
                 if (!style)
                     return [2 /*return*/, dom];
@@ -1263,13 +1456,11 @@ var BaseConverter = /** @class */ (function () {
     // 处理填充
     BaseConverter.prototype.convertFills = function (node, dom, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, fill, _c, img, _d, _e, a, c, e, _f, b, d, f, rotation, v, v, v, v, v, v, v, color, e_3_1;
+            var _a, _b, fill, _c, img, cssBlendMode, _d, _e, a, c, e, _f, b, d, f, rotation, v, v, v, v, v, v, v, color, e_3_1;
             var e_3, _g;
             return __generator(this, function (_h) {
                 switch (_h.label) {
                     case 0:
-                        if (node.type === 'BOOLEAN_OPERATION')
-                            return [2 /*return*/, dom];
                         if (!(!node.isMaskOutline && node.fills)) return [3 /*break*/, 14];
                         _h.label = 1;
                     case 1:
@@ -1352,11 +1543,12 @@ var BaseConverter = /** @class */ (function () {
                                 break;
                             }
                         }
-                        // 不支持的模式，直接透明
-                        switch (fill.blendMode) {
-                            case types_1.BlendMode.SCREEN: {
-                                dom.style.opacity = '0';
-                                break;
+                        // 处理填充的混合模式
+                        if (fill.blendMode) {
+                            cssBlendMode = this.convertBlendMode(fill.blendMode);
+                            if (cssBlendMode && cssBlendMode !== 'normal') {
+                                // 对于填充的混合模式，使用 background-blend-mode
+                                dom.style.backgroundBlendMode = cssBlendMode;
                             }
                         }
                         if (dom && fill.imageTransform && fill.scaleMode === types_1.PaintSolidScaleMode.STRETCH) {
@@ -1462,8 +1654,6 @@ var BaseConverter = /** @class */ (function () {
             return __generator(this, function (_e) {
                 switch (_e.label) {
                     case 0:
-                        if (node.type === 'BOOLEAN_OPERATION')
-                            return [2 /*return*/, dom];
                         if (!(node.strokes && node.strokes.length)) return [3 /*break*/, 14];
                         _e.label = 1;
                     case 1:
@@ -1569,19 +1759,56 @@ var BaseConverter = /** @class */ (function () {
     };
     // 是否是空的dom节点
     BaseConverter.prototype.isEmptyDom = function (dom) {
+        // 有子节点，不是空
         if (dom.children && dom.children.length)
             return false;
+        // 有文本内容，不是空
         if (dom.text)
             return false;
+        // 非 div 类型（如 svg, img 等），不是空
         if (dom.type !== 'div')
             return false;
-        if (dom.style.filter)
+        // 检查样式是否有意义的内容
+        var style = dom.style;
+        // 有滤镜效果
+        if (dom.filters && dom.filters.length)
             return false;
-        if (dom.style.borderImageSource || dom.style.backgroundImage || dom.style.background)
+        if (style.filter)
             return false;
-        if (dom.style.backgroundColor && !this.isTransparentColor(dom.style.backgroundColor))
+        // 有背景相关
+        if (style.borderImageSource || style.backgroundImage || style.background)
             return false;
-        return true;
+        if (style.backgroundColor && !this.isTransparentColor(style.backgroundColor))
+            return false;
+        // 有边框
+        if (style.border || style.borderWidth || style.borderStyle || style.borderColor)
+            return false;
+        if (style.borderRadius || style.borderTopLeftRadius)
+            return false;
+        // 有阴影
+        if (style.boxShadow || style.boxShadow)
+            return false;
+        // 有变换
+        if (dom.transform && Object.keys(dom.transform).length > 0)
+            return false;
+        if (style.transform)
+            return false;
+        // 有混合模式
+        if (style.mixBlendMode && style.mixBlendMode !== 'normal')
+            return false;
+        // 有透明度设置
+        if (style.opacity !== undefined && style.opacity !== '1')
+            return false;
+        // 有明确的尺寸和位置（可能是占位元素）
+        // 如果有明确的尺寸，即使没有其他样式，也可能是有意义的
+        var hasExplicitSize = (style.width && style.width !== '0px' && style.width !== 'auto') ||
+            (style.height && style.height !== '0px' && style.height !== 'auto');
+        // 如果没有任何样式属性，认为是空
+        var hasAnyStyle = Object.keys(style).some(function (key) {
+            var value = style[key];
+            return value !== undefined && value !== '' && value !== 'initial' && value !== 'inherit';
+        });
+        return !hasAnyStyle;
     };
     // 是否是透明色
     BaseConverter.prototype.isTransparentColor = function (color) {
@@ -1816,6 +2043,33 @@ var BaseConverter = /** @class */ (function () {
         var h = (newHeight * Math.abs(cos) - newWidth * Math.abs(sin)) / (Math.pow(cos, 2) - Math.pow(sin, 2));
         return { width: w, height: h };
     };
+    // 转换混合模式
+    BaseConverter.prototype.convertBlendMode = function (blendMode) {
+        var _a;
+        // Figma 混合模式到 CSS mix-blend-mode 的映射
+        var blendModeMap = (_a = {},
+            _a[types_1.BlendMode.PASS_THROUGH] = 'normal', // 仅适用于组，子元素不继承混合模式
+            _a[types_1.BlendMode.NORMAL] = 'normal',
+            _a[types_1.BlendMode.DARKEN] = 'darken',
+            _a[types_1.BlendMode.MULTIPLY] = 'multiply',
+            _a[types_1.BlendMode.LINEAR_BURN] = 'color-burn', // CSS 没有 linear-burn，用 color-burn 近似
+            _a[types_1.BlendMode.COLOR_BURN] = 'color-burn',
+            _a[types_1.BlendMode.LIGHTEN] = 'lighten',
+            _a[types_1.BlendMode.SCREEN] = 'screen',
+            _a[types_1.BlendMode.LINEAR_DODGE] = 'color-dodge', // CSS 没有 linear-dodge，用 color-dodge 近似
+            _a[types_1.BlendMode.COLOR_DODGE] = 'color-dodge',
+            _a[types_1.BlendMode.OVERLAY] = 'overlay',
+            _a[types_1.BlendMode.SOFT_LIGHT] = 'soft-light',
+            _a[types_1.BlendMode.HARD_LIGHT] = 'hard-light',
+            _a[types_1.BlendMode.DIFFERENCE] = 'difference',
+            _a[types_1.BlendMode.EXCLUSION] = 'exclusion',
+            _a[types_1.BlendMode.HUE] = 'hue',
+            _a[types_1.BlendMode.SATURATION] = 'saturation',
+            _a[types_1.BlendMode.COLOR] = 'color',
+            _a[types_1.BlendMode.LUMINOSITY] = 'luminosity',
+            _a);
+        return blendModeMap[blendMode] || 'normal';
+    };
     return BaseConverter;
 }());
 exports.BaseConverter = BaseConverter;
@@ -1847,8 +2101,451 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BooleanOperationConverter = void 0;
+var polygon_1 = __importDefault(require("./polygon"));
+var BooleanOperationConverter = /** @class */ (function (_super) {
+    __extends(BooleanOperationConverter, _super);
+    function BooleanOperationConverter() {
+        var _this = _super.apply(this, __spreadArray([], __read(arguments), false)) || this;
+        // 使用 path 元素
+        _this.polygonName = 'path';
+        return _this;
+    }
+    BooleanOperationConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                // BOOLEAN_OPERATION 有自己的 fillGeometry（合并后的形状）
+                // 应该使用这个形状，而不是依赖子元素
+                // 子元素的渲染在 node.ts 中根据 fillGeometry 的存在来判断是否跳过
+                return [2 /*return*/, _super.prototype.convert.call(this, node, dom, parentNode, page, option, container)];
+            });
+        });
+    };
+    return BooleanOperationConverter;
+}(polygon_1.default));
+exports.BooleanOperationConverter = BooleanOperationConverter;
+exports.default = BooleanOperationConverter;
+
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.COMPONENTConverter = void 0;
+var utils_1 = require("@fefeding/utils");
+var baseNode_1 = __importDefault(require("./baseNode"));
+/**
+ * COMPONENT 节点转换器
+ * 组件节点本质上和 FRAME 类似，但包含组件特有的属性
+ */
+var COMPONENTConverter = /** @class */ (function (_super) {
+    __extends(COMPONENTConverter, _super);
+    function COMPONENTConverter() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    COMPONENTConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
+        return __awaiter(this, void 0, void 0, function () {
+            var box, cssBlendMode;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        // 标记为组件
+                        dom.attributes = dom.attributes || {};
+                        dom.attributes['data-component'] = 'true';
+                        // 组件和 Frame 类似，使用相同的基本转换逻辑
+                        // 处理边界框和定位
+                        dom.bounds = {
+                            x: 0,
+                            y: 0,
+                            width: 0,
+                            height: 0,
+                        };
+                        box = node.absoluteBoundingBox || node.absoluteRenderBounds;
+                        if (box) {
+                            dom.absoluteBoundingBox = __assign({}, box);
+                            dom.bounds.width = box.width;
+                            dom.bounds.height = box.height;
+                            if (page && !dom.isElement) {
+                                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
+                                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
+                            }
+                            else if (parentNode && parentNode.absoluteBoundingBox) {
+                                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                            }
+                            else {
+                                dom.data.left = dom.bounds.x = 0;
+                                dom.data.top = dom.bounds.y = 0;
+                            }
+                        }
+                        // 处理背景色
+                        if (node.backgroundColor)
+                            dom.style.backgroundColor = utils_1.util.colorToString(node.backgroundColor, 255);
+                        // 处理圆角
+                        if (node.cornerRadius) {
+                            dom.style.borderRadius = utils_1.util.toPX(node.cornerRadius);
+                        }
+                        else if (node.rectangleCornerRadii) {
+                            dom.style.borderRadius = node.rectangleCornerRadii.map(function (p) { return utils_1.util.toPX(p); }).join(' ');
+                        }
+                        // 处理透明度
+                        if (node.opacity)
+                            dom.style.opacity = node.opacity.toString();
+                        dom.style.transformOrigin = 'center center';
+                        // 裁剪超出区域
+                        if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) {
+                            dom.style.overflow = 'hidden';
+                        }
+                        // 是否保持宽高比
+                        dom.preserveRatio = node.preserveRatio;
+                        // 调用基类的样式转换方法
+                        return [4 /*yield*/, this.convertStyle(node, dom, option, container)];
+                    case 1:
+                        // 调用基类的样式转换方法
+                        _a.sent();
+                        return [4 /*yield*/, this.convertFills(node, dom, option, container)];
+                    case 2:
+                        _a.sent();
+                        return [4 /*yield*/, this.convertStrokes(node, dom, option, container)];
+                    case 3:
+                        _a.sent();
+                        return [4 /*yield*/, this.convertEffects(node, dom, option, container)];
+                    case 4:
+                        _a.sent();
+                        dom.data.left = dom.bounds.x;
+                        dom.data.top = dom.bounds.y;
+                        dom.data.width = dom.bounds.width;
+                        dom.data.height = dom.bounds.height;
+                        dom.style.left = utils_1.util.toPX(dom.bounds.x).toString();
+                        dom.style.top = utils_1.util.toPX(dom.bounds.y).toString();
+                        dom.style.width = utils_1.util.toPX(dom.bounds.width).toString();
+                        dom.style.height = utils_1.util.toPX(dom.bounds.height).toString();
+                        // 处理混合模式
+                        if (node.blendMode) {
+                            cssBlendMode = this.convertBlendMode(node.blendMode);
+                            if (cssBlendMode) {
+                                dom.style.mixBlendMode = cssBlendMode;
+                            }
+                        }
+                        return [2 /*return*/, dom];
+                }
+            });
+        });
+    };
+    return COMPONENTConverter;
+}(baseNode_1.default));
+exports.COMPONENTConverter = COMPONENTConverter;
+exports.default = COMPONENTConverter;
+
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.COMPONENT_SETConverter = void 0;
+var utils_1 = require("@fefeding/utils");
+var baseNode_1 = __importDefault(require("./baseNode"));
+/**
+ * COMPONENT_SET 节点转换器
+ * 组件集用于管理组件的变体（variants）
+ */
+var COMPONENT_SETConverter = /** @class */ (function (_super) {
+    __extends(COMPONENT_SETConverter, _super);
+    function COMPONENT_SETConverter() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    COMPONENT_SETConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
+        return __awaiter(this, void 0, void 0, function () {
+            var box, cssBlendMode;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        // 标记为组件集
+                        dom.attributes = dom.attributes || {};
+                        dom.attributes['data-component-set'] = 'true';
+                        // 组件集和 Frame 类似，使用相同的基本转换逻辑
+                        dom.bounds = {
+                            x: 0,
+                            y: 0,
+                            width: 0,
+                            height: 0,
+                        };
+                        box = node.absoluteBoundingBox || node.absoluteRenderBounds;
+                        if (box) {
+                            dom.absoluteBoundingBox = __assign({}, box);
+                            dom.bounds.width = box.width;
+                            dom.bounds.height = box.height;
+                            if (page && !dom.isElement) {
+                                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
+                                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
+                            }
+                            else if (parentNode && parentNode.absoluteBoundingBox) {
+                                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                            }
+                            else {
+                                dom.data.left = dom.bounds.x = 0;
+                                dom.data.top = dom.bounds.y = 0;
+                            }
+                        }
+                        if (node.backgroundColor)
+                            dom.style.backgroundColor = utils_1.util.colorToString(node.backgroundColor, 255);
+                        if (node.cornerRadius) {
+                            dom.style.borderRadius = utils_1.util.toPX(node.cornerRadius);
+                        }
+                        else if (node.rectangleCornerRadii) {
+                            dom.style.borderRadius = node.rectangleCornerRadii.map(function (p) { return utils_1.util.toPX(p); }).join(' ');
+                        }
+                        if (node.opacity)
+                            dom.style.opacity = node.opacity.toString();
+                        dom.style.transformOrigin = 'center center';
+                        if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) {
+                            dom.style.overflow = 'hidden';
+                        }
+                        dom.preserveRatio = node.preserveRatio;
+                        return [4 /*yield*/, this.convertStyle(node, dom, option, container)];
+                    case 1:
+                        _a.sent();
+                        return [4 /*yield*/, this.convertFills(node, dom, option, container)];
+                    case 2:
+                        _a.sent();
+                        return [4 /*yield*/, this.convertStrokes(node, dom, option, container)];
+                    case 3:
+                        _a.sent();
+                        return [4 /*yield*/, this.convertEffects(node, dom, option, container)];
+                    case 4:
+                        _a.sent();
+                        dom.data.left = dom.bounds.x;
+                        dom.data.top = dom.bounds.y;
+                        dom.data.width = dom.bounds.width;
+                        dom.data.height = dom.bounds.height;
+                        dom.style.left = utils_1.util.toPX(dom.bounds.x).toString();
+                        dom.style.top = utils_1.util.toPX(dom.bounds.y).toString();
+                        dom.style.width = utils_1.util.toPX(dom.bounds.width).toString();
+                        dom.style.height = utils_1.util.toPX(dom.bounds.height).toString();
+                        if (node.blendMode) {
+                            cssBlendMode = this.convertBlendMode(node.blendMode);
+                            if (cssBlendMode) {
+                                dom.style.mixBlendMode = cssBlendMode;
+                            }
+                        }
+                        return [2 /*return*/, dom];
+                }
+            });
+        });
+    };
+    return COMPONENT_SETConverter;
+}(baseNode_1.default));
+exports.COMPONENT_SETConverter = COMPONENT_SETConverter;
+exports.default = COMPONENT_SETConverter;
+
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -1924,8 +2621,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -2079,8 +2776,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -2127,9 +2824,9 @@ var FRAMEConverter = /** @class */ (function (_super) {
     function FRAMEConverter() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    FRAMEConverter.prototype.convert = function (node, dom, parentNode, page, option) {
+    FRAMEConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, child;
+            var _a, _b, child, hasLayoutAlign, hasLayoutGrow, hasLayoutSizing;
             var e_1, _c;
             return __generator(this, function (_d) {
                 if (parentNode && parentNode.type === 'CANVAS') {
@@ -2163,7 +2860,51 @@ var FRAMEConverter = /** @class */ (function (_super) {
                         }
                     }
                 }
-                return [2 /*return*/, _super.prototype.convert.call(this, node, dom, parentNode, page, option)];
+                // Auto Layout 子元素的额外处理
+                // 如果父元素有 Auto Layout，检查子元素是否参与 Auto Layout
+                // 子元素只有在有 layoutAlign 或 layoutGrow 属性时才参与 Auto Layout
+                // 否则应该保持绝对定位（使用 relativeTransform）
+                if (parentNode && parentNode.layoutMode && parentNode.layoutMode !== 'NONE') {
+                    hasLayoutAlign = node.layoutAlign !== undefined;
+                    hasLayoutGrow = node.layoutGrow !== undefined;
+                    hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
+                        node.layoutSizingVertical !== undefined;
+                    // 只有当子元素有 Auto Layout 相关属性时，才让它参与 flexbox 布局
+                    // 否则保持绝对定位
+                    if (hasLayoutAlign || hasLayoutGrow || hasLayoutSizing) {
+                        // 移除绝对定位，让 flexbox 布局生效
+                        dom.style.position = 'relative';
+                        dom.style.left = '';
+                        dom.style.top = '';
+                        // 处理 layoutGrow（flex-grow）
+                        if (hasLayoutGrow) {
+                            dom.style.flexGrow = node.layoutGrow.toString();
+                        }
+                        // 处理 layoutAlign（align-self）
+                        if (hasLayoutAlign) {
+                            switch (node.layoutAlign) {
+                                case 'INHERIT':
+                                    // 继承父元素，不需要设置
+                                    break;
+                                case 'STRETCH':
+                                    dom.style.alignSelf = 'stretch';
+                                    break;
+                                case 'MIN':
+                                    dom.style.alignSelf = 'flex-start';
+                                    break;
+                                case 'CENTER':
+                                    dom.style.alignSelf = 'center';
+                                    break;
+                                case 'MAX':
+                                    dom.style.alignSelf = 'flex-end';
+                                    break;
+                            }
+                        }
+                    }
+                    // 没有 Auto Layout 属性的子元素保持绝对定位
+                    // 它们的位置由 relativeTransform 决定
+                }
+                return [2 /*return*/, _super.prototype.convert.call(this, node, dom, parentNode, page, option, container)];
             });
         });
     };
@@ -2198,8 +2939,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -2263,6 +3004,17 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -2273,8 +3025,165 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.INSTANCEConverter = void 0;
+var utils_1 = require("@fefeding/utils");
+var baseNode_1 = __importDefault(require("./baseNode"));
+/**
+ * INSTANCE 节点转换器
+ * 组件实例会继承主组件的样式，但可以有自己的覆盖
+ */
+var INSTANCEConverter = /** @class */ (function (_super) {
+    __extends(INSTANCEConverter, _super);
+    function INSTANCEConverter() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    INSTANCEConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
+        return __awaiter(this, void 0, void 0, function () {
+            var box, cssBlendMode;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        // 标记为组件实例
+                        dom.attributes = dom.attributes || {};
+                        dom.attributes['data-instance'] = 'true';
+                        // 记录引用的主组件 ID
+                        if (node.componentId) {
+                            dom.attributes['data-component-id'] = node.componentId;
+                        }
+                        // 组件实例和 Frame 类似，Figma API 返回的实例数据已经包含了主组件的样式覆盖
+                        dom.bounds = {
+                            x: 0,
+                            y: 0,
+                            width: 0,
+                            height: 0,
+                        };
+                        box = node.absoluteBoundingBox || node.absoluteRenderBounds;
+                        if (box) {
+                            dom.absoluteBoundingBox = __assign({}, box);
+                            dom.bounds.width = box.width;
+                            dom.bounds.height = box.height;
+                            if (page && !dom.isElement) {
+                                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
+                                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
+                            }
+                            else if (parentNode && parentNode.absoluteBoundingBox) {
+                                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                            }
+                            else {
+                                dom.data.left = dom.bounds.x = 0;
+                                dom.data.top = dom.bounds.y = 0;
+                            }
+                        }
+                        if (node.backgroundColor)
+                            dom.style.backgroundColor = utils_1.util.colorToString(node.backgroundColor, 255);
+                        if (node.cornerRadius) {
+                            dom.style.borderRadius = utils_1.util.toPX(node.cornerRadius);
+                        }
+                        else if (node.rectangleCornerRadii) {
+                            dom.style.borderRadius = node.rectangleCornerRadii.map(function (p) { return utils_1.util.toPX(p); }).join(' ');
+                        }
+                        if (node.opacity)
+                            dom.style.opacity = node.opacity.toString();
+                        dom.style.transformOrigin = 'center center';
+                        if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) {
+                            dom.style.overflow = 'hidden';
+                        }
+                        dom.preserveRatio = node.preserveRatio;
+                        return [4 /*yield*/, this.convertStyle(node, dom, option, container)];
+                    case 1:
+                        _a.sent();
+                        return [4 /*yield*/, this.convertFills(node, dom, option, container)];
+                    case 2:
+                        _a.sent();
+                        return [4 /*yield*/, this.convertStrokes(node, dom, option, container)];
+                    case 3:
+                        _a.sent();
+                        return [4 /*yield*/, this.convertEffects(node, dom, option, container)];
+                    case 4:
+                        _a.sent();
+                        dom.data.left = dom.bounds.x;
+                        dom.data.top = dom.bounds.y;
+                        dom.data.width = dom.bounds.width;
+                        dom.data.height = dom.bounds.height;
+                        dom.style.left = utils_1.util.toPX(dom.bounds.x).toString();
+                        dom.style.top = utils_1.util.toPX(dom.bounds.y).toString();
+                        dom.style.width = utils_1.util.toPX(dom.bounds.width).toString();
+                        dom.style.height = utils_1.util.toPX(dom.bounds.height).toString();
+                        if (node.blendMode) {
+                            cssBlendMode = this.convertBlendMode(node.blendMode);
+                            if (cssBlendMode) {
+                                dom.style.mixBlendMode = cssBlendMode;
+                            }
+                        }
+                        return [2 /*return*/, dom];
+                }
+            });
+        });
+    };
+    return INSTANCEConverter;
+}(baseNode_1.default));
+exports.INSTANCEConverter = INSTANCEConverter;
+exports.default = INSTANCEConverter;
+
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -2399,8 +3308,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -2476,8 +3385,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -2560,7 +3469,6 @@ var PolygonConverter = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        polygon = dom;
                         // 如果 没有生成父的svg标签，则当前dom就是，然后再生成子元素
                         if (!container) {
                             container = dom;
@@ -2575,11 +3483,16 @@ var PolygonConverter = /** @class */ (function (_super) {
                         }
                         else {
                             defs = container.children[0];
-                            if (!defs) {
+                            if (!defs || defs.type !== 'defs') {
                                 defs = this.createDomNode('defs');
-                                container.children.push(defs);
+                                container.children.unshift(defs);
                             }
-                            polygon.type = this.polygonName;
+                            // 创建新的polygon元素
+                            polygon = this.createDomNode(this.polygonName, {
+                                id: node.id || '',
+                                // @ts-ignore
+                                figmaData: node
+                            });
                         }
                         // 如果是蒙板
                         if (node.isMask) {
@@ -2602,6 +3515,8 @@ var PolygonConverter = /** @class */ (function (_super) {
                         // svg外转用定位和大小，其它样式都给子元素
                         dom = _a.sent();
                         polygon.bounds = dom.bounds;
+                        // 保存polygon引用，以便convertFills和convertStrokes使用
+                        dom._polygon = polygon;
                         mask = this.getMask(container);
                         if (node.isMask) {
                             if (mask) {
@@ -2642,13 +3557,36 @@ var PolygonConverter = /** @class */ (function (_super) {
     // 生成多边形路径
     PolygonConverter.prototype.createPolygonPath = function (dom, node, container) {
         var pos = this.getPosition(dom, container);
-        var points = [
-            [pos.x, pos.y].join(','),
-            [pos.x + dom.bounds.width, pos.y].join(','),
-            [pos.x + dom.bounds.width, pos.y + dom.bounds.height].join(','),
-            [pos.x, pos.y + dom.bounds.height].join(','),
-        ];
-        dom.attributes['points'] = points.join(' ');
+        // 优先使用 fillGeometry（矢量路径数据）
+        // @ts-ignore
+        if (node.fillGeometry && node.fillGeometry.length > 0) {
+            // 如果有多个路径，合并成一个
+            // @ts-ignore
+            var paths = node.fillGeometry.map(function (geo) { return geo.path; }).join(' ');
+            dom.attributes['d'] = paths;
+            // @ts-ignore
+            if (node.fillGeometry[0].windingRule) {
+                // @ts-ignore
+                dom.attributes['fill-rule'] = node.fillGeometry[0].windingRule.toLowerCase();
+            }
+        }
+        // 如果没有 fillGeometry，使用 strokeGeometry
+        // @ts-ignore
+        else if (node.strokeGeometry && node.strokeGeometry.length > 0) {
+            // @ts-ignore
+            var paths = node.strokeGeometry.map(function (geo) { return geo.path; }).join(' ');
+            dom.attributes['d'] = paths;
+            // @ts-ignore
+            if (node.strokeGeometry[0].windingRule) {
+                // @ts-ignore
+                dom.attributes['fill-rule'] = node.strokeGeometry[0].windingRule.toLowerCase();
+            }
+        }
+        // 兜底：使用边界框创建简单的矩形路径
+        else {
+            var path = "M ".concat(pos.x, " ").concat(pos.y, " L ").concat(pos.x + dom.bounds.width, " ").concat(pos.y, " L ").concat(pos.x + dom.bounds.width, " ").concat(pos.y + dom.bounds.height, " L ").concat(pos.x, " ").concat(pos.y + dom.bounds.height, " Z");
+            dom.attributes['d'] = path;
+        }
     };
     // 获取蒙板
     PolygonConverter.prototype.getMask = function (container) {
@@ -2677,6 +3615,9 @@ var PolygonConverter = /** @class */ (function (_super) {
     PolygonConverter.prototype.getPolygon = function (node, dom) {
         var e_2, _a;
         var _b;
+        // 优先使用保存的polygon引用
+        if (dom._polygon)
+            return dom._polygon;
         if (dom.children && dom.children.length) {
             try {
                 for (var _c = __values(dom.children), _d = _c.next(); !_d.done; _d = _c.next()) {
@@ -2704,86 +3645,71 @@ var PolygonConverter = /** @class */ (function (_super) {
     // 处理填充
     PolygonConverter.prototype.convertFills = function (node, dom, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var polygon, _a, _b, fill, _c, e_3_1;
-            var e_3, _d;
-            return __generator(this, function (_e) {
-                switch (_e.label) {
+            var polygon, parentFills, visibleFill, _a, cssBlendMode;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
-                        if (!node.fills) return [3 /*break*/, 14];
                         polygon = this.getPolygon(node, container || dom);
-                        _e.label = 1;
-                    case 1:
-                        _e.trys.push([1, 11, 12, 13]);
-                        _a = __values(node.fills), _b = _a.next();
-                        _e.label = 2;
-                    case 2:
-                        if (!!_b.done) return [3 /*break*/, 10];
-                        fill = _b.value;
-                        if (fill.visible === false)
-                            return [3 /*break*/, 9];
-                        _c = fill.type;
-                        switch (_c) {
-                            case types_1.PaintType.SOLID: return [3 /*break*/, 3];
-                            case types_1.PaintType.GRADIENT_LINEAR: return [3 /*break*/, 4];
-                            case types_1.PaintType.GRADIENT_DIAMOND: return [3 /*break*/, 5];
-                            case types_1.PaintType.GRADIENT_ANGULAR: return [3 /*break*/, 5];
-                            case types_1.PaintType.GRADIENT_RADIAL: return [3 /*break*/, 5];
-                            case types_1.PaintType.IMAGE: return [3 /*break*/, 6];
+                        parentFills = node._parentFills;
+                        if (parentFills && parentFills.length > 0) {
+                            polygon.style.fill = 'transparent';
+                            return [2 /*return*/, dom];
                         }
-                        return [3 /*break*/, 8];
+                        // 没有 fills 或 fills 为空数组时，设置 fill 为 none
+                        if (!node.fills || node.fills.length === 0) {
+                            polygon.style.fill = 'none';
+                            return [2 /*return*/, dom];
+                        }
+                        visibleFill = node.fills.find(function (fill) { return fill.visible !== false; });
+                        if (!visibleFill) return [3 /*break*/, 7];
+                        _a = visibleFill.type;
+                        switch (_a) {
+                            case types_1.PaintType.SOLID: return [3 /*break*/, 1];
+                            case types_1.PaintType.GRADIENT_LINEAR: return [3 /*break*/, 2];
+                            case types_1.PaintType.GRADIENT_DIAMOND: return [3 /*break*/, 3];
+                            case types_1.PaintType.GRADIENT_ANGULAR: return [3 /*break*/, 3];
+                            case types_1.PaintType.GRADIENT_RADIAL: return [3 /*break*/, 3];
+                            case types_1.PaintType.IMAGE: return [3 /*break*/, 4];
+                        }
+                        return [3 /*break*/, 6];
+                    case 1:
+                        {
+                            if (typeof visibleFill.opacity !== 'undefined')
+                                visibleFill.color.a = visibleFill.opacity;
+                            polygon.style.fill = utils_1.util.colorToString(visibleFill.color, 255);
+                            return [3 /*break*/, 6];
+                        }
+                        _b.label = 2;
+                    case 2:
+                        {
+                            polygon.style.fill = this.convertLinearGradient(visibleFill, dom, container);
+                            return [3 /*break*/, 6];
+                        }
+                        _b.label = 3;
                     case 3:
                         {
-                            if (typeof fill.opacity !== 'undefined')
-                                fill.color.a = fill.opacity;
-                            polygon.style.fill = utils_1.util.colorToString(fill.color, 255);
-                            return [3 /*break*/, 8];
+                            polygon.style.fill = this.convertRadialGradient(visibleFill, dom, container);
+                            return [3 /*break*/, 6];
                         }
-                        _e.label = 4;
-                    case 4:
-                        {
-                            polygon.style.fill = this.convertLinearGradient(fill, dom, container);
-                            return [3 /*break*/, 8];
-                        }
-                        _e.label = 5;
+                        _b.label = 4;
+                    case 4: return [4 /*yield*/, _super.prototype.convertFills.call(this, node, polygon, option, container)];
                     case 5:
-                        {
-                            polygon.style.fill = this.convertRadialGradient(fill, dom, container);
-                            return [3 /*break*/, 8];
-                        }
-                        _e.label = 6;
-                    case 6: return [4 /*yield*/, _super.prototype.convertFills.call(this, node, polygon, option, container)];
-                    case 7:
-                        _e.sent();
-                        return [3 /*break*/, 8];
-                    case 8:
-                        // 不支持的模式，直接透明
-                        switch (fill.blendMode) {
-                            case types_1.BlendMode.SCREEN: {
-                                dom.style.opacity = '0';
-                                break;
+                        _b.sent();
+                        return [3 /*break*/, 6];
+                    case 6:
+                        // 处理混合模式
+                        if (visibleFill.blendMode) {
+                            cssBlendMode = this.convertBlendMode(visibleFill.blendMode);
+                            if (cssBlendMode && cssBlendMode !== 'normal') {
+                                polygon.style.mixBlendMode = cssBlendMode;
                             }
                         }
-                        _e.label = 9;
-                    case 9:
-                        _b = _a.next();
-                        return [3 /*break*/, 2];
-                    case 10: return [3 /*break*/, 13];
-                    case 11:
-                        e_3_1 = _e.sent();
-                        e_3 = { error: e_3_1 };
-                        return [3 /*break*/, 13];
-                    case 12:
-                        try {
-                            if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
-                        }
-                        finally { if (e_3) throw e_3.error; }
-                        return [7 /*endfinally*/];
-                    case 13:
-                        // 默认透明
+                        _b.label = 7;
+                    case 7:
+                        // 默认透明（如果没有可见的 fill）
                         if (!polygon.style.fill)
-                            polygon.style.fill = 'transparent';
-                        _e.label = 14;
-                    case 14: return [2 /*return*/, dom];
+                            polygon.style.fill = 'none';
+                        return [2 /*return*/, dom];
                 }
             });
         });
@@ -2792,7 +3718,7 @@ var PolygonConverter = /** @class */ (function (_super) {
     PolygonConverter.prototype.convertStrokes = function (node, dom, option, container) {
         return __awaiter(this, void 0, void 0, function () {
             var polygon, _a, _b, stroke;
-            var e_4, _c;
+            var e_3, _c;
             return __generator(this, function (_d) {
                 polygon = this.getPolygon(node, container || dom);
                 if (node.strokes && node.strokes.length) {
@@ -2801,19 +3727,38 @@ var PolygonConverter = /** @class */ (function (_super) {
                             stroke = _b.value;
                             if (stroke.visible === false)
                                 continue;
-                            if (stroke.color) {
-                                if (typeof stroke.opacity !== 'undefined')
-                                    stroke.color.a = stroke.opacity;
-                                polygon.attributes['stroke'] = utils_1.util.colorToString(stroke.color, 255);
+                            switch (stroke.type) {
+                                case types_1.PaintType.SOLID: {
+                                    if (stroke.color) {
+                                        if (typeof stroke.opacity !== 'undefined')
+                                            stroke.color.a = stroke.opacity;
+                                        polygon.attributes['stroke'] = utils_1.util.colorToString(stroke.color, 255);
+                                    }
+                                    break;
+                                }
+                                case types_1.PaintType.GRADIENT_LINEAR: {
+                                    polygon.attributes['stroke'] = this.convertLinearGradient(stroke, dom, container);
+                                    break;
+                                }
+                                case types_1.PaintType.GRADIENT_DIAMOND:
+                                case types_1.PaintType.GRADIENT_ANGULAR:
+                                case types_1.PaintType.GRADIENT_RADIAL: {
+                                    polygon.attributes['stroke'] = this.convertRadialGradient(stroke, dom, container);
+                                    break;
+                                }
+                                case types_1.PaintType.IMAGE: {
+                                    // 图片描边暂不支持
+                                    break;
+                                }
                             }
                         }
                     }
-                    catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                    catch (e_3_1) { e_3 = { error: e_3_1 }; }
                     finally {
                         try {
                             if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                         }
-                        finally { if (e_4) throw e_4.error; }
+                        finally { if (e_3) throw e_3.error; }
                     }
                     if (node.strokeWeight) {
                         if (dom.style.outlineColor)
@@ -2895,7 +3840,7 @@ var PolygonConverter = /** @class */ (function (_super) {
     };
     // Helper function to get the gradient stops
     PolygonConverter.prototype.getGradientStopDoms = function (gradientStops) {
-        var e_5, _a;
+        var e_4, _a;
         var stops = [];
         try {
             for (var gradientStops_1 = __values(gradientStops), gradientStops_1_1 = gradientStops_1.next(); !gradientStops_1_1.done; gradientStops_1_1 = gradientStops_1.next()) {
@@ -2906,12 +3851,12 @@ var PolygonConverter = /** @class */ (function (_super) {
                 stops.push(stop_1);
             }
         }
-        catch (e_5_1) { e_5 = { error: e_5_1 }; }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
         finally {
             try {
                 if (gradientStops_1_1 && !gradientStops_1_1.done && (_a = gradientStops_1.return)) _a.call(gradientStops_1);
             }
-            finally { if (e_5) throw e_5.error; }
+            finally { if (e_4) throw e_4.error; }
         }
         return stops;
     };
@@ -2946,8 +3891,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -3086,6 +4031,98 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SLICEConverter = void 0;
+var baseNode_1 = __importDefault(require("./baseNode"));
+/**
+ * SLICE 节点转换器
+ * 切片节点主要用于导出，在 HTML 中通常不需要渲染
+ * 但如果需要显示，可以创建一个带边框的占位区域
+ */
+var SLICEConverter = /** @class */ (function (_super) {
+    __extends(SLICEConverter, _super);
+    function SLICEConverter() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    SLICEConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
+        return __awaiter(this, void 0, void 0, function () {
+            var formats;
+            return __generator(this, function (_a) {
+                // 切片节点通常不渲染，只保留位置和大小信息
+                dom.style.border = '1px dashed #ccc';
+                dom.style.backgroundColor = 'transparent';
+                // 可以添加一个标签标识这是切片
+                dom.attributes = dom.attributes || {};
+                dom.attributes['data-slice'] = 'true';
+                // 如果有导出设置，记录格式信息
+                if (node.exportSettings && node.exportSettings.length > 0) {
+                    formats = node.exportSettings.map(function (s) { return s.format; }).join(',');
+                    dom.attributes['data-export-formats'] = formats;
+                }
+                return [2 /*return*/, _super.prototype.convert.call(this, node, dom, parentNode, page, option, container)];
+            });
+        });
+    };
+    return SLICEConverter;
+}(baseNode_1.default));
+exports.SLICEConverter = SLICEConverter;
+exports.default = SLICEConverter;
+
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -3166,8 +4203,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -3217,9 +4254,9 @@ var TEXTConverter = /** @class */ (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     TEXTConverter.prototype.convert = function (node, dom, parentNode, page, option) {
-        var _a, _b;
         return __awaiter(this, void 0, void 0, function () {
             var res, isSingleLine, w;
+            var _a, _b;
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
@@ -3250,11 +4287,11 @@ var TEXTConverter = /** @class */ (function (_super) {
         });
     };
     // 解析字体多样式
-    TEXTConverter.prototype.convertCharacterStyleOverrides = function (node, dom, option, isSingleLine) {
-        if (isSingleLine === void 0) { isSingleLine = false; }
-        return __awaiter(this, void 0, void 0, function () {
+    TEXTConverter.prototype.convertCharacterStyleOverrides = function (node_1, dom_1, option_1) {
+        return __awaiter(this, arguments, void 0, function (node, dom, option, isSingleLine) {
             var width, text, index, lastStyleOverrides, lastDom, s, f, style, fDom, _a, _b, c, w;
             var e_1, _c;
+            if (isSingleLine === void 0) { isSingleLine = false; }
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
@@ -3472,3 +4509,106 @@ var TEXTConverter = /** @class */ (function (_super) {
 }(baseNode_1.default));
 exports.TEXTConverter = TEXTConverter;
 exports.default = TEXTConverter;
+
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.VECTORConverter = void 0;
+var polygon_1 = __importDefault(require("./polygon"));
+var VECTORConverter = /** @class */ (function (_super) {
+    __extends(VECTORConverter, _super);
+    function VECTORConverter() {
+        var _this = _super.apply(this, __spreadArray([], __read(arguments), false)) || this;
+        // VECTOR 使用 path 元素
+        _this.polygonName = 'path';
+        return _this;
+    }
+    VECTORConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, _super.prototype.convert.call(this, node, dom, parentNode, page, option, container)];
+            });
+        });
+    };
+    return VECTORConverter;
+}(polygon_1.default));
+exports.VECTORConverter = VECTORConverter;
+exports.default = VECTORConverter;

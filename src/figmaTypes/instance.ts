@@ -1,0 +1,98 @@
+
+
+import type { Node, DomNode, ConvertNodeOption } from '../common/types';
+import { util } from '@fefeding/utils';
+import BaseConverter from './baseNode';
+
+/**
+ * INSTANCE 节点转换器
+ * 组件实例会继承主组件的样式，但可以有自己的覆盖
+ */
+export class INSTANCEConverter extends BaseConverter<'INSTANCE'> {
+    async convert(node:  Node<'INSTANCE'>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode) {
+        // 标记为组件实例
+        dom.attributes = dom.attributes || {};
+        dom.attributes['data-instance'] = 'true';
+        
+        // 记录引用的主组件 ID
+        if ((node as any).componentId) {
+            dom.attributes['data-component-id'] = (node as any).componentId;
+        }
+        
+        // 组件实例和 Frame 类似，Figma API 返回的实例数据已经包含了主组件的样式覆盖
+        dom.bounds = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+        };
+
+        const box = node.absoluteBoundingBox || node.absoluteRenderBounds;
+        if(box) {
+            dom.absoluteBoundingBox = {
+                ...box
+            };
+            
+            dom.bounds.width = box.width;
+            dom.bounds.height = box.height;
+
+            if(page && !dom.isElement) {
+                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x; 
+                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y; 
+            }
+            else if(parentNode && parentNode.absoluteBoundingBox) {
+                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x; 
+                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y; 
+            }
+            else {
+                dom.data.left = dom.bounds.x = 0;
+                dom.data.top = dom.bounds.y = 0;
+            } 
+        }
+
+        if(node.backgroundColor) dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
+
+        if(node.cornerRadius) {
+            dom.style.borderRadius = util.toPX(node.cornerRadius);
+        }
+        else if(node.rectangleCornerRadii) {
+            dom.style.borderRadius = node.rectangleCornerRadii.map(p => util.toPX(p)).join(' ');
+        }
+
+        if(node.opacity) dom.style.opacity = node.opacity.toString();
+
+        dom.style.transformOrigin = 'center center';
+        
+        if(node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) {
+            dom.style.overflow = 'hidden';
+        }
+        
+        dom.preserveRatio = node.preserveRatio;
+
+        await this.convertStyle(node, dom, option, container);
+        await this.convertFills(node, dom, option, container);
+        await this.convertStrokes(node, dom, option, container);
+        await this.convertEffects(node, dom, option, container);
+        
+        dom.data.left = dom.bounds.x;
+        dom.data.top = dom.bounds.y;
+        dom.data.width = dom.bounds.width;
+        dom.data.height = dom.bounds.height;
+
+        dom.style.left = util.toPX(dom.bounds.x).toString();
+        dom.style.top = util.toPX(dom.bounds.y).toString();
+        dom.style.width = util.toPX(dom.bounds.width).toString();
+        dom.style.height = util.toPX(dom.bounds.height).toString();
+
+        if(node.blendMode) {
+            const cssBlendMode = this.convertBlendMode(node.blendMode);
+            if(cssBlendMode) {
+                dom.style.mixBlendMode = cssBlendMode;
+            }
+        }
+
+        return dom;
+    }
+}
+
+export default INSTANCEConverter;

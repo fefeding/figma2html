@@ -1,4 +1,4 @@
-import { Node, DomNode, DomNodeType, NodeType, NodeConverter, Vector, ColorStop, ConvertNodeOption, Paint, TypeStyle } from '../common/types';
+import { Node, DomNode, DomNodeType, NodeType, NodeConverter, Vector, ColorStop, ConvertNodeOption, Paint, TypeStyle, BlendMode } from '../common/types';
 import { type Point } from '@fefeding/utils';
 export declare class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
     convert(node: Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;
@@ -37,5 +37,6 @@ export declare class BaseConverter<NType extends NodeType = NodeType> implements
         width: number;
         height: number;
     };
+    convertBlendMode(blendMode: BlendMode): string;
 }
 export default BaseConverter;

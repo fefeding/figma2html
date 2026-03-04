@@ -1,6 +1,6 @@
 import BaseConverter from './baseNode';
 export class FRAMEConverter extends BaseConverter {
-    async convert(node, dom, parentNode, page, option) {
+    async convert(node, dom, parentNode, page, option, container) {
         if (parentNode && parentNode.type === 'CANVAS') {
             dom.style.overflow = 'hidden';
             if (parentNode && !parentNode.absoluteBoundingBox) {
@@ -22,7 +22,51 @@ export class FRAMEConverter extends BaseConverter {
                 }
             }
         }
-        return super.convert(node, dom, parentNode, page, option);
+        // Auto Layout 子元素的额外处理
+        // 如果父元素有 Auto Layout，检查子元素是否参与 Auto Layout
+        // 子元素只有在有 layoutAlign 或 layoutGrow 属性时才参与 Auto Layout
+        // 否则应该保持绝对定位（使用 relativeTransform）
+        if (parentNode && parentNode.layoutMode && parentNode.layoutMode !== 'NONE') {
+            const hasLayoutAlign = node.layoutAlign !== undefined;
+            const hasLayoutGrow = node.layoutGrow !== undefined;
+            const hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
+                node.layoutSizingVertical !== undefined;
+            // 只有当子元素有 Auto Layout 相关属性时，才让它参与 flexbox 布局
+            // 否则保持绝对定位
+            if (hasLayoutAlign || hasLayoutGrow || hasLayoutSizing) {
+                // 移除绝对定位，让 flexbox 布局生效
+                dom.style.position = 'relative';
+                dom.style.left = '';
+                dom.style.top = '';
+                // 处理 layoutGrow（flex-grow）
+                if (hasLayoutGrow) {
+                    dom.style.flexGrow = node.layoutGrow.toString();
+                }
+                // 处理 layoutAlign（align-self）
+                if (hasLayoutAlign) {
+                    switch (node.layoutAlign) {
+                        case 'INHERIT':
+                            // 继承父元素，不需要设置
+                            break;
+                        case 'STRETCH':
+                            dom.style.alignSelf = 'stretch';
+                            break;
+                        case 'MIN':
+                            dom.style.alignSelf = 'flex-start';
+                            break;
+                        case 'CENTER':
+                            dom.style.alignSelf = 'center';
+                            break;
+                        case 'MAX':
+                            dom.style.alignSelf = 'flex-end';
+                            break;
+                    }
+                }
+            }
+            // 没有 Auto Layout 属性的子元素保持绝对定位
+            // 它们的位置由 relativeTransform 决定
+        }
+        return super.convert(node, dom, parentNode, page, option, container);
     }
 }
 export default FRAMEConverter;
