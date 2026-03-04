@@ -22,71 +22,90 @@ export class FRAMEConverter extends BaseConverter {
                 }
             }
         }
-        // Auto Layout 子元素的额外处理
-        // 如果父元素有 Auto Layout，检查子元素是否参与 Auto Layout
-        // 子元素只有在有 layoutAlign 或 layoutGrow 属性时才参与 Auto Layout
-        // 否则应该保持绝对定位（使用 relativeTransform）
-        if (parentNode && parentNode.layoutMode && parentNode.layoutMode !== 'NONE') {
-            const hasLayoutAlign = node.layoutAlign !== undefined;
-            const hasLayoutGrow = node.layoutGrow !== undefined;
-            const hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
-                node.layoutSizingVertical !== undefined;
-            // 只有当子元素有 Auto Layout 相关属性时，才让它参与 flexbox 布局
-            // 否则保持绝对定位（已在baseNode.ts中处理）
-            if (hasLayoutAlign || hasLayoutGrow || hasLayoutSizing) {
-                // 参与Auto Layout的子元素
-                // position已在baseNode.ts中设置为relative
-                // 这里只需要处理flex相关属性
-                // 处理 layoutGrow（flex-grow）
-                if (hasLayoutGrow) {
-                    dom.style.flexGrow = node.layoutGrow.toString();
+        // ========== Auto Layout 子元素的 Flex 属性处理 ==========
+        // 检查是否参与父元素的 Auto Layout
+        const parentLayoutMode = parentNode ? parentNode.layoutMode : undefined;
+        const parentHasAutoLayout = parentLayoutMode === 'HORIZONTAL' || parentLayoutMode === 'VERTICAL';
+        const isExplicitAbsolute = node.layoutPositioning === 'ABSOLUTE';
+        const participatesInAutoLayout = parentHasAutoLayout && !isExplicitAbsolute;
+        if (participatesInAutoLayout) {
+            // ========== 作为 Flex Item 的属性转换 ==========
+            // 处理 layoutGrow（flex-grow）- 控制元素是否拉伸填充剩余空间
+            const layoutGrow = node.layoutGrow;
+            if (layoutGrow !== undefined && layoutGrow !== 0) {
+                dom.style.flexGrow = layoutGrow.toString();
+                // 如果有flexGrow，可能需要设置flexBasis
+                dom.style.flexBasis = '0';
+            }
+            // 处理 layoutAlign（align-self）- 交叉轴对齐
+            const layoutAlign = node.layoutAlign;
+            if (layoutAlign && layoutAlign !== 'INHERIT') {
+                switch (layoutAlign) {
+                    case 'STRETCH':
+                        dom.style.alignSelf = 'stretch';
+                        break;
+                    case 'MIN':
+                        dom.style.alignSelf = 'flex-start';
+                        break;
+                    case 'CENTER':
+                        dom.style.alignSelf = 'center';
+                        break;
+                    case 'MAX':
+                        dom.style.alignSelf = 'flex-end';
+                        break;
                 }
-                // 处理 layoutAlign（align-self）
-                if (hasLayoutAlign) {
-                    switch (node.layoutAlign) {
-                        case 'INHERIT':
-                            // 继承父元素，不需要设置
-                            break;
-                        case 'STRETCH':
-                            dom.style.alignSelf = 'stretch';
-                            break;
-                        case 'MIN':
-                            dom.style.alignSelf = 'flex-start';
-                            break;
-                        case 'CENTER':
-                            dom.style.alignSelf = 'center';
-                            break;
-                        case 'MAX':
-                            dom.style.alignSelf = 'flex-end';
-                            break;
+            }
+            // 处理 layoutSizingHorizontal（水平方向尺寸策略）
+            const layoutSizingHorizontal = node.layoutSizingHorizontal;
+            if (layoutSizingHorizontal) {
+                switch (layoutSizingHorizontal) {
+                    case 'FILL':
+                        // 填充：使用 flex-grow 拉伸
+                        dom.style.flexGrow = '1';
+                        dom.style.flexBasis = '0';
+                        dom.style.width = 'auto';
+                        break;
+                    case 'HUG':
+                        // 自适应内容宽度
+                        dom.style.width = 'auto';
+                        break;
+                    // 'FIXED' 使用默认的固定宽度
+                }
+            }
+            // 处理 layoutSizingVertical（垂直方向尺寸策略）
+            const layoutSizingVertical = node.layoutSizingVertical;
+            if (layoutSizingVertical) {
+                switch (layoutSizingVertical) {
+                    case 'FILL':
+                        // 填充：使用 align-self: stretch
+                        dom.style.alignSelf = 'stretch';
+                        dom.style.height = 'auto';
+                        break;
+                    case 'HUG':
+                        // 自适应内容高度
+                        dom.style.height = 'auto';
+                        break;
+                    // 'FIXED' 使用默认的固定高度
+                }
+            }
+            // 处理 constraints（约束）- 在 Flex 容器中的附加约束
+            if (node.constraints && !layoutSizingHorizontal && !layoutSizingVertical) {
+                // 水平约束
+                if (node.constraints.horizontal === 'LEFT_RIGHT' || node.constraints.horizontal === 'SCALE') {
+                    // 左右约束或缩放：在水平布局中拉伸
+                    if (parentNode.layoutMode === 'HORIZONTAL' && !layoutGrow) {
+                        dom.style.flexGrow = '1';
+                        dom.style.flexBasis = '0';
                     }
                 }
-                // 处理 layoutSizingHorizontal（宽度适应）
-                if (node.layoutSizingHorizontal) {
-                    switch (node.layoutSizingHorizontal) {
-                        case 'FILL':
-                            dom.style.flexGrow = '1';
-                            break;
-                        case 'HUG':
-                            // 自适应内容宽度
-                            dom.style.width = 'auto';
-                            break;
-                    }
-                }
-                // 处理 layoutSizingVertical（高度适应）
-                if (node.layoutSizingVertical) {
-                    switch (node.layoutSizingVertical) {
-                        case 'FILL':
-                            dom.style.alignSelf = 'stretch';
-                            break;
-                        case 'HUG':
-                            // 自适应内容高度
-                            dom.style.height = 'auto';
-                            break;
+                // 垂直约束
+                if (node.constraints.vertical === 'TOP_BOTTOM' || node.constraints.vertical === 'SCALE') {
+                    // 上下约束或缩放：在垂直布局中拉伸
+                    if (parentNode.layoutMode === 'VERTICAL' && layoutAlign !== 'STRETCH') {
+                        dom.style.alignSelf = 'stretch';
                     }
                 }
             }
-            // 不参与Auto Layout的子元素：position已在baseNode.ts中设置为absolute
         }
         return super.convert(node, dom, parentNode, page, option, container);
     }

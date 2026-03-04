@@ -1026,6 +1026,8 @@ export interface IJElementData {
     visible?: boolean;
     zIndex?: number;
     src?: string;
+    parentHasRotation?: boolean;
+    parentRotation?: number;
     text?: string;
     imageSizeMode?: 'stretch' | 'cover' | 'contain' | 'repeat' | '';
 }

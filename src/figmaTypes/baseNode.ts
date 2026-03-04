@@ -49,66 +49,95 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             dom.bounds.width = box.width;
             dom.bounds.height = box.height;
 
+            // ========== 智能定位策略 ==========
+            // 核心原则：正确识别 Auto Layout，优先使用 Flexbox 布局
+            
             // 检查父节点是否有Auto Layout
-            const parentHasAutoLayout = parentNode && (parentNode as any).layoutMode && (parentNode as any).layoutMode !== 'NONE';
-            // 检查当前节点是否参与Auto Layout
-            const hasLayoutAlign = (node as any).layoutAlign !== undefined;
-            const hasLayoutGrow = (node as any).layoutGrow !== undefined;
-            const hasLayoutSizing = (node as any).layoutSizingHorizontal !== undefined || 
-                                    (node as any).layoutSizingVertical !== undefined;
-            const participatesInAutoLayout = hasLayoutAlign || hasLayoutGrow || hasLayoutSizing;
+            // 注意：layoutMode 可能是 undefined（不存在）或 'NONE'，都不是 Auto Layout
+            const parentLayoutMode = parentNode ? (parentNode as any).layoutMode : undefined;
+            const parentHasAutoLayout = parentLayoutMode === 'HORIZONTAL' || parentLayoutMode === 'VERTICAL';
+            
+            // 检查当前节点是否显式设置为绝对定位
+            const isExplicitAbsolute = (node as any).layoutPositioning === 'ABSOLUTE';
+            
+            // 核心判断：是否参与Auto Layout（作为 Flex Item）
+            // 规则：父元素有 Auto Layout，且子元素没有显式设置为绝对定位
+            const participatesInAutoLayout = parentHasAutoLayout && !isExplicitAbsolute;
 
-            // 智能定位策略
-            // 1. page的直接子元素（顶级Frame）：使用绝对定位，相对于page
-            // 2. 参与Auto Layout的子元素：使用flex布局，不需要left/top
-            // 3. 不参与Auto Layout的子元素：使用绝对定位
+            // 检查父元素是否有旋转
+            const parentRotation = (parentNode as any).rotation;
+            const parentHasRotation = parentRotation && Math.abs(parentRotation) > 0.0001;
 
             // 优先相对于页面坐标, isElement是相于它的父级的
             if(page && !dom.isElement) {
+                // 顶级Frame
                 dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x; 
                 dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
-                // 顶级Frame使用绝对定位（保持之前的行为）
-                dom.style.position = 'absolute';
+                
+                // 顶级Frame：Auto Layout容器使用相对定位，否则绝对定位
+                if((node as any).layoutMode && (node as any).layoutMode !== 'NONE') {
+                    dom.style.position = 'relative';
+                    // 清除left/top，让Auto Layout容器自然定位
+                    delete dom.data.left;
+                    delete dom.data.top;
+                    delete dom.style.left;
+                    delete dom.style.top;
+                } else {
+                    dom.style.position = 'absolute';
+                }
             }
             // 相对于父位置
             else if(parentNode && parentNode.absoluteBoundingBox) {
-                if(parentHasAutoLayout) {
-                    if(participatesInAutoLayout) {
-                        // 参与Auto Layout：位置由flex布局决定
-                        dom.data.left = dom.bounds.x = 0; 
-                        dom.data.top = dom.bounds.y = 0;
-                        // 使用relative让它成为flex item
-                        dom.style.position = 'relative';
+                if(participatesInAutoLayout) {
+                    // ========== 参与Auto Layout（Flex Item）==========
+                    // 位置由flex布局决定，不需要设置left/top
+                    dom.data.left = dom.bounds.x = 0; 
+                    dom.data.top = dom.bounds.y = 0;
+                    dom.style.position = 'relative';
+                    // 清除可能的定位属性
+                    delete dom.style.left;
+                    delete dom.style.top;
+                } 
+                else if(parentHasRotation && isExplicitAbsolute) {
+                    // ========== 绝对定位 + 父元素旋转 ==========
+                    dom.data.parentHasRotation = true;
+                    dom.data.parentRotation = parentRotation;
+                    
+                    const parentCenter = {
+                        x: parentNode.absoluteBoundingBox.x + parentNode.absoluteBoundingBox.width / 2,
+                        y: parentNode.absoluteBoundingBox.y + parentNode.absoluteBoundingBox.height / 2
+                    };
+                    const childCenter = {
+                        x: box.x + box.width / 2,
+                        y: box.y + box.height / 2
+                    };
+                    
+                    const offsetX = childCenter.x - parentCenter.x;
+                    const offsetY = childCenter.y - parentCenter.y;
+                    
+                    const cos = Math.cos(-parentRotation);
+                    const sin = Math.sin(-parentRotation);
+                    const rotatedX = offsetX * cos - offsetY * sin;
+                    const rotatedY = offsetX * sin + offsetY * cos;
+                    
+                    dom.data.left = dom.bounds.x = rotatedX - box.width / 2 + parentNode.absoluteBoundingBox.width / 2;
+                    dom.data.top = dom.bounds.y = rotatedY - box.height / 2 + parentNode.absoluteBoundingBox.height / 2;
+                    dom.style.position = 'absolute';
+                } 
+                else if(parentHasAutoLayout && isExplicitAbsolute) {
+                    // ========== 在Auto Layout容器中显式绝对定位 ==========
+                    if((node as any).relativeTransform) {
+                        dom.data.left = dom.bounds.x = (node as any).relativeTransform[0][2];
+                        dom.data.top = dom.bounds.y = (node as any).relativeTransform[1][2];
                     } else {
-                        // 不参与Auto Layout：使用绝对定位
-                        // 当父元素有rotation时，relativeTransform是相对于旋转后的坐标系
-                        // 在CSS中这会导致定位问题，应使用absoluteBoundingBox
-                        const parentRotation = (parentNode as any).rotation;
-                        if(parentRotation && Math.abs(parentRotation) > 0.0001 && (node as any).relativeTransform) {
-                            // 父元素有旋转，使用absoluteBoundingBox计算位置
-                            dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x; 
-                            dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                        } else if((node as any).relativeTransform) {
-                            // 父元素无旋转，使用relativeTransform
-                            dom.data.left = dom.bounds.x = (node as any).relativeTransform[0][2];
-                            dom.data.top = dom.bounds.y = (node as any).relativeTransform[1][2];
-                        } else {
-                            dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x; 
-                            dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                        }
-                        dom.style.position = 'absolute';
-                    }
-                } else {
-                    // 父节点没有Auto Layout：使用绝对定位
-                    // 当父元素有rotation时，relativeTransform是相对于旋转后的坐标系
-                    // 在CSS中这会导致定位问题，应使用absoluteBoundingBox
-                    const parentRotation = (parentNode as any).rotation;
-                    if(parentRotation && Math.abs(parentRotation) > 0.0001 && (node as any).relativeTransform) {
-                        // 父元素有旋转，使用absoluteBoundingBox计算位置
                         dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x; 
                         dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                    } else if((node as any).relativeTransform) {
-                        // 父元素无旋转，使用relativeTransform
+                    }
+                    dom.style.position = 'absolute';
+                }
+                else {
+                    // ========== 普通绝对定位（父元素无Auto Layout）==========
+                    if((node as any).relativeTransform) {
                         dom.data.left = dom.bounds.x = (node as any).relativeTransform[0][2];
                         dom.data.top = dom.bounds.y = (node as any).relativeTransform[1][2];
                     } else {
@@ -118,11 +147,11 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     dom.style.position = 'absolute';
                 }
             }
-            // 没有父元素，使用绝对定位
+            // 没有父元素，使用相对定位
             else {
                 dom.data.left = dom.bounds.x = 0;
                 dom.data.top = dom.bounds.y = 0;
-                dom.style.position = 'absolute';
+                dom.style.position = 'relative';
             } 
         }
         // 背景色

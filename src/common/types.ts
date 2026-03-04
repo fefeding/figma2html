@@ -1081,6 +1081,10 @@ export interface IJElementData {
 
     src?: string;
 
+    // 父元素旋转相关
+    parentHasRotation?: boolean;
+    parentRotation?: number;
+
     text?: string;
     // 图片大小处理方式
     imageSizeMode?: 'stretch'|'cover'|'contain'|'repeat'|'';

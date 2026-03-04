@@ -1558,69 +1558,87 @@ class BaseConverter {
                 box.height = node.style.lineHeightPx;
             dom.bounds.width = box.width;
             dom.bounds.height = box.height;
+            // ========== 智能定位策略 ==========
+            // 核心原则：正确识别 Auto Layout，优先使用 Flexbox 布局
             // 检查父节点是否有Auto Layout
-            const parentHasAutoLayout = parentNode && parentNode.layoutMode && parentNode.layoutMode !== 'NONE';
-            // 检查当前节点是否参与Auto Layout
-            const hasLayoutAlign = node.layoutAlign !== undefined;
-            const hasLayoutGrow = node.layoutGrow !== undefined;
-            const hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
-                node.layoutSizingVertical !== undefined;
-            const participatesInAutoLayout = hasLayoutAlign || hasLayoutGrow || hasLayoutSizing;
-            // 智能定位策略
-            // 1. page的直接子元素（顶级Frame）：使用绝对定位，相对于page
-            // 2. 参与Auto Layout的子元素：使用flex布局，不需要left/top
-            // 3. 不参与Auto Layout的子元素：使用绝对定位
+            // 注意：layoutMode 可能是 undefined（不存在）或 'NONE'，都不是 Auto Layout
+            const parentLayoutMode = parentNode ? parentNode.layoutMode : undefined;
+            const parentHasAutoLayout = parentLayoutMode === 'HORIZONTAL' || parentLayoutMode === 'VERTICAL';
+            // 检查当前节点是否显式设置为绝对定位
+            const isExplicitAbsolute = node.layoutPositioning === 'ABSOLUTE';
+            // 核心判断：是否参与Auto Layout（作为 Flex Item）
+            // 规则：父元素有 Auto Layout，且子元素没有显式设置为绝对定位
+            const participatesInAutoLayout = parentHasAutoLayout && !isExplicitAbsolute;
+            // 检查父元素是否有旋转
+            const parentRotation = parentNode.rotation;
+            const parentHasRotation = parentRotation && Math.abs(parentRotation) > 0.0001;
             // 优先相对于页面坐标, isElement是相于它的父级的
             if (page && !dom.isElement) {
+                // 顶级Frame
                 dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
                 dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
-                // 顶级Frame使用绝对定位（保持之前的行为）
-                dom.style.position = 'absolute';
+                // 顶级Frame：Auto Layout容器使用相对定位，否则绝对定位
+                if (node.layoutMode && node.layoutMode !== 'NONE') {
+                    dom.style.position = 'relative';
+                    // 清除left/top，让Auto Layout容器自然定位
+                    delete dom.data.left;
+                    delete dom.data.top;
+                    delete dom.style.left;
+                    delete dom.style.top;
+                }
+                else {
+                    dom.style.position = 'absolute';
+                }
             }
             // 相对于父位置
             else if (parentNode && parentNode.absoluteBoundingBox) {
-                if (parentHasAutoLayout) {
-                    if (participatesInAutoLayout) {
-                        // 参与Auto Layout：位置由flex布局决定
-                        dom.data.left = dom.bounds.x = 0;
-                        dom.data.top = dom.bounds.y = 0;
-                        // 使用relative让它成为flex item
-                        dom.style.position = 'relative';
+                if (participatesInAutoLayout) {
+                    // ========== 参与Auto Layout（Flex Item）==========
+                    // 位置由flex布局决定，不需要设置left/top
+                    dom.data.left = dom.bounds.x = 0;
+                    dom.data.top = dom.bounds.y = 0;
+                    dom.style.position = 'relative';
+                    // 清除可能的定位属性
+                    delete dom.style.left;
+                    delete dom.style.top;
+                }
+                else if (parentHasRotation && isExplicitAbsolute) {
+                    // ========== 绝对定位 + 父元素旋转 ==========
+                    dom.data.parentHasRotation = true;
+                    dom.data.parentRotation = parentRotation;
+                    const parentCenter = {
+                        x: parentNode.absoluteBoundingBox.x + parentNode.absoluteBoundingBox.width / 2,
+                        y: parentNode.absoluteBoundingBox.y + parentNode.absoluteBoundingBox.height / 2
+                    };
+                    const childCenter = {
+                        x: box.x + box.width / 2,
+                        y: box.y + box.height / 2
+                    };
+                    const offsetX = childCenter.x - parentCenter.x;
+                    const offsetY = childCenter.y - parentCenter.y;
+                    const cos = Math.cos(-parentRotation);
+                    const sin = Math.sin(-parentRotation);
+                    const rotatedX = offsetX * cos - offsetY * sin;
+                    const rotatedY = offsetX * sin + offsetY * cos;
+                    dom.data.left = dom.bounds.x = rotatedX - box.width / 2 + parentNode.absoluteBoundingBox.width / 2;
+                    dom.data.top = dom.bounds.y = rotatedY - box.height / 2 + parentNode.absoluteBoundingBox.height / 2;
+                    dom.style.position = 'absolute';
+                }
+                else if (parentHasAutoLayout && isExplicitAbsolute) {
+                    // ========== 在Auto Layout容器中显式绝对定位 ==========
+                    if (node.relativeTransform) {
+                        dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
+                        dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
                     }
                     else {
-                        // 不参与Auto Layout：使用绝对定位
-                        // 当父元素有rotation时，relativeTransform是相对于旋转后的坐标系
-                        // 在CSS中这会导致定位问题，应使用absoluteBoundingBox
-                        const parentRotation = parentNode.rotation;
-                        if (parentRotation && Math.abs(parentRotation) > 0.0001 && node.relativeTransform) {
-                            // 父元素有旋转，使用absoluteBoundingBox计算位置
-                            dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                            dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                        }
-                        else if (node.relativeTransform) {
-                            // 父元素无旋转，使用relativeTransform
-                            dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
-                            dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
-                        }
-                        else {
-                            dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                            dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                        }
-                        dom.style.position = 'absolute';
-                    }
-                }
-                else {
-                    // 父节点没有Auto Layout：使用绝对定位
-                    // 当父元素有rotation时，relativeTransform是相对于旋转后的坐标系
-                    // 在CSS中这会导致定位问题，应使用absoluteBoundingBox
-                    const parentRotation = parentNode.rotation;
-                    if (parentRotation && Math.abs(parentRotation) > 0.0001 && node.relativeTransform) {
-                        // 父元素有旋转，使用absoluteBoundingBox计算位置
                         dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
                         dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
                     }
-                    else if (node.relativeTransform) {
-                        // 父元素无旋转，使用relativeTransform
+                    dom.style.position = 'absolute';
+                }
+                else {
+                    // ========== 普通绝对定位（父元素无Auto Layout）==========
+                    if (node.relativeTransform) {
                         dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
                         dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
                     }
@@ -1631,11 +1649,11 @@ class BaseConverter {
                     dom.style.position = 'absolute';
                 }
             }
-            // 没有父元素，使用绝对定位
+            // 没有父元素，使用相对定位
             else {
                 dom.data.left = dom.bounds.x = 0;
                 dom.data.top = dom.bounds.y = 0;
-                dom.style.position = 'absolute';
+                dom.style.position = 'relative';
             }
         }
         // 背景色
@@ -2413,71 +2431,90 @@ class FRAMEConverter extends BaseConverter {
                 }
             }
         }
-        // Auto Layout 子元素的额外处理
-        // 如果父元素有 Auto Layout，检查子元素是否参与 Auto Layout
-        // 子元素只有在有 layoutAlign 或 layoutGrow 属性时才参与 Auto Layout
-        // 否则应该保持绝对定位（使用 relativeTransform）
-        if (parentNode && parentNode.layoutMode && parentNode.layoutMode !== 'NONE') {
-            const hasLayoutAlign = node.layoutAlign !== undefined;
-            const hasLayoutGrow = node.layoutGrow !== undefined;
-            const hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
-                node.layoutSizingVertical !== undefined;
-            // 只有当子元素有 Auto Layout 相关属性时，才让它参与 flexbox 布局
-            // 否则保持绝对定位（已在baseNode.ts中处理）
-            if (hasLayoutAlign || hasLayoutGrow || hasLayoutSizing) {
-                // 参与Auto Layout的子元素
-                // position已在baseNode.ts中设置为relative
-                // 这里只需要处理flex相关属性
-                // 处理 layoutGrow（flex-grow）
-                if (hasLayoutGrow) {
-                    dom.style.flexGrow = node.layoutGrow.toString();
+        // ========== Auto Layout 子元素的 Flex 属性处理 ==========
+        // 检查是否参与父元素的 Auto Layout
+        const parentLayoutMode = parentNode ? parentNode.layoutMode : undefined;
+        const parentHasAutoLayout = parentLayoutMode === 'HORIZONTAL' || parentLayoutMode === 'VERTICAL';
+        const isExplicitAbsolute = node.layoutPositioning === 'ABSOLUTE';
+        const participatesInAutoLayout = parentHasAutoLayout && !isExplicitAbsolute;
+        if (participatesInAutoLayout) {
+            // ========== 作为 Flex Item 的属性转换 ==========
+            // 处理 layoutGrow（flex-grow）- 控制元素是否拉伸填充剩余空间
+            const layoutGrow = node.layoutGrow;
+            if (layoutGrow !== undefined && layoutGrow !== 0) {
+                dom.style.flexGrow = layoutGrow.toString();
+                // 如果有flexGrow，可能需要设置flexBasis
+                dom.style.flexBasis = '0';
+            }
+            // 处理 layoutAlign（align-self）- 交叉轴对齐
+            const layoutAlign = node.layoutAlign;
+            if (layoutAlign && layoutAlign !== 'INHERIT') {
+                switch (layoutAlign) {
+                    case 'STRETCH':
+                        dom.style.alignSelf = 'stretch';
+                        break;
+                    case 'MIN':
+                        dom.style.alignSelf = 'flex-start';
+                        break;
+                    case 'CENTER':
+                        dom.style.alignSelf = 'center';
+                        break;
+                    case 'MAX':
+                        dom.style.alignSelf = 'flex-end';
+                        break;
                 }
-                // 处理 layoutAlign（align-self）
-                if (hasLayoutAlign) {
-                    switch (node.layoutAlign) {
-                        case 'INHERIT':
-                            // 继承父元素，不需要设置
-                            break;
-                        case 'STRETCH':
-                            dom.style.alignSelf = 'stretch';
-                            break;
-                        case 'MIN':
-                            dom.style.alignSelf = 'flex-start';
-                            break;
-                        case 'CENTER':
-                            dom.style.alignSelf = 'center';
-                            break;
-                        case 'MAX':
-                            dom.style.alignSelf = 'flex-end';
-                            break;
+            }
+            // 处理 layoutSizingHorizontal（水平方向尺寸策略）
+            const layoutSizingHorizontal = node.layoutSizingHorizontal;
+            if (layoutSizingHorizontal) {
+                switch (layoutSizingHorizontal) {
+                    case 'FILL':
+                        // 填充：使用 flex-grow 拉伸
+                        dom.style.flexGrow = '1';
+                        dom.style.flexBasis = '0';
+                        dom.style.width = 'auto';
+                        break;
+                    case 'HUG':
+                        // 自适应内容宽度
+                        dom.style.width = 'auto';
+                        break;
+                    // 'FIXED' 使用默认的固定宽度
+                }
+            }
+            // 处理 layoutSizingVertical（垂直方向尺寸策略）
+            const layoutSizingVertical = node.layoutSizingVertical;
+            if (layoutSizingVertical) {
+                switch (layoutSizingVertical) {
+                    case 'FILL':
+                        // 填充：使用 align-self: stretch
+                        dom.style.alignSelf = 'stretch';
+                        dom.style.height = 'auto';
+                        break;
+                    case 'HUG':
+                        // 自适应内容高度
+                        dom.style.height = 'auto';
+                        break;
+                    // 'FIXED' 使用默认的固定高度
+                }
+            }
+            // 处理 constraints（约束）- 在 Flex 容器中的附加约束
+            if (node.constraints && !layoutSizingHorizontal && !layoutSizingVertical) {
+                // 水平约束
+                if (node.constraints.horizontal === 'LEFT_RIGHT' || node.constraints.horizontal === 'SCALE') {
+                    // 左右约束或缩放：在水平布局中拉伸
+                    if (parentNode.layoutMode === 'HORIZONTAL' && !layoutGrow) {
+                        dom.style.flexGrow = '1';
+                        dom.style.flexBasis = '0';
                     }
                 }
-                // 处理 layoutSizingHorizontal（宽度适应）
-                if (node.layoutSizingHorizontal) {
-                    switch (node.layoutSizingHorizontal) {
-                        case 'FILL':
-                            dom.style.flexGrow = '1';
-                            break;
-                        case 'HUG':
-                            // 自适应内容宽度
-                            dom.style.width = 'auto';
-                            break;
-                    }
-                }
-                // 处理 layoutSizingVertical（高度适应）
-                if (node.layoutSizingVertical) {
-                    switch (node.layoutSizingVertical) {
-                        case 'FILL':
-                            dom.style.alignSelf = 'stretch';
-                            break;
-                        case 'HUG':
-                            // 自适应内容高度
-                            dom.style.height = 'auto';
-                            break;
+                // 垂直约束
+                if (node.constraints.vertical === 'TOP_BOTTOM' || node.constraints.vertical === 'SCALE') {
+                    // 上下约束或缩放：在垂直布局中拉伸
+                    if (parentNode.layoutMode === 'VERTICAL' && layoutAlign !== 'STRETCH') {
+                        dom.style.alignSelf = 'stretch';
                     }
                 }
             }
-            // 不参与Auto Layout的子元素：position已在baseNode.ts中设置为absolute
         }
         return super.convert(node, dom, parentNode, page, option, container);
     }
@@ -3201,132 +3238,67 @@ class COMPONENTConverter extends BaseConverter {
         // 标记为组件
         dom.attributes = dom.attributes || {};
         dom.attributes['data-component'] = 'true';
-        // 组件和 Frame 类似，使用相同的基本转换逻辑
-        // 处理边界框和定位
-        dom.bounds = {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-        };
-        const box = node.absoluteBoundingBox || node.absoluteRenderBounds;
-        if (box) {
-            dom.absoluteBoundingBox = {
-                ...box
-            };
-            const center = {
-                x: box.x + box.width / 2,
-                y: box.y + box.height / 2
-            };
-            // 处理旋转（忽略极小的旋转值，如浮点误差）
-            if (node.rotation && Math.abs(node.rotation) > 0.0001) {
-                dom.data.rotation = node.rotation;
-                dom.transform.rotateZ = node.rotation;
-                dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
-                // 因为拿到的是新长形宽高，需要求出原始长方形宽高
-                const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
-                box.width = size.width;
-                box.height = size.height;
-                box.x = center.x - size.width / 2;
-                box.y = center.y - size.height / 2;
+        // ========== Flex Item 属性处理 ==========
+        // 检查是否参与父元素的 Auto Layout
+        const parentLayoutMode = parentNode ? parentNode.layoutMode : undefined;
+        const parentHasAutoLayout = parentLayoutMode === 'HORIZONTAL' || parentLayoutMode === 'VERTICAL';
+        const isExplicitAbsolute = node.layoutPositioning === 'ABSOLUTE';
+        const participatesInAutoLayout = parentHasAutoLayout && !isExplicitAbsolute;
+        if (participatesInAutoLayout) {
+            // 处理 layoutGrow（flex-grow）
+            const layoutGrow = node.layoutGrow;
+            if (layoutGrow !== undefined && layoutGrow !== 0) {
+                dom.style.flexGrow = layoutGrow.toString();
+                dom.style.flexBasis = '0';
             }
-            dom.bounds.width = box.width;
-            dom.bounds.height = box.height;
-            // 检查父节点是否有Auto Layout
-            const parentHasAutoLayout = parentNode && parentNode.layoutMode && parentNode.layoutMode !== 'NONE';
-            // 检查当前节点是否参与Auto Layout
-            const hasLayoutAlign = node.layoutAlign !== undefined;
-            const hasLayoutGrow = node.layoutGrow !== undefined;
-            const hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
-                node.layoutSizingVertical !== undefined;
-            const participatesInAutoLayout = hasLayoutAlign || hasLayoutGrow || hasLayoutSizing;
-            if (page && !dom.isElement) {
-                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
-                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
-                dom.style.position = 'absolute';
-            }
-            else if (parentNode && parentNode.absoluteBoundingBox) {
-                if (parentHasAutoLayout) {
-                    if (participatesInAutoLayout) {
-                        dom.data.left = dom.bounds.x = 0;
-                        dom.data.top = dom.bounds.y = 0;
-                        dom.style.position = 'relative';
-                    }
-                    else {
-                        // 不参与Auto Layout：使用绝对定位
-                        if (node.relativeTransform) {
-                            dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
-                            dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
-                        }
-                        else {
-                            dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                            dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                        }
-                        dom.style.position = 'absolute';
-                    }
-                }
-                else {
-                    if (node.relativeTransform) {
-                        dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
-                        dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
-                    }
-                    else {
-                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                    }
-                    dom.style.position = 'absolute';
+            // 处理 layoutAlign（align-self）
+            const layoutAlign = node.layoutAlign;
+            if (layoutAlign && layoutAlign !== 'INHERIT') {
+                switch (layoutAlign) {
+                    case 'STRETCH':
+                        dom.style.alignSelf = 'stretch';
+                        break;
+                    case 'MIN':
+                        dom.style.alignSelf = 'flex-start';
+                        break;
+                    case 'CENTER':
+                        dom.style.alignSelf = 'center';
+                        break;
+                    case 'MAX':
+                        dom.style.alignSelf = 'flex-end';
+                        break;
                 }
             }
-            else {
-                dom.data.left = dom.bounds.x = 0;
-                dom.data.top = dom.bounds.y = 0;
-                dom.style.position = 'absolute';
+            // 处理 layoutSizingHorizontal
+            const layoutSizingHorizontal = node.layoutSizingHorizontal;
+            if (layoutSizingHorizontal) {
+                switch (layoutSizingHorizontal) {
+                    case 'FILL':
+                        dom.style.flexGrow = '1';
+                        dom.style.flexBasis = '0';
+                        dom.style.width = 'auto';
+                        break;
+                    case 'HUG':
+                        dom.style.width = 'auto';
+                        break;
+                }
+            }
+            // 处理 layoutSizingVertical
+            const layoutSizingVertical = node.layoutSizingVertical;
+            if (layoutSizingVertical) {
+                switch (layoutSizingVertical) {
+                    case 'FILL':
+                        dom.style.alignSelf = 'stretch';
+                        dom.style.height = 'auto';
+                        break;
+                    case 'HUG':
+                        dom.style.height = 'auto';
+                        break;
+                }
             }
         }
-        // 处理背景色
-        if (node.backgroundColor)
-            dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
-        // 处理圆角
-        if (node.cornerRadius) {
-            dom.style.borderRadius = util.toPX(node.cornerRadius);
-        }
-        else if (node.rectangleCornerRadii) {
-            dom.style.borderRadius = node.rectangleCornerRadii.map(p => util.toPX(p)).join(' ');
-        }
-        // 处理透明度
-        if (node.opacity)
-            dom.style.opacity = node.opacity.toString();
-        dom.style.transformOrigin = 'center center';
-        // 裁剪超出区域
-        if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) {
-            dom.style.overflow = 'hidden';
-        }
-        // 是否保持宽高比
-        dom.preserveRatio = node.preserveRatio;
-        // 调用基类的样式转换方法
-        await this.convertStyle(node, dom, option, container);
-        await this.convertFills(node, dom, option, container);
-        await this.convertStrokes(node, dom, option, container);
-        await this.convertEffects(node, dom, option, container);
-        dom.data.left = dom.bounds.x;
-        dom.data.top = dom.bounds.y;
-        dom.data.width = dom.bounds.width;
-        dom.data.height = dom.bounds.height;
-        // 只有绝对定位时才设置left/top
-        if (dom.style.position === 'absolute') {
-            dom.style.left = util.toPX(dom.bounds.x).toString();
-            dom.style.top = util.toPX(dom.bounds.y).toString();
-        }
-        dom.style.width = util.toPX(dom.bounds.width).toString();
-        dom.style.height = util.toPX(dom.bounds.height).toString();
-        // 处理混合模式
-        if (node.blendMode) {
-            const cssBlendMode = this.convertBlendMode(node.blendMode);
-            if (cssBlendMode) {
-                dom.style.mixBlendMode = cssBlendMode;
-            }
-        }
-        return dom;
+        // 调用基类转换方法处理定位和其他样式
+        return super.convert(node, dom, parentNode, page, option, container);
     }
 }
 
@@ -3339,123 +3311,67 @@ class COMPONENT_SETConverter extends BaseConverter {
         // 标记为组件集
         dom.attributes = dom.attributes || {};
         dom.attributes['data-component-set'] = 'true';
-        // 组件集和 Frame 类似，使用相同的基本转换逻辑
-        dom.bounds = {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-        };
-        const box = node.absoluteBoundingBox || node.absoluteRenderBounds;
-        if (box) {
-            dom.absoluteBoundingBox = {
-                ...box
-            };
-            const center = {
-                x: box.x + box.width / 2,
-                y: box.y + box.height / 2
-            };
-            // 处理旋转（忽略极小的旋转值，如浮点误差）
-            if (node.rotation && Math.abs(node.rotation) > 0.0001) {
-                dom.data.rotation = node.rotation;
-                dom.transform.rotateZ = node.rotation;
-                dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
-                // 因为拿到的是新长形宽高，需要求出原始长方形宽高
-                const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
-                box.width = size.width;
-                box.height = size.height;
-                box.x = center.x - size.width / 2;
-                box.y = center.y - size.height / 2;
+        // ========== Flex Item 属性处理 ==========
+        // 检查是否参与父元素的 Auto Layout
+        const parentLayoutMode = parentNode ? parentNode.layoutMode : undefined;
+        const parentHasAutoLayout = parentLayoutMode === 'HORIZONTAL' || parentLayoutMode === 'VERTICAL';
+        const isExplicitAbsolute = node.layoutPositioning === 'ABSOLUTE';
+        const participatesInAutoLayout = parentHasAutoLayout && !isExplicitAbsolute;
+        if (participatesInAutoLayout) {
+            // 处理 layoutGrow（flex-grow）
+            const layoutGrow = node.layoutGrow;
+            if (layoutGrow !== undefined && layoutGrow !== 0) {
+                dom.style.flexGrow = layoutGrow.toString();
+                dom.style.flexBasis = '0';
             }
-            dom.bounds.width = box.width;
-            dom.bounds.height = box.height;
-            // 检查父节点是否有Auto Layout
-            const parentHasAutoLayout = parentNode && parentNode.layoutMode && parentNode.layoutMode !== 'NONE';
-            // 检查当前节点是否参与Auto Layout
-            const hasLayoutAlign = node.layoutAlign !== undefined;
-            const hasLayoutGrow = node.layoutGrow !== undefined;
-            const hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
-                node.layoutSizingVertical !== undefined;
-            const participatesInAutoLayout = hasLayoutAlign || hasLayoutGrow || hasLayoutSizing;
-            if (page && !dom.isElement) {
-                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
-                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
-                dom.style.position = 'absolute';
-            }
-            else if (parentNode && parentNode.absoluteBoundingBox) {
-                if (parentHasAutoLayout) {
-                    if (participatesInAutoLayout) {
-                        dom.data.left = dom.bounds.x = 0;
-                        dom.data.top = dom.bounds.y = 0;
-                        dom.style.position = 'relative';
-                    }
-                    else {
-                        if (node.relativeTransform) {
-                            dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
-                            dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
-                        }
-                        else {
-                            dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                            dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                        }
-                        dom.style.position = 'absolute';
-                    }
-                }
-                else {
-                    if (node.relativeTransform) {
-                        dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
-                        dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
-                    }
-                    else {
-                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                    }
-                    dom.style.position = 'absolute';
+            // 处理 layoutAlign（align-self）
+            const layoutAlign = node.layoutAlign;
+            if (layoutAlign && layoutAlign !== 'INHERIT') {
+                switch (layoutAlign) {
+                    case 'STRETCH':
+                        dom.style.alignSelf = 'stretch';
+                        break;
+                    case 'MIN':
+                        dom.style.alignSelf = 'flex-start';
+                        break;
+                    case 'CENTER':
+                        dom.style.alignSelf = 'center';
+                        break;
+                    case 'MAX':
+                        dom.style.alignSelf = 'flex-end';
+                        break;
                 }
             }
-            else {
-                dom.data.left = dom.bounds.x = 0;
-                dom.data.top = dom.bounds.y = 0;
-                dom.style.position = 'absolute';
+            // 处理 layoutSizingHorizontal
+            const layoutSizingHorizontal = node.layoutSizingHorizontal;
+            if (layoutSizingHorizontal) {
+                switch (layoutSizingHorizontal) {
+                    case 'FILL':
+                        dom.style.flexGrow = '1';
+                        dom.style.flexBasis = '0';
+                        dom.style.width = 'auto';
+                        break;
+                    case 'HUG':
+                        dom.style.width = 'auto';
+                        break;
+                }
+            }
+            // 处理 layoutSizingVertical
+            const layoutSizingVertical = node.layoutSizingVertical;
+            if (layoutSizingVertical) {
+                switch (layoutSizingVertical) {
+                    case 'FILL':
+                        dom.style.alignSelf = 'stretch';
+                        dom.style.height = 'auto';
+                        break;
+                    case 'HUG':
+                        dom.style.height = 'auto';
+                        break;
+                }
             }
         }
-        if (node.backgroundColor)
-            dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
-        if (node.cornerRadius) {
-            dom.style.borderRadius = util.toPX(node.cornerRadius);
-        }
-        else if (node.rectangleCornerRadii) {
-            dom.style.borderRadius = node.rectangleCornerRadii.map(p => util.toPX(p)).join(' ');
-        }
-        if (node.opacity)
-            dom.style.opacity = node.opacity.toString();
-        dom.style.transformOrigin = 'center center';
-        if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) {
-            dom.style.overflow = 'hidden';
-        }
-        dom.preserveRatio = node.preserveRatio;
-        await this.convertStyle(node, dom, option, container);
-        await this.convertFills(node, dom, option, container);
-        await this.convertStrokes(node, dom, option, container);
-        await this.convertEffects(node, dom, option, container);
-        dom.data.left = dom.bounds.x;
-        dom.data.top = dom.bounds.y;
-        dom.data.width = dom.bounds.width;
-        dom.data.height = dom.bounds.height;
-        // 只有绝对定位时才设置left/top
-        if (dom.style.position === 'absolute') {
-            dom.style.left = util.toPX(dom.bounds.x).toString();
-            dom.style.top = util.toPX(dom.bounds.y).toString();
-        }
-        dom.style.width = util.toPX(dom.bounds.width).toString();
-        dom.style.height = util.toPX(dom.bounds.height).toString();
-        if (node.blendMode) {
-            const cssBlendMode = this.convertBlendMode(node.blendMode);
-            if (cssBlendMode) {
-                dom.style.mixBlendMode = cssBlendMode;
-            }
-        }
-        return dom;
+        // 调用基类转换方法处理定位和其他样式
+        return super.convert(node, dom, parentNode, page, option, container);
     }
 }
 
@@ -3472,126 +3388,67 @@ class INSTANCEConverter extends BaseConverter {
         if (node.componentId) {
             dom.attributes['data-component-id'] = node.componentId;
         }
-        // 组件实例和 Frame 类似，Figma API 返回的实例数据已经包含了主组件的样式覆盖
-        dom.bounds = {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-        };
-        const box = node.absoluteBoundingBox || node.absoluteRenderBounds;
-        if (box) {
-            dom.absoluteBoundingBox = {
-                ...box
-            };
-            const center = {
-                x: box.x + box.width / 2,
-                y: box.y + box.height / 2
-            };
-            // 处理旋转（忽略极小的旋转值，如浮点误差）
-            if (node.rotation && Math.abs(node.rotation) > 0.0001) {
-                dom.data.rotation = node.rotation;
-                dom.transform.rotateZ = node.rotation;
-                dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
-                // 因为拿到的是新长形宽高，需要求出原始长方形宽高
-                const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
-                box.width = size.width;
-                box.height = size.height;
-                box.x = center.x - size.width / 2;
-                box.y = center.y - size.height / 2;
+        // ========== Flex Item 属性处理 ==========
+        // 检查是否参与父元素的 Auto Layout
+        const parentLayoutMode = parentNode ? parentNode.layoutMode : undefined;
+        const parentHasAutoLayout = parentLayoutMode === 'HORIZONTAL' || parentLayoutMode === 'VERTICAL';
+        const isExplicitAbsolute = node.layoutPositioning === 'ABSOLUTE';
+        const participatesInAutoLayout = parentHasAutoLayout && !isExplicitAbsolute;
+        if (participatesInAutoLayout) {
+            // 处理 layoutGrow（flex-grow）
+            const layoutGrow = node.layoutGrow;
+            if (layoutGrow !== undefined && layoutGrow !== 0) {
+                dom.style.flexGrow = layoutGrow.toString();
+                dom.style.flexBasis = '0';
             }
-            dom.bounds.width = box.width;
-            dom.bounds.height = box.height;
-            // 检查父节点是否有Auto Layout
-            const parentHasAutoLayout = parentNode && parentNode.layoutMode && parentNode.layoutMode !== 'NONE';
-            // 检查当前节点是否参与Auto Layout
-            const hasLayoutAlign = node.layoutAlign !== undefined;
-            const hasLayoutGrow = node.layoutGrow !== undefined;
-            const hasLayoutSizing = node.layoutSizingHorizontal !== undefined ||
-                node.layoutSizingVertical !== undefined;
-            const participatesInAutoLayout = hasLayoutAlign || hasLayoutGrow || hasLayoutSizing;
-            if (page && !dom.isElement) {
-                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
-                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
-                dom.style.position = 'absolute';
-            }
-            else if (parentNode && parentNode.absoluteBoundingBox) {
-                if (parentHasAutoLayout) {
-                    if (participatesInAutoLayout) {
-                        dom.data.left = dom.bounds.x = 0;
-                        dom.data.top = dom.bounds.y = 0;
-                        dom.style.position = 'relative';
-                    }
-                    else {
-                        // 不参与Auto Layout：使用绝对定位
-                        // 优先使用relativeTransform（更精确）
-                        if (node.relativeTransform) {
-                            dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
-                            dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
-                        }
-                        else {
-                            dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                            dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                        }
-                        dom.style.position = 'absolute';
-                    }
-                }
-                else {
-                    // 父节点没有Auto Layout：使用绝对定位
-                    if (node.relativeTransform) {
-                        dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
-                        dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
-                    }
-                    else {
-                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                    }
-                    dom.style.position = 'absolute';
+            // 处理 layoutAlign（align-self）
+            const layoutAlign = node.layoutAlign;
+            if (layoutAlign && layoutAlign !== 'INHERIT') {
+                switch (layoutAlign) {
+                    case 'STRETCH':
+                        dom.style.alignSelf = 'stretch';
+                        break;
+                    case 'MIN':
+                        dom.style.alignSelf = 'flex-start';
+                        break;
+                    case 'CENTER':
+                        dom.style.alignSelf = 'center';
+                        break;
+                    case 'MAX':
+                        dom.style.alignSelf = 'flex-end';
+                        break;
                 }
             }
-            else {
-                dom.data.left = dom.bounds.x = 0;
-                dom.data.top = dom.bounds.y = 0;
-                dom.style.position = 'absolute';
+            // 处理 layoutSizingHorizontal
+            const layoutSizingHorizontal = node.layoutSizingHorizontal;
+            if (layoutSizingHorizontal) {
+                switch (layoutSizingHorizontal) {
+                    case 'FILL':
+                        dom.style.flexGrow = '1';
+                        dom.style.flexBasis = '0';
+                        dom.style.width = 'auto';
+                        break;
+                    case 'HUG':
+                        dom.style.width = 'auto';
+                        break;
+                }
+            }
+            // 处理 layoutSizingVertical
+            const layoutSizingVertical = node.layoutSizingVertical;
+            if (layoutSizingVertical) {
+                switch (layoutSizingVertical) {
+                    case 'FILL':
+                        dom.style.alignSelf = 'stretch';
+                        dom.style.height = 'auto';
+                        break;
+                    case 'HUG':
+                        dom.style.height = 'auto';
+                        break;
+                }
             }
         }
-        if (node.backgroundColor)
-            dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
-        if (node.cornerRadius) {
-            dom.style.borderRadius = util.toPX(node.cornerRadius);
-        }
-        else if (node.rectangleCornerRadii) {
-            dom.style.borderRadius = node.rectangleCornerRadii.map(p => util.toPX(p)).join(' ');
-        }
-        if (node.opacity)
-            dom.style.opacity = node.opacity.toString();
-        dom.style.transformOrigin = 'center center';
-        if (node.clipsContent === true || (parentNode && parentNode.clipsContent === true)) {
-            dom.style.overflow = 'hidden';
-        }
-        dom.preserveRatio = node.preserveRatio;
-        await this.convertStyle(node, dom, option, container);
-        await this.convertFills(node, dom, option, container);
-        await this.convertStrokes(node, dom, option, container);
-        await this.convertEffects(node, dom, option, container);
-        dom.data.left = dom.bounds.x;
-        dom.data.top = dom.bounds.y;
-        dom.data.width = dom.bounds.width;
-        dom.data.height = dom.bounds.height;
-        // 只有绝对定位时才设置left/top
-        if (dom.style.position === 'absolute') {
-            dom.style.left = util.toPX(dom.bounds.x).toString();
-            dom.style.top = util.toPX(dom.bounds.y).toString();
-        }
-        dom.style.width = util.toPX(dom.bounds.width).toString();
-        dom.style.height = util.toPX(dom.bounds.height).toString();
-        if (node.blendMode) {
-            const cssBlendMode = this.convertBlendMode(node.blendMode);
-            if (cssBlendMode) {
-                dom.style.mixBlendMode = cssBlendMode;
-            }
-        }
-        return dom;
+        // 调用基类转换方法处理定位和其他样式
+        return super.convert(node, dom, parentNode, page, option, container);
     }
 }
 
