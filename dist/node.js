@@ -76,7 +76,7 @@ export async function convert(node, parentNode, page, option, container) {
             visible: true,
             data: {},
             style: {
-                // 默认采用绝对定位
+                // 默认绝对定位，由baseNode.ts中的逻辑决定最终的定位方式
                 position: 'absolute',
             },
             children: [],

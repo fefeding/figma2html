@@ -40,12 +40,11 @@ export class FRAMEConverter extends BaseConverter<'FRAME'> {
                                     (node as any).layoutSizingVertical !== undefined;
             
             // 只有当子元素有 Auto Layout 相关属性时，才让它参与 flexbox 布局
-            // 否则保持绝对定位
+            // 否则保持绝对定位（已在baseNode.ts中处理）
             if(hasLayoutAlign || hasLayoutGrow || hasLayoutSizing) {
-                // 移除绝对定位，让 flexbox 布局生效
-                dom.style.position = 'relative';
-                dom.style.left = '';
-                dom.style.top = '';
+                // 参与Auto Layout的子元素
+                // position已在baseNode.ts中设置为relative
+                // 这里只需要处理flex相关属性
                 
                 // 处理 layoutGrow（flex-grow）
                 if(hasLayoutGrow) {
@@ -72,9 +71,34 @@ export class FRAMEConverter extends BaseConverter<'FRAME'> {
                             break;
                     }
                 }
+
+                // 处理 layoutSizingHorizontal（宽度适应）
+                if((node as any).layoutSizingHorizontal) {
+                    switch((node as any).layoutSizingHorizontal) {
+                        case 'FILL':
+                            dom.style.flexGrow = '1';
+                            break;
+                        case 'HUG':
+                            // 自适应内容宽度
+                            dom.style.width = 'auto';
+                            break;
+                    }
+                }
+
+                // 处理 layoutSizingVertical（高度适应）
+                if((node as any).layoutSizingVertical) {
+                    switch((node as any).layoutSizingVertical) {
+                        case 'FILL':
+                            dom.style.alignSelf = 'stretch';
+                            break;
+                        case 'HUG':
+                            // 自适应内容高度
+                            dom.style.height = 'auto';
+                            break;
+                    }
+                }
             }
-            // 没有 Auto Layout 属性的子元素保持绝对定位
-            // 它们的位置由 relativeTransform 决定
+            // 不参与Auto Layout的子元素：position已在baseNode.ts中设置为absolute
         }
 
         return super.convert(node, dom, parentNode, page, option, container);

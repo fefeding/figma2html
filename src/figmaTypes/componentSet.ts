@@ -27,22 +27,75 @@ export class COMPONENT_SETConverter extends BaseConverter<'COMPONENT_SET'> {
             dom.absoluteBoundingBox = {
                 ...box
             };
-            
+
+            const center = {
+                x: box.x + box.width/2,
+                y: box.y + box.height/2
+            };
+
+            // 处理旋转（忽略极小的旋转值，如浮点误差）
+            if(node.rotation && Math.abs(node.rotation) > 0.0001) {
+                dom.data.rotation = node.rotation;
+                dom.transform.rotateZ = node.rotation;
+                dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
+
+                // 因为拿到的是新长形宽高，需要求出原始长方形宽高
+                const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
+                box.width = size.width;
+                box.height = size.height;
+                box.x = center.x - size.width/2;
+                box.y = center.y - size.height/2;
+            }
+
             dom.bounds.width = box.width;
             dom.bounds.height = box.height;
 
+            // 检查父节点是否有Auto Layout
+            const parentHasAutoLayout = parentNode && (parentNode as any).layoutMode && (parentNode as any).layoutMode !== 'NONE';
+            // 检查当前节点是否参与Auto Layout
+            const hasLayoutAlign = (node as any).layoutAlign !== undefined;
+            const hasLayoutGrow = (node as any).layoutGrow !== undefined;
+            const hasLayoutSizing = (node as any).layoutSizingHorizontal !== undefined ||
+                                    (node as any).layoutSizingVertical !== undefined;
+            const participatesInAutoLayout = hasLayoutAlign || hasLayoutGrow || hasLayoutSizing;
+
             if(page && !dom.isElement) {
-                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x; 
-                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y; 
+                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
+                dom.style.position = 'absolute';
             }
             else if(parentNode && parentNode.absoluteBoundingBox) {
-                dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x; 
-                dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y; 
+                if(parentHasAutoLayout) {
+                    if(participatesInAutoLayout) {
+                        dom.data.left = dom.bounds.x = 0;
+                        dom.data.top = dom.bounds.y = 0;
+                        dom.style.position = 'relative';
+                    } else {
+                        if((node as any).relativeTransform) {
+                            dom.data.left = dom.bounds.x = (node as any).relativeTransform[0][2];
+                            dom.data.top = dom.bounds.y = (node as any).relativeTransform[1][2];
+                        } else {
+                            dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                            dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                        }
+                        dom.style.position = 'absolute';
+                    }
+                } else {
+                    if((node as any).relativeTransform) {
+                        dom.data.left = dom.bounds.x = (node as any).relativeTransform[0][2];
+                        dom.data.top = dom.bounds.y = (node as any).relativeTransform[1][2];
+                    } else {
+                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
+                    }
+                    dom.style.position = 'absolute';
+                }
             }
             else {
                 dom.data.left = dom.bounds.x = 0;
                 dom.data.top = dom.bounds.y = 0;
-            } 
+                dom.style.position = 'absolute';
+            }
         }
 
         if(node.backgroundColor) dom.style.backgroundColor = util.colorToString(node.backgroundColor, 255);
@@ -74,8 +127,12 @@ export class COMPONENT_SETConverter extends BaseConverter<'COMPONENT_SET'> {
         dom.data.width = dom.bounds.width;
         dom.data.height = dom.bounds.height;
 
-        dom.style.left = util.toPX(dom.bounds.x).toString();
-        dom.style.top = util.toPX(dom.bounds.y).toString();
+        // 只有绝对定位时才设置left/top
+        if(dom.style.position === 'absolute') {
+            dom.style.left = util.toPX(dom.bounds.x).toString();
+            dom.style.top = util.toPX(dom.bounds.y).toString();
+        }
+
         dom.style.width = util.toPX(dom.bounds.width).toString();
         dom.style.height = util.toPX(dom.bounds.height).toString();
 

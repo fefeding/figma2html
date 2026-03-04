@@ -83,7 +83,7 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
             visible: true,
             data: {} as IJElementData,
             style: {
-                // 默认采用绝对定位
+                // 默认绝对定位，由baseNode.ts中的逻辑决定最终的定位方式
                 position: 'absolute',
             } as CSSStyleDeclaration,
             children: [] as Array<DomNode>,
