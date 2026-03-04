@@ -136,10 +136,6 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
         await converter.convert(node, dom, parentNode, page, option, container);
 
         if(!page && node.type === 'FRAME' && option?.expandToPage) page = dom;// 当前节点开始，为页面模板
-        else if(page && (!container || dom.type === 'svg')) {
-            // 没有显示意义的div不处理
-            if(!dom.isElement) page.children.push(dom);
-        } 
 
         if(node.children && node.children.length) {
             // 检查是否应该跳过子元素渲染
@@ -168,7 +164,7 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
                         (child as any)._parentFills = node.fills;
                     }
 
-                    try {
+                        try {
                         const c = await convert(child, node, parent || page, option, parent);
                         if(!c) continue;
                         lastChildDom = c;
@@ -176,7 +172,8 @@ export async function convert(node: Node, parentNode?: Node, page?: DomNode, opt
                             console.log('[figma2html] Empty dom skipped:', c.name || c.id);
                             continue;
                         }
-                        if(!c.isMask && !dom.children.includes(c) && (!page || c.isElement)) dom.children.push(c);
+                        // 统一将子节点加入父节点的 children 中，不再扁平化
+                        if(!c.isMask && !dom.children.includes(c)) dom.children.push(c);
                     } catch (error) {
                         console.error(`[figma2html] Failed to convert child node ${child.name || child.id}:`, error);
                     }

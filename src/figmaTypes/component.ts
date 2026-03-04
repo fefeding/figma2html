@@ -52,8 +52,12 @@ export class COMPONENTConverter extends BaseConverter<'COMPONENT'> {
             if(layoutSizingHorizontal) {
                 switch(layoutSizingHorizontal) {
                     case 'FILL':
-                        dom.style.flexGrow = '1';
-                        dom.style.flexBasis = '0';
+                        if((parentNode as any).layoutMode === 'HORIZONTAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        } else {
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.width = 'auto';
                         break;
                     case 'HUG':
@@ -67,7 +71,12 @@ export class COMPONENTConverter extends BaseConverter<'COMPONENT'> {
             if(layoutSizingVertical) {
                 switch(layoutSizingVertical) {
                     case 'FILL':
-                        dom.style.alignSelf = 'stretch';
+                        if((parentNode as any).layoutMode === 'VERTICAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        } else {
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.height = 'auto';
                         break;
                     case 'HUG':

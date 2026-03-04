@@ -1538,21 +1538,34 @@ class BaseConverter {
                 x: box.x + box.width / 2,
                 y: box.y + box.height / 2
             };
+            const parentRotation = parentNode.rotation;
+            const parentHasRotation = parentRotation && Math.abs(parentRotation) > 0.0001;
             // 旋转（忽略极小的旋转值，如浮点误差）
             if (node.rotation && Math.abs(node.rotation) > 0.0001) {
                 dom.data.rotation = node.rotation;
                 dom.transform.rotateZ = node.rotation;
                 dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
-                // 因为拿到的是新长形宽高，需要求出原始长方形宽高
-                const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
-                box.width = size.width;
-                box.height = size.height;
-                box.x = center.x - size.width / 2;
-                box.y = center.y - size.height / 2;
-                // 因为都是相对于整个document的坐标，这里需要用原始坐标把它还原到没有旋转前的位置。才是css中的坐标　
-                //const pos = util.rotatePoints(box, center, -dom.data.rotation);
-                //box.x = pos.x;
-                //box.y = pos.y;
+                // 优先使用 Figma 提供的局部尺寸，避免 90° 等角度反推失真
+                if (node.size && util.isNumber(node.size.x) && util.isNumber(node.size.y)) {
+                    box.width = node.size.x;
+                    box.height = node.size.y;
+                    box.x = center.x - box.width / 2;
+                    box.y = center.y - box.height / 2;
+                }
+                else {
+                    const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
+                    if (Number.isFinite(size.width) && Number.isFinite(size.height) && size.width > 0 && size.height > 0) {
+                        box.width = size.width;
+                        box.height = size.height;
+                        box.x = center.x - size.width / 2;
+                        box.y = center.y - size.height / 2;
+                    }
+                }
+            }
+            // 父级有旋转时，absoluteBoundingBox 是全局包围盒，尺寸应回退到节点局部 size
+            if (parentHasRotation && node.size && util.isNumber(node.size.x) && util.isNumber(node.size.y)) {
+                box.width = node.size.x;
+                box.height = node.size.y;
             }
             if (dom.type === 'text' && box.height < node.style?.lineHeightPx)
                 box.height = node.style.lineHeightPx;
@@ -1561,51 +1574,28 @@ class BaseConverter {
             // ========== 智能定位策略 ==========
             // 核心原则：正确识别 Auto Layout，优先使用 Flexbox 布局
             // 检查父节点是否有Auto Layout
-            // 注意：layoutMode 可能是 undefined（不存在）或 'NONE'，都不是 Auto Layout
             const parentLayoutMode = parentNode ? parentNode.layoutMode : undefined;
             const parentHasAutoLayout = parentLayoutMode === 'HORIZONTAL' || parentLayoutMode === 'VERTICAL';
             // 检查当前节点是否显式设置为绝对定位
             const isExplicitAbsolute = node.layoutPositioning === 'ABSOLUTE';
             // 核心判断：是否参与Auto Layout（作为 Flex Item）
-            // 规则：父元素有 Auto Layout，且子元素没有显式设置为绝对定位
             const participatesInAutoLayout = parentHasAutoLayout && !isExplicitAbsolute;
-            // 检查父元素是否有旋转
-            const parentRotation = parentNode.rotation;
-            const parentHasRotation = parentRotation && Math.abs(parentRotation) > 0.0001;
-            // 优先相对于页面坐标, isElement是相于它的父级的
-            if (page && !dom.isElement) {
-                // 顶级Frame
-                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
-                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
-                // 顶级Frame：Auto Layout容器使用相对定位，否则绝对定位
-                if (node.layoutMode && node.layoutMode !== 'NONE') {
-                    dom.style.position = 'relative';
-                    // 清除left/top，让Auto Layout容器自然定位
-                    delete dom.data.left;
-                    delete dom.data.top;
-                    delete dom.style.left;
-                    delete dom.style.top;
-                }
-                else {
-                    dom.style.position = 'absolute';
-                }
+            // 检查父元素是否有旋转（已在上方计算）
+            // 定位逻辑
+            if (participatesInAutoLayout) {
+                // ========== 参与 Auto Layout (Flex Item) ==========
+                dom.data.left = dom.bounds.x = 0;
+                dom.data.top = dom.bounds.y = 0;
+                dom.style.position = 'relative';
+                // 清除可能的定位属性，让 Flexbox 决定位置
+                delete dom.style.left;
+                delete dom.style.top;
             }
-            // 相对于父位置
             else if (parentNode && parentNode.absoluteBoundingBox) {
-                if (participatesInAutoLayout) {
-                    // ========== 参与Auto Layout（Flex Item）==========
-                    // 位置由flex布局决定，不需要设置left/top
-                    dom.data.left = dom.bounds.x = 0;
-                    dom.data.top = dom.bounds.y = 0;
-                    dom.style.position = 'relative';
-                    // 清除可能的定位属性
-                    delete dom.style.left;
-                    delete dom.style.top;
-                }
-                else if (parentHasRotation && isExplicitAbsolute) {
-                    // ========== 绝对定位 + 父元素旋转 ==========
-                    dom.data.parentHasRotation = true;
-                    dom.data.parentRotation = parentRotation;
+                // ========== 绝对定位 (相对于父节点) ==========
+                dom.style.position = 'absolute';
+                if (parentHasRotation && isExplicitAbsolute) {
+                    // 处理父节点旋转时的绝对定位
                     const parentCenter = {
                         x: parentNode.absoluteBoundingBox.x + parentNode.absoluteBoundingBox.width / 2,
                         y: parentNode.absoluteBoundingBox.y + parentNode.absoluteBoundingBox.height / 2
@@ -1622,35 +1612,26 @@ class BaseConverter {
                     const rotatedY = offsetX * sin + offsetY * cos;
                     dom.data.left = dom.bounds.x = rotatedX - box.width / 2 + parentNode.absoluteBoundingBox.width / 2;
                     dom.data.top = dom.bounds.y = rotatedY - box.height / 2 + parentNode.absoluteBoundingBox.height / 2;
-                    dom.style.position = 'absolute';
                 }
-                else if (parentHasAutoLayout && isExplicitAbsolute) {
-                    // ========== 在Auto Layout容器中显式绝对定位 ==========
-                    if (node.relativeTransform) {
-                        dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
-                        dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
-                    }
-                    else {
-                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                    }
-                    dom.style.position = 'absolute';
+                else if (node.relativeTransform) {
+                    // 优先使用 relativeTransform [ [1, 0, x], [0, 1, y] ]
+                    dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
+                    dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
                 }
                 else {
-                    // ========== 普通绝对定位（父元素无Auto Layout）==========
-                    if (node.relativeTransform) {
-                        dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
-                        dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
-                    }
-                    else {
-                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                    }
-                    dom.style.position = 'absolute';
+                    // 回退到 absoluteBoundingBox 差值计算
+                    dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                    dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
                 }
             }
-            // 没有父元素，使用相对定位
+            else if (page && page.absoluteBoundingBox) {
+                // ========== 相对于页面的定位 (顶级节点) ==========
+                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
+                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
+                dom.style.position = 'absolute';
+            }
             else {
+                // ========== 无父节点 ==========
                 dom.data.left = dom.bounds.x = 0;
                 dom.data.top = dom.bounds.y = 0;
                 dom.style.position = 'relative';
@@ -2359,10 +2340,18 @@ class BaseConverter {
         // 旋转后的长方形的宽和高 newWidth newHeight
         const cos = Math.cos(radian);
         const sin = Math.sin(radian);
+        const denominator = cos ** 2 - sin ** 2;
+        // 在接近 45°/135° 时，反推会出现数值不稳定，直接回退
+        if (Math.abs(denominator) < 1e-6) {
+            return { width: newWidth, height: newHeight };
+        }
         // 解方程求原始长方形的宽度和高度
-        const w = (newWidth * Math.abs(cos) - newHeight * Math.abs(sin)) / (cos ** 2 - sin ** 2);
-        const h = (newHeight * Math.abs(cos) - newWidth * Math.abs(sin)) / (cos ** 2 - sin ** 2);
-        return { width: w, height: h };
+        const w = (newWidth * Math.abs(cos) - newHeight * Math.abs(sin)) / denominator;
+        const h = (newHeight * Math.abs(cos) - newWidth * Math.abs(sin)) / denominator;
+        return {
+            width: Number.isFinite(w) && w > 0 ? w : newWidth,
+            height: Number.isFinite(h) && h > 0 ? h : newHeight
+        };
     }
     // 转换混合模式
     convertBlendMode(blendMode) {
@@ -2469,9 +2458,16 @@ class FRAMEConverter extends BaseConverter {
             if (layoutSizingHorizontal) {
                 switch (layoutSizingHorizontal) {
                     case 'FILL':
-                        // 填充：使用 flex-grow 拉伸
-                        dom.style.flexGrow = '1';
-                        dom.style.flexBasis = '0';
+                        // FILL 是“填充父容器在该轴向的可用空间”
+                        // 若父是 HORIZONTAL，则水平是主轴，使用 flex-grow
+                        if (parentNode.layoutMode === 'HORIZONTAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        }
+                        else {
+                            // 父是 VERTICAL 时，水平是交叉轴，使用 stretch
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.width = 'auto';
                         break;
                     case 'HUG':
@@ -2486,8 +2482,15 @@ class FRAMEConverter extends BaseConverter {
             if (layoutSizingVertical) {
                 switch (layoutSizingVertical) {
                     case 'FILL':
-                        // 填充：使用 align-self: stretch
-                        dom.style.alignSelf = 'stretch';
+                        // 若父是 VERTICAL，则垂直是主轴，使用 flex-grow
+                        if (parentNode.layoutMode === 'VERTICAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        }
+                        else {
+                            // 父是 HORIZONTAL 时，垂直是交叉轴，使用 stretch
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.height = 'auto';
                         break;
                     case 'HUG':
@@ -3274,8 +3277,13 @@ class COMPONENTConverter extends BaseConverter {
             if (layoutSizingHorizontal) {
                 switch (layoutSizingHorizontal) {
                     case 'FILL':
-                        dom.style.flexGrow = '1';
-                        dom.style.flexBasis = '0';
+                        if (parentNode.layoutMode === 'HORIZONTAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        }
+                        else {
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.width = 'auto';
                         break;
                     case 'HUG':
@@ -3288,7 +3296,13 @@ class COMPONENTConverter extends BaseConverter {
             if (layoutSizingVertical) {
                 switch (layoutSizingVertical) {
                     case 'FILL':
-                        dom.style.alignSelf = 'stretch';
+                        if (parentNode.layoutMode === 'VERTICAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        }
+                        else {
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.height = 'auto';
                         break;
                     case 'HUG':
@@ -3347,8 +3361,13 @@ class COMPONENT_SETConverter extends BaseConverter {
             if (layoutSizingHorizontal) {
                 switch (layoutSizingHorizontal) {
                     case 'FILL':
-                        dom.style.flexGrow = '1';
-                        dom.style.flexBasis = '0';
+                        if (parentNode.layoutMode === 'HORIZONTAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        }
+                        else {
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.width = 'auto';
                         break;
                     case 'HUG':
@@ -3361,7 +3380,13 @@ class COMPONENT_SETConverter extends BaseConverter {
             if (layoutSizingVertical) {
                 switch (layoutSizingVertical) {
                     case 'FILL':
-                        dom.style.alignSelf = 'stretch';
+                        if (parentNode.layoutMode === 'VERTICAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        }
+                        else {
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.height = 'auto';
                         break;
                     case 'HUG':
@@ -3424,8 +3449,13 @@ class INSTANCEConverter extends BaseConverter {
             if (layoutSizingHorizontal) {
                 switch (layoutSizingHorizontal) {
                     case 'FILL':
-                        dom.style.flexGrow = '1';
-                        dom.style.flexBasis = '0';
+                        if (parentNode.layoutMode === 'HORIZONTAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        }
+                        else {
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.width = 'auto';
                         break;
                     case 'HUG':
@@ -3438,7 +3468,13 @@ class INSTANCEConverter extends BaseConverter {
             if (layoutSizingVertical) {
                 switch (layoutSizingVertical) {
                     case 'FILL':
-                        dom.style.alignSelf = 'stretch';
+                        if (parentNode.layoutMode === 'VERTICAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        }
+                        else {
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.height = 'auto';
                         break;
                     case 'HUG':
@@ -3567,11 +3603,6 @@ async function convert(node, parentNode, page, option, container) {
         await converter.convert(node, dom, parentNode, page, option, container);
         if (!page && node.type === 'FRAME' && option?.expandToPage)
             page = dom; // 当前节点开始，为页面模板
-        else if (page && (!container || dom.type === 'svg')) {
-            // 没有显示意义的div不处理
-            if (!dom.isElement)
-                page.children.push(dom);
-        }
         if (node.children && node.children.length) {
             // 检查是否应该跳过子元素渲染
             // BOOLEAN_OPERATION 有自己的 fillGeometry 时，不需要渲染子元素
@@ -3604,7 +3635,8 @@ async function convert(node, parentNode, page, option, container) {
                             console.log('[figma2html] Empty dom skipped:', c.name || c.id);
                             continue;
                         }
-                        if (!c.isMask && !dom.children.includes(c) && (!page || c.isElement))
+                        // 统一将子节点加入父节点的 children 中，不再扁平化
+                        if (!c.isMask && !dom.children.includes(c))
                             dom.children.push(c);
                     }
                     catch (error) {

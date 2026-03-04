@@ -25,23 +25,37 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                 x: box.x + box.width/2,
                 y: box.y + box.height/2
             };
+
+            const parentRotation = (parentNode as any).rotation;
+            const parentHasRotation = parentRotation && Math.abs(parentRotation) > 0.0001;
+
             // 旋转（忽略极小的旋转值，如浮点误差）
             if(node.rotation && Math.abs(node.rotation) > 0.0001) {
                 dom.data.rotation = node.rotation;
                 dom.transform.rotateZ = node.rotation;
                 dom.style.transform = `rotate(${util.toRad(node.rotation)})`;
 
-                // 因为拿到的是新长形宽高，需要求出原始长方形宽高
-                const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
-                box.width = size.width;
-                box.height = size.height;
-                box.x = center.x - size.width/2; 
-                box.y = center.y - size.height/2;
+                // 优先使用 Figma 提供的局部尺寸，避免 90° 等角度反推失真
+                if((node as any).size && util.isNumber((node as any).size.x) && util.isNumber((node as any).size.y)) {
+                    box.width = (node as any).size.x;
+                    box.height = (node as any).size.y;
+                    box.x = center.x - box.width/2;
+                    box.y = center.y - box.height/2;
+                } else {
+                    const size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
+                    if(Number.isFinite(size.width) && Number.isFinite(size.height) && size.width > 0 && size.height > 0) {
+                        box.width = size.width;
+                        box.height = size.height;
+                        box.x = center.x - size.width/2;
+                        box.y = center.y - size.height/2;
+                    }
+                }
+            }
 
-                // 因为都是相对于整个document的坐标，这里需要用原始坐标把它还原到没有旋转前的位置。才是css中的坐标　
-                //const pos = util.rotatePoints(box, center, -dom.data.rotation);
-                //box.x = pos.x;
-                //box.y = pos.y;
+            // 父级有旋转时，absoluteBoundingBox 是全局包围盒，尺寸应回退到节点局部 size
+            if(parentHasRotation && (node as any).size && util.isNumber((node as any).size.x) && util.isNumber((node as any).size.y)) {
+                box.width = (node as any).size.x;
+                box.height = (node as any).size.y;
             }
 
             if(dom.type === 'text' && box.height < node.style?.lineHeightPx) box.height = node.style.lineHeightPx;
@@ -53,7 +67,6 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             // 核心原则：正确识别 Auto Layout，优先使用 Flexbox 布局
             
             // 检查父节点是否有Auto Layout
-            // 注意：layoutMode 可能是 undefined（不存在）或 'NONE'，都不是 Auto Layout
             const parentLayoutMode = parentNode ? (parentNode as any).layoutMode : undefined;
             const parentHasAutoLayout = parentLayoutMode === 'HORIZONTAL' || parentLayoutMode === 'VERTICAL';
             
@@ -61,48 +74,26 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             const isExplicitAbsolute = (node as any).layoutPositioning === 'ABSOLUTE';
             
             // 核心判断：是否参与Auto Layout（作为 Flex Item）
-            // 规则：父元素有 Auto Layout，且子元素没有显式设置为绝对定位
             const participatesInAutoLayout = parentHasAutoLayout && !isExplicitAbsolute;
 
-            // 检查父元素是否有旋转
-            const parentRotation = (parentNode as any).rotation;
-            const parentHasRotation = parentRotation && Math.abs(parentRotation) > 0.0001;
+            // 检查父元素是否有旋转（已在上方计算）
 
-            // 优先相对于页面坐标, isElement是相于它的父级的
-            if(page && !dom.isElement) {
-                // 顶级Frame
-                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x; 
-                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
-                
-                // 顶级Frame：Auto Layout容器使用相对定位，否则绝对定位
-                if((node as any).layoutMode && (node as any).layoutMode !== 'NONE') {
-                    dom.style.position = 'relative';
-                    // 清除left/top，让Auto Layout容器自然定位
-                    delete dom.data.left;
-                    delete dom.data.top;
-                    delete dom.style.left;
-                    delete dom.style.top;
-                } else {
-                    dom.style.position = 'absolute';
-                }
-            }
-            // 相对于父位置
+            // 定位逻辑
+            if(participatesInAutoLayout) {
+                // ========== 参与 Auto Layout (Flex Item) ==========
+                dom.data.left = dom.bounds.x = 0; 
+                dom.data.top = dom.bounds.y = 0;
+                dom.style.position = 'relative';
+                // 清除可能的定位属性，让 Flexbox 决定位置
+                delete dom.style.left;
+                delete dom.style.top;
+            } 
             else if(parentNode && parentNode.absoluteBoundingBox) {
-                if(participatesInAutoLayout) {
-                    // ========== 参与Auto Layout（Flex Item）==========
-                    // 位置由flex布局决定，不需要设置left/top
-                    dom.data.left = dom.bounds.x = 0; 
-                    dom.data.top = dom.bounds.y = 0;
-                    dom.style.position = 'relative';
-                    // 清除可能的定位属性
-                    delete dom.style.left;
-                    delete dom.style.top;
-                } 
-                else if(parentHasRotation && isExplicitAbsolute) {
-                    // ========== 绝对定位 + 父元素旋转 ==========
-                    dom.data.parentHasRotation = true;
-                    dom.data.parentRotation = parentRotation;
-                    
+                // ========== 绝对定位 (相对于父节点) ==========
+                dom.style.position = 'absolute';
+                
+                if(parentHasRotation && isExplicitAbsolute) {
+                    // 处理父节点旋转时的绝对定位
                     const parentCenter = {
                         x: parentNode.absoluteBoundingBox.x + parentNode.absoluteBoundingBox.width / 2,
                         y: parentNode.absoluteBoundingBox.y + parentNode.absoluteBoundingBox.height / 2
@@ -122,33 +113,26 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                     
                     dom.data.left = dom.bounds.x = rotatedX - box.width / 2 + parentNode.absoluteBoundingBox.width / 2;
                     dom.data.top = dom.bounds.y = rotatedY - box.height / 2 + parentNode.absoluteBoundingBox.height / 2;
-                    dom.style.position = 'absolute';
                 } 
-                else if(parentHasAutoLayout && isExplicitAbsolute) {
-                    // ========== 在Auto Layout容器中显式绝对定位 ==========
-                    if((node as any).relativeTransform) {
-                        dom.data.left = dom.bounds.x = (node as any).relativeTransform[0][2];
-                        dom.data.top = dom.bounds.y = (node as any).relativeTransform[1][2];
-                    } else {
-                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x; 
-                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                    }
-                    dom.style.position = 'absolute';
-                }
+                else if((node as any).relativeTransform) {
+                    // 优先使用 relativeTransform [ [1, 0, x], [0, 1, y] ]
+                    dom.data.left = dom.bounds.x = (node as any).relativeTransform[0][2];
+                    dom.data.top = dom.bounds.y = (node as any).relativeTransform[1][2];
+                } 
                 else {
-                    // ========== 普通绝对定位（父元素无Auto Layout）==========
-                    if((node as any).relativeTransform) {
-                        dom.data.left = dom.bounds.x = (node as any).relativeTransform[0][2];
-                        dom.data.top = dom.bounds.y = (node as any).relativeTransform[1][2];
-                    } else {
-                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x; 
-                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                    }
-                    dom.style.position = 'absolute';
+                    // 回退到 absoluteBoundingBox 差值计算
+                    dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x; 
+                    dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
                 }
             }
-            // 没有父元素，使用相对定位
+            else if(page && page.absoluteBoundingBox) {
+                // ========== 相对于页面的定位 (顶级节点) ==========
+                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x; 
+                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
+                dom.style.position = 'absolute';
+            }
             else {
+                // ========== 无父节点 ==========
                 dom.data.left = dom.bounds.x = 0;
                 dom.data.top = dom.bounds.y = 0;
                 dom.style.position = 'relative';
@@ -898,11 +882,21 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
 
         const cos = Math.cos(radian);
         const sin = Math.sin(radian)
+        const denominator = cos**2 - sin**2;
+
+        // 在接近 45°/135° 时，反推会出现数值不稳定，直接回退
+        if(Math.abs(denominator) < 1e-6) {
+            return { width: newWidth, height: newHeight };
+        }
+
         // 解方程求原始长方形的宽度和高度
-        const w = (newWidth * Math.abs(cos) - newHeight * Math.abs(sin)) / (cos**2 - sin**2);
-        const h = (newHeight * Math.abs(cos) - newWidth * Math.abs(sin)) / (cos**2 - sin**2);
+        const w = (newWidth * Math.abs(cos) - newHeight * Math.abs(sin)) / denominator;
+        const h = (newHeight * Math.abs(cos) - newWidth * Math.abs(sin)) / denominator;
         
-        return { width: w,  height: h };
+        return {
+            width: Number.isFinite(w) && w > 0 ? w : newWidth,
+            height: Number.isFinite(h) && h > 0 ? h : newHeight
+        };
     }
 
     // 转换混合模式

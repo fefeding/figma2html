@@ -71,9 +71,15 @@ export class FRAMEConverter extends BaseConverter<'FRAME'> {
             if(layoutSizingHorizontal) {
                 switch(layoutSizingHorizontal) {
                     case 'FILL':
-                        // 填充：使用 flex-grow 拉伸
-                        dom.style.flexGrow = '1';
-                        dom.style.flexBasis = '0';
+                        // FILL 是“填充父容器在该轴向的可用空间”
+                        // 若父是 HORIZONTAL，则水平是主轴，使用 flex-grow
+                        if((parentNode as any).layoutMode === 'HORIZONTAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        } else {
+                            // 父是 VERTICAL 时，水平是交叉轴，使用 stretch
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.width = 'auto';
                         break;
                     case 'HUG':
@@ -89,8 +95,14 @@ export class FRAMEConverter extends BaseConverter<'FRAME'> {
             if(layoutSizingVertical) {
                 switch(layoutSizingVertical) {
                     case 'FILL':
-                        // 填充：使用 align-self: stretch
-                        dom.style.alignSelf = 'stretch';
+                        // 若父是 VERTICAL，则垂直是主轴，使用 flex-grow
+                        if((parentNode as any).layoutMode === 'VERTICAL') {
+                            dom.style.flexGrow = '1';
+                            dom.style.flexBasis = '0';
+                        } else {
+                            // 父是 HORIZONTAL 时，垂直是交叉轴，使用 stretch
+                            dom.style.alignSelf = 'stretch';
+                        }
                         dom.style.height = 'auto';
                         break;
                     case 'HUG':
