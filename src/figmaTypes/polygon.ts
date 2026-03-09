@@ -86,9 +86,11 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
 
         // 生成路径
         this.createPolygonPath(polygon, node, container);
+        await this.createAdditionalFillLayers(node, dom, polygon, option, container);
 
         return dom;
     }
+
 
     // 获取定位
     getPosition(dom: DomNode, container?: DomNode) {
@@ -137,8 +139,85 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
         }
     }
 
+    async createAdditionalFillLayers(node: Node<NType>, dom: DomNode, polygon: DomNode, option?: ConvertNodeOption, container?: DomNode) {
+        if(node.isMask) return;
+        if(!node.fills || node.fills.length < 2) return;
+
+        const visibleFills = node.fills.filter(fill => fill.visible !== false);
+        if(visibleFills.length < 2) return;
+
+        const svgContainer = container || dom;
+        const polygonIndex = svgContainer.children.indexOf(polygon);
+        if(polygonIndex < 0) return;
+
+        let insertIndex = polygonIndex;
+        for(const fill of [...visibleFills.slice(1)].reverse()) {
+            const layerPolygon = this.createDomNode(polygon.type as DomNodeType, {
+                // @ts-ignore
+                figmaData: node,
+                attributes: {
+                    ...polygon.attributes,
+                },
+                style: {
+                    ...polygon.style,
+                } as CSSStyleDeclaration,
+            });
+            layerPolygon.bounds = {
+                ...polygon.bounds,
+            };
+            delete layerPolygon.attributes['stroke'];
+            delete layerPolygon.attributes['stroke-width'];
+            delete layerPolygon.attributes['stroke-dasharray'];
+            delete layerPolygon.style.fill;
+            delete layerPolygon.style.mixBlendMode;
+            await this.applySingleFillToPolygon(fill, node, layerPolygon, dom, option, container);
+            svgContainer.children.splice(insertIndex, 0, layerPolygon);
+            insertIndex++;
+        }
+    }
+
+    async applySingleFillToPolygon(fill: Paint, node: Node<NType>, polygon: DomNode, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
+        switch(fill.type) {
+            case PaintType.SOLID: {
+                const color = {
+                    ...fill.color,
+                    a: typeof fill.opacity !== 'undefined' ? fill.opacity : fill.color.a,
+                };
+                polygon.style.fill = util.colorToString(color, 255);
+                break;
+            }
+            case PaintType.GRADIENT_LINEAR: {
+                polygon.style.fill = this.convertLinearGradient(fill, dom, container);
+                break;
+            }
+            case PaintType.GRADIENT_DIAMOND:
+            case PaintType.GRADIENT_ANGULAR:
+            case PaintType.GRADIENT_RADIAL: {
+                polygon.style.fill = this.convertRadialGradient(fill, dom, container);
+                break;
+            }
+            case PaintType.IMAGE: {
+                await super.convertFills({
+                    ...node,
+                    fills: [fill],
+                } as Node<NType>, polygon, option, container);
+                break;
+            }
+        }
+
+        if(fill.blendMode) {
+            const cssBlendMode = this.convertBlendMode(fill.blendMode);
+            if(cssBlendMode && cssBlendMode !== 'normal') {
+                polygon.style.mixBlendMode = cssBlendMode;
+            }
+        }
+
+        if(!polygon.style.fill) polygon.style.fill = 'none';
+    }
+
     // 获取蒙板
     getMask(container: DomNode) {
+
         const defs = container.children[0];
         if(defs.children?.length) {
             for(const child of defs.children) {
@@ -170,64 +249,27 @@ export class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'> extend
     async convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
         const polygon = this.getPolygon(node, container || dom);
 
-        // 检查父元素是否是 BOOLEAN_OPERATION 且有自己的填充
-        // 如果是，子元素应该使用透明填充，让父元素的填充显示
         const parentFills = (node as any)._parentFills;
         if(parentFills && parentFills.length > 0) {
             polygon.style.fill = 'transparent';
             return dom;
         }
 
-        // 没有 fills 或 fills 为空数组时，设置 fill 为 none
         if(!node.fills || node.fills.length === 0) {
             polygon.style.fill = 'none';
             return dom;
         }
 
-        // 只使用第一个可见的 fill
-        // Figma 中的多个 fills 需要创建多个图层，这里简化处理
         const visibleFill = node.fills.find(fill => fill.visible !== false);
-
-        if(visibleFill) {
-            switch(visibleFill.type) {
-                case PaintType.SOLID: {
-                    if(typeof visibleFill.opacity !== 'undefined') visibleFill.color.a = visibleFill.opacity;
-                    polygon.style.fill = util.colorToString(visibleFill.color, 255);
-                    break;
-                }
-                // 线性渐变
-                case PaintType.GRADIENT_LINEAR: {
-                    polygon.style.fill = this.convertLinearGradient(visibleFill, dom, container);
-                    break;
-                }
-                // 径向性渐变
-                case PaintType.GRADIENT_DIAMOND:
-                case PaintType.GRADIENT_ANGULAR:
-                case PaintType.GRADIENT_RADIAL: {
-                    polygon.style.fill = this.convertRadialGradient(visibleFill, dom, container);
-                    break;
-                }
-                // 图片
-                case PaintType.IMAGE: {
-                    await super.convertFills(node, polygon, option, container);
-                    break;
-                }
-            }
-
-            // 处理混合模式
-            if(visibleFill.blendMode) {
-                const cssBlendMode = this.convertBlendMode(visibleFill.blendMode);
-                if(cssBlendMode && cssBlendMode !== 'normal') {
-                    polygon.style.mixBlendMode = cssBlendMode;
-                }
-            }
+        if(!visibleFill) {
+            polygon.style.fill = 'none';
+            return dom;
         }
 
-        // 默认透明（如果没有可见的 fill）
-        if(!polygon.style.fill) polygon.style.fill = 'none';
-
+        await this.applySingleFillToPolygon(visibleFill, node, polygon, dom, option, container);
         return dom;
     }
+
 
     // 处理边框
     async convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {

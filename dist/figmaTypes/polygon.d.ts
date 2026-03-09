@@ -8,6 +8,8 @@ export declare class PolygonConverter<NType extends NodeType = 'REGULAR_POLYGON'
         y: number;
     };
     createPolygonPath(dom: DomNode, node: Node<NType>, container?: DomNode): void;
+    createAdditionalFillLayers(node: Node<NType>, dom: DomNode, polygon: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<void>;
+    applySingleFillToPolygon(fill: Paint, node: Node<NType>, polygon: DomNode, dom: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<void>;
     getMask(container: DomNode): DomNode;
     getPolygon(node: Node<NType>, dom: DomNode): DomNode;
     convertFills(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;

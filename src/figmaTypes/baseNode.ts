@@ -15,9 +15,19 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
             height: 0,
         };
 
-        const box = node.absoluteBoundingBox || node.absoluteRenderBounds;
-        if(box) {
-            // dom 上保留原值
+        const sourceBox = node.absoluteBoundingBox || node.absoluteRenderBounds || this.getNodeAbsoluteBoundingBox(node);
+        if(sourceBox) {
+            if(!node.absoluteBoundingBox) {
+                node.absoluteBoundingBox = {
+                    ...sourceBox
+                };
+            }
+
+            const box = {
+                ...sourceBox
+            };
+
+            // dom 上保留原值
             dom.absoluteBoundingBox = {
                 ...box
             };
@@ -25,6 +35,7 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                 x: box.x + box.width/2,
                 y: box.y + box.height/2
             };
+
 
             const parentRotation = (parentNode as any).rotation;
             const parentHasRotation = parentRotation && Math.abs(parentRotation) > 0.0001;
@@ -84,10 +95,12 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
                 dom.data.left = dom.bounds.x = 0; 
                 dom.data.top = dom.bounds.y = 0;
                 dom.style.position = 'relative';
+                dom.style.flexShrink = '0';
                 // 清除可能的定位属性，让 Flexbox 决定位置
                 delete dom.style.left;
                 delete dom.style.top;
             } 
+
             else if(parentNode && parentNode.absoluteBoundingBox) {
                 // ========== 绝对定位 (相对于父节点) ==========
                 dom.style.position = 'absolute';
@@ -267,8 +280,47 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
         return dom;
     }
 
+    getNodeAbsoluteBoundingBox(node: Node<any>) {
+        const directBox = node.absoluteBoundingBox || node.absoluteRenderBounds;
+        if(directBox) {
+            return {
+                ...directBox
+            };
+        }
+
+        if(!node.children || !node.children.length) return null;
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        for(const child of node.children) {
+            if(!child || child.visible === false) continue;
+            const childBox = this.getNodeAbsoluteBoundingBox(child as Node<any>);
+            if(!childBox) continue;
+
+            minX = Math.min(minX, childBox.x);
+            minY = Math.min(minY, childBox.y);
+            maxX = Math.max(maxX, childBox.x + childBox.width);
+            maxY = Math.max(maxY, childBox.y + childBox.height);
+        }
+
+        if(!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+            return null;
+        }
+
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY,
+        };
+    }
+
     // 生成节点对象
     createDomNode(type: DomNodeType, option?: DomNode) {
+
         const dom = {
             data: {} as IJElementData,
             attributes: {} as StringKeyValue,
@@ -352,181 +404,210 @@ export class BaseConverter<NType extends NodeType = NodeType> implements NodeCon
 
     // 处理填充
     async convertFills(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
-        // isMaskOutline 如果为true则忽略填充样式
-        if(!node.isMaskOutline && node.fills) {
-            for(const fill of node.fills) {
-                if(fill.visible === false) continue;
+        if(node.isMaskOutline || !node.fills) return dom;
 
-                switch(fill.type) {
-                    case PaintType.SOLID: {
-                        if(typeof fill.opacity !== 'undefined') fill.color.a = fill.opacity;
-                        dom.style.backgroundColor = util.colorToString(fill.color, 255);
-                        break;
+        const visibleFills = node.fills.filter(fill => fill.visible !== false);
+        if(!visibleFills.length) return dom;
+
+        const backgroundLayers = [] as Array<string>;
+        const backgroundSizes = [] as Array<string>;
+        const backgroundRepeats = [] as Array<string>;
+        const backgroundBlendModes = [] as Array<string>;
+
+        for(const fill of visibleFills) {
+            let backgroundLayer = '';
+            const fillConfig = this.getFillBackgroundConfig(fill);
+
+            switch(fill.type) {
+                case PaintType.SOLID: {
+                    const color = {
+                        ...fill.color,
+                        a: typeof fill.opacity !== 'undefined' ? fill.opacity : fill.color.a,
+                    };
+                    const colorString = util.colorToString(color, 255);
+                    if(visibleFills.length > 1 && dom.type !== 'img') {
+                        backgroundLayer = `linear-gradient(${colorString}, ${colorString})`;
                     }
-                    // 线性渐变
-                    case PaintType.GRADIENT_LINEAR: {
-                        dom.style.background = this.convertLinearGradient(fill, dom, container);
-                        break;
+                    else {
+                        dom.style.backgroundColor = colorString;
                     }
-                    // 径向性渐变
-                    case PaintType.GRADIENT_DIAMOND:
-                    case PaintType.GRADIENT_ANGULAR:
-                    case PaintType.GRADIENT_RADIAL: {
-                        dom.style.background = this.convertRadialGradient(fill, dom, container);
-                        break;
-                    }
-                    // 图片
-                    case PaintType.IMAGE: {
-                        if(option && option.getImage) {
-                            const img = await option.getImage(fill.imageRef);
-                            if(img) {
-                                if(dom.type === 'img') {
-                                    dom.url = img;
-                                }
-                                else {
-                                    dom.style.backgroundImage = `url(${img})`;
-                                }
+                    break;
+                }
+                case PaintType.GRADIENT_LINEAR: {
+                    backgroundLayer = this.convertLinearGradient(fill, dom, container);
+                    break;
+                }
+                case PaintType.GRADIENT_DIAMOND:
+                case PaintType.GRADIENT_ANGULAR:
+                case PaintType.GRADIENT_RADIAL: {
+                    backgroundLayer = this.convertRadialGradient(fill, dom, container);
+                    break;
+                }
+                case PaintType.IMAGE: {
+                    if(option && option.getImage) {
+                        const img = await option.getImage(fill.imageRef);
+                        dom.backgroundImageUrl = img || fill.imageRef;
+                        if(img) {
+                            if(dom.type === 'img') {
+                                dom.url = img;
                             }
-                            dom.backgroundImageUrl = img || fill.imageRef;
-                        }
-                        break;
-                    }
-                }
-                        
-                switch(fill.scaleMode) {
-                    case PaintSolidScaleMode.FILL: {
-                        dom.data.imageSizeMode = dom.style.backgroundSize = 'cover';
-                        break;
-                    }
-                    case PaintSolidScaleMode.FIT: {
-                        dom.data.imageSizeMode = dom.style.backgroundSize = 'contain';
-                        break;
-                    }
-                    case PaintSolidScaleMode.CROP: {
-                        dom.data.imageSizeMode = dom.style.backgroundSize = 'stretch';
-                        break;
-                    }
-                    case PaintSolidScaleMode.STRETCH: {
-                        dom.style.backgroundSize = '100% 100%';
-                        dom.data.imageSizeMode = 'stretch';
-                        break;
-                    }
-                    // 平铺
-                    case PaintSolidScaleMode.TILE: {
-                        dom.data.imageSizeMode = dom.style.backgroundRepeat = 'repeat';
-                        break;
-                    }
-                }
-
-                // 处理填充的混合模式
-                if(fill.blendMode) {
-                    const cssBlendMode = this.convertBlendMode(fill.blendMode);
-                    if(cssBlendMode && cssBlendMode !== 'normal') {
-                        // 对于填充的混合模式，使用 background-blend-mode
-                        dom.style.backgroundBlendMode = cssBlendMode;
-                    }
-                }
-
-                if(dom && fill.imageTransform && fill.scaleMode === PaintSolidScaleMode.STRETCH) {
-                    if(!dom.transform) dom.transform = {} as IStyleTransform;
-
-                    /**
-                     * [[cos(angle), sin(angle), 0],
-                        [-sin(angle), cos(angle), 0]]
-                     */
-                    const [
-                        [a, c, e], 
-                        [b, d, f]
-                    ] = fill.imageTransform;
-
-                    // 计算旋转角度和正弦值
-                    dom.transform.translateX = util.toPX(e) // * node.absoluteBoundingBox.width;                    
-                    dom.transform.translateY = util.toPX(f)  //* node.absoluteBoundingBox.width;
-
-                    //dom.transform.scaleX = Math.sqrt(a*a + b*b);
-                    //dom.transform.scaleY = Math.sqrt(c*c + d*d);
-
-                    //dom.transform.skewX = Math.atan2(b, a);
-                    //dom.transform.skewY =  Math.atan2(b, a);
-
-                    // 计算旋转角度和正弦值
-                    const rotation = Math.atan2(b, a);//util.getPointCoordRotation({x: a, y: b}, {x: c, y: d}); //Math.atan2(b, a);
-                    dom.transform.rotateZ = rotation;
-
-                    //const scaleX = Math.sqrt(a * a + b * b);
-                    //const scaleY = Math.sqrt(c * c + d * d);
-
-                    dom.preserveRatio = true;
-                }
-                // 如果有滤镜，则给指定
-                if(fill.filters) {
-                    /* exposure?: number; // 曝光度 (exposure): 控制图像的明亮程度或暗度。
-                    contrast?: number; // 对比
-                    saturation?: number; // 饱和度
-                    temperature?: number; // 色温
-                    tint?: number; // 色调
-                    highlights?: number; // 调整图像中高光部分的亮度和对比度。
-                    shadows?: number; // 阴影
-                    */
-                    if(fill.filters.contrast) {
-                        const v = util.toNumberRange(fill.filters.contrast, -1, 1, 0.5, 1);
-                        dom.filters.push(new ContrastFilter({
-                            value: v
-                        }));
-                    }
-                    if(fill.filters.exposure) {
-                        const v = util.toNumberRange(fill.filters.exposure, -1, 1, 0.3, 2);
-                        dom.filters.push(new BrightnessFilter({
-                            value: v
-                        }));
-                    }
-                    if(fill.filters.saturation) {
-                        const v = util.toNumberRange(fill.filters.saturation, -1, 1, 0, 2);
-                        dom.filters.push(new SaturateFilter({
-                            value: v
-                        }));
-                    }
-                    if(fill.filters.temperature) {
-                        const v = fill.filters.temperature;//util.toNumberRange(fill.filters.temperature, -1, 1, -Math.PI, Math.PI);
-                        dom.filters.push(new HueRotateFilter({
-                            value: util.toRad(v)
-                        }));
-                    }
-                    if(fill.filters.tint) {
-                        const v = util.toNumberRange(fill.filters.tint, -1, 1, 5, 7);
-                        dom.filters.push(new HueRotateFilter({
-                            value: util.toDeg(util.radToDeg(v))
-                        }));
-                    }
-                    if(fill.filters.highlights) {
-                        const v = util.toNumberRange(fill.filters.highlights, -1, 1, 0.6, 1.1);
-                        dom.filters.push(new BrightnessFilter({
-                            value: v
-                        }));
-                    }
-                    if(fill.filters.shadows) {
-                        const v = Math.abs(fill.filters.shadows);
-                        let color = `rgba(255,255,255,${v})`;
-                        if(fill.filters.shadows < 0) {
-                            color = `rgba(0,0,0,${v})`;
-                        }
-                        dom.filters.push(new DropShadowFilter({
-                            value: {
-                                x: '0',
-                                y: '0',
-                                blur: '2px',
-                                color
+                            else {
+                                backgroundLayer = `url(${img})`;
                             }
-                        }));
+                        }
                     }
+                    break;
+                }
+            }
+
+            if(fill.scaleMode) {
+                dom.data.imageSizeMode = fillConfig.mode;
+            }
+
+            if(backgroundLayer && dom.type !== 'img') {
+                backgroundLayers.push(backgroundLayer);
+                backgroundSizes.push(fillConfig.size);
+                backgroundRepeats.push(fillConfig.repeat);
+                backgroundBlendModes.push(fill.blendMode ? this.convertBlendMode(fill.blendMode) : 'normal');
+            }
+
+            if(dom && fill.imageTransform && fill.scaleMode === PaintSolidScaleMode.STRETCH) {
+                if(!dom.transform) dom.transform = {} as IStyleTransform;
+
+                const [
+                    [a, c, e], 
+                    [b, d, f]
+                ] = fill.imageTransform;
+
+                dom.transform.translateX = util.toPX(e);
+                dom.transform.translateY = util.toPX(f);
+
+                const rotation = Math.atan2(b, a);
+                dom.transform.rotateZ = rotation;
+                dom.preserveRatio = true;
+            }
+
+            if(fill.filters) {
+                if(fill.filters.contrast) {
+                    const v = util.toNumberRange(fill.filters.contrast, -1, 1, 0.5, 1);
+                    dom.filters.push(new ContrastFilter({
+                        value: v
+                    }));
+                }
+                if(fill.filters.exposure) {
+                    const v = util.toNumberRange(fill.filters.exposure, -1, 1, 0.3, 2);
+                    dom.filters.push(new BrightnessFilter({
+                        value: v
+                    }));
+                }
+                if(fill.filters.saturation) {
+                    const v = util.toNumberRange(fill.filters.saturation, -1, 1, 0, 2);
+                    dom.filters.push(new SaturateFilter({
+                        value: v
+                    }));
+                }
+                if(fill.filters.temperature) {
+                    const v = fill.filters.temperature;
+                    dom.filters.push(new HueRotateFilter({
+                        value: util.toRad(v)
+                    }));
+                }
+                if(fill.filters.tint) {
+                    const v = util.toNumberRange(fill.filters.tint, -1, 1, 5, 7);
+                    dom.filters.push(new HueRotateFilter({
+                        value: util.toDeg(util.radToDeg(v))
+                    }));
+                }
+                if(fill.filters.highlights) {
+                    const v = util.toNumberRange(fill.filters.highlights, -1, 1, 0.6, 1.1);
+                    dom.filters.push(new BrightnessFilter({
+                        value: v
+                    }));
+                }
+                if(fill.filters.shadows) {
+                    const v = Math.abs(fill.filters.shadows);
+                    let color = `rgba(255,255,255,${v})`;
+                    if(fill.filters.shadows < 0) {
+                        color = `rgba(0,0,0,${v})`;
+                    }
+                    dom.filters.push(new DropShadowFilter({
+                        value: {
+                            x: '0',
+                            y: '0',
+                            blur: '2px',
+                            color
+                        }
+                    }));
                 }
             }
         }
+
+        if(backgroundLayers.length) {
+            const layeredBackgrounds = [...backgroundLayers].reverse();
+            const layeredSizes = [...backgroundSizes].reverse();
+            const layeredRepeats = [...backgroundRepeats].reverse();
+            const layeredBlendModes = [...backgroundBlendModes].reverse();
+
+            dom.style.background = layeredBackgrounds.join(', ');
+            dom.style.backgroundSize = layeredSizes.join(', ');
+            dom.style.backgroundRepeat = layeredRepeats.join(', ');
+            if(layeredBlendModes.some(mode => mode && mode !== 'normal')) {
+                dom.style.backgroundBlendMode = layeredBlendModes.join(', ');
+            }
+        }
+
+        else if(dom.type !== 'img' && dom.backgroundImageUrl) {
+            const fillConfig = this.getFillBackgroundConfig(visibleFills[0]);
+            dom.style.backgroundSize = fillConfig.size;
+            dom.style.backgroundRepeat = fillConfig.repeat;
+        }
+
         return dom;
     }
 
+
+
+
+    getFillBackgroundConfig(fill: Paint) {
+        switch(fill.scaleMode) {
+            case PaintSolidScaleMode.FILL:
+                return {
+                    mode: 'cover' as const,
+                    size: 'cover',
+                    repeat: 'no-repeat',
+                };
+            case PaintSolidScaleMode.FIT:
+                return {
+                    mode: 'contain' as const,
+                    size: 'contain',
+                    repeat: 'no-repeat',
+                };
+            case PaintSolidScaleMode.CROP:
+            case PaintSolidScaleMode.STRETCH:
+                return {
+                    mode: 'stretch' as const,
+                    size: '100% 100%',
+                    repeat: 'no-repeat',
+                };
+            case PaintSolidScaleMode.TILE:
+                return {
+                    mode: 'repeat' as const,
+                    size: 'auto',
+                    repeat: 'repeat',
+                };
+            default:
+                return {
+                    mode: 'cover' as const,
+                    size: 'auto',
+                    repeat: 'no-repeat',
+                };
+        }
+    }
+
+
     // 处理边框
     async convertStrokes(node:  Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode) {
+
 
         if(node.strokes && node.strokes.length) {
             

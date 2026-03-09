@@ -2,10 +2,28 @@ import { Node, DomNode, DomNodeType, NodeType, NodeConverter, Vector, ColorStop,
 import { type Point } from '@fefeding/utils';
 export declare class BaseConverter<NType extends NodeType = NodeType> implements NodeConverter<NType> {
     convert(node: Node<NType>, dom: DomNode, parentNode?: Node, page?: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;
+    getNodeAbsoluteBoundingBox(node: Node<any>): any;
     createDomNode(type: DomNodeType, option?: DomNode): DomNode;
     convertStyle(node: Node<NType> | TypeStyle, dom: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;
     convertEffects(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;
     convertFills(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;
+    getFillBackgroundConfig(fill: Paint): {
+        mode: "cover";
+        size: string;
+        repeat: string;
+    } | {
+        mode: "contain";
+        size: string;
+        repeat: string;
+    } | {
+        mode: "stretch";
+        size: string;
+        repeat: string;
+    } | {
+        mode: "repeat";
+        size: string;
+        repeat: string;
+    };
     convertStrokes(node: Node<NType>, dom: DomNode, option?: ConvertNodeOption, container?: DomNode): Promise<DomNode>;
     isEmptyDom(dom: DomNode): boolean;
     isTransparentColor(color: any): boolean;

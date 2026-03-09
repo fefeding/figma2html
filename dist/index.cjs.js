@@ -381,11 +381,6 @@ function convert(node, parentNode, page, option, container) {
                     _g.sent();
                     if (!page && node.type === 'FRAME' && (option === null || option === void 0 ? void 0 : option.expandToPage))
                         page = dom; // 当前节点开始，为页面模板
-                    else if (page && (!container || dom.type === 'svg')) {
-                        // 没有显示意义的div不处理
-                        if (!dom.isElement)
-                            page.children.push(dom);
-                    }
                     if (!(node.children && node.children.length)) return [3 /*break*/, 13];
                     shouldSkipChildren = (node.type === 'BOOLEAN_OPERATION' || node.type === 'BOOLEAN') &&
                         node.fillGeometry && node.fillGeometry.length > 0;
@@ -427,7 +422,8 @@ function convert(node, parentNode, page, option, container) {
                         console.log('[figma2html] Empty dom skipped:', c.name || c.id);
                         return [3 /*break*/, 9];
                     }
-                    if (!c.isMask && !dom.children.includes(c) && (!page || c.isElement))
+                    // 统一将子节点加入父节点的 children 中，不再扁平化
+                    if (!c.isMask && !dom.children.includes(c))
                         dom.children.push(c);
                     return [3 /*break*/, 9];
                 case 8:
@@ -1133,6 +1129,15 @@ var __read = (this && this.__read) || function (o, n) {
     }
     return ar;
 };
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BaseConverter = void 0;
 var css_filters_1 = require("@fefeding/css-filters");
@@ -1143,7 +1148,7 @@ var BaseConverter = /** @class */ (function () {
     }
     BaseConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var box, center, size, parentLayoutMode, parentHasAutoLayout, isExplicitAbsolute, participatesInAutoLayout, parentRotation, parentHasRotation, parentCenter, childCenter, offsetX, offsetY, cos, sin, rotatedX, rotatedY, _a, _b, padding, v, cssBlendMode;
+            var sourceBox, box, center, parentRotation, parentHasRotation, size, parentLayoutMode, parentHasAutoLayout, isExplicitAbsolute, participatesInAutoLayout, parentCenter, childCenter, offsetX, offsetY, cos, sin, rotatedX, rotatedY, _a, _b, padding, v, cssBlendMode;
             var e_1, _c;
             var _d;
             return __generator(this, function (_e) {
@@ -1157,28 +1162,46 @@ var BaseConverter = /** @class */ (function () {
                             width: 0,
                             height: 0,
                         };
-                        box = node.absoluteBoundingBox || node.absoluteRenderBounds;
-                        if (box) {
-                            // dom 上保留原值
+                        sourceBox = node.absoluteBoundingBox || node.absoluteRenderBounds || this.getNodeAbsoluteBoundingBox(node);
+                        if (sourceBox) {
+                            if (!node.absoluteBoundingBox) {
+                                node.absoluteBoundingBox = __assign({}, sourceBox);
+                            }
+                            box = __assign({}, sourceBox);
+                            // dom 上保留原值
                             dom.absoluteBoundingBox = __assign({}, box);
                             center = {
                                 x: box.x + box.width / 2,
                                 y: box.y + box.height / 2
                             };
+                            parentRotation = parentNode.rotation;
+                            parentHasRotation = parentRotation && Math.abs(parentRotation) > 0.0001;
                             // 旋转（忽略极小的旋转值，如浮点误差）
                             if (node.rotation && Math.abs(node.rotation) > 0.0001) {
                                 dom.data.rotation = node.rotation;
                                 dom.transform.rotateZ = node.rotation;
                                 dom.style.transform = "rotate(".concat(utils_1.util.toRad(node.rotation), ")");
-                                size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
-                                box.width = size.width;
-                                box.height = size.height;
-                                box.x = center.x - size.width / 2;
-                                box.y = center.y - size.height / 2;
-                                // 因为都是相对于整个document的坐标，这里需要用原始坐标把它还原到没有旋转前的位置。才是css中的坐标　
-                                //const pos = util.rotatePoints(box, center, -dom.data.rotation);
-                                //box.x = pos.x;
-                                //box.y = pos.y;
+                                // 优先使用 Figma 提供的局部尺寸，避免 90° 等角度反推失真
+                                if (node.size && utils_1.util.isNumber(node.size.x) && utils_1.util.isNumber(node.size.y)) {
+                                    box.width = node.size.x;
+                                    box.height = node.size.y;
+                                    box.x = center.x - box.width / 2;
+                                    box.y = center.y - box.height / 2;
+                                }
+                                else {
+                                    size = this.calculateOriginalRectangleDimensions(dom.data.rotation, box.width, box.height);
+                                    if (Number.isFinite(size.width) && Number.isFinite(size.height) && size.width > 0 && size.height > 0) {
+                                        box.width = size.width;
+                                        box.height = size.height;
+                                        box.x = center.x - size.width / 2;
+                                        box.y = center.y - size.height / 2;
+                                    }
+                                }
+                            }
+                            // 父级有旋转时，absoluteBoundingBox 是全局包围盒，尺寸应回退到节点局部 size
+                            if (parentHasRotation && node.size && utils_1.util.isNumber(node.size.x) && utils_1.util.isNumber(node.size.y)) {
+                                box.width = node.size.x;
+                                box.height = node.size.y;
                             }
                             if (dom.type === 'text' && box.height < ((_d = node.style) === null || _d === void 0 ? void 0 : _d.lineHeightPx))
                                 box.height = node.style.lineHeightPx;
@@ -1188,42 +1211,22 @@ var BaseConverter = /** @class */ (function () {
                             parentHasAutoLayout = parentLayoutMode === 'HORIZONTAL' || parentLayoutMode === 'VERTICAL';
                             isExplicitAbsolute = node.layoutPositioning === 'ABSOLUTE';
                             participatesInAutoLayout = parentHasAutoLayout && !isExplicitAbsolute;
-                            parentRotation = parentNode.rotation;
-                            parentHasRotation = parentRotation && Math.abs(parentRotation) > 0.0001;
-                            // 优先相对于页面坐标, isElement是相于它的父级的
-                            if (page && !dom.isElement) {
-                                // 顶级Frame
-                                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
-                                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
-                                // 顶级Frame：Auto Layout容器使用相对定位，否则绝对定位
-                                if (node.layoutMode && node.layoutMode !== 'NONE') {
-                                    dom.style.position = 'relative';
-                                    // 清除left/top，让Auto Layout容器自然定位
-                                    delete dom.data.left;
-                                    delete dom.data.top;
-                                    delete dom.style.left;
-                                    delete dom.style.top;
-                                }
-                                else {
-                                    dom.style.position = 'absolute';
-                                }
+                            // 检查父元素是否有旋转（已在上方计算）
+                            // 定位逻辑
+                            if (participatesInAutoLayout) {
+                                // ========== 参与 Auto Layout (Flex Item) ==========
+                                dom.data.left = dom.bounds.x = 0;
+                                dom.data.top = dom.bounds.y = 0;
+                                dom.style.position = 'relative';
+                                dom.style.flexShrink = '0';
+                                // 清除可能的定位属性，让 Flexbox 决定位置
+                                delete dom.style.left;
+                                delete dom.style.top;
                             }
-                            // 相对于父位置
                             else if (parentNode && parentNode.absoluteBoundingBox) {
-                                if (participatesInAutoLayout) {
-                                    // ========== 参与Auto Layout（Flex Item）==========
-                                    // 位置由flex布局决定，不需要设置left/top
-                                    dom.data.left = dom.bounds.x = 0;
-                                    dom.data.top = dom.bounds.y = 0;
-                                    dom.style.position = 'relative';
-                                    // 清除可能的定位属性
-                                    delete dom.style.left;
-                                    delete dom.style.top;
-                                }
-                                else if (parentHasRotation && isExplicitAbsolute) {
-                                    // ========== 绝对定位 + 父元素旋转 ==========
-                                    dom.data.parentHasRotation = true;
-                                    dom.data.parentRotation = parentRotation;
+                                // ========== 绝对定位 (相对于父节点) ==========
+                                dom.style.position = 'absolute';
+                                if (parentHasRotation && isExplicitAbsolute) {
                                     parentCenter = {
                                         x: parentNode.absoluteBoundingBox.x + parentNode.absoluteBoundingBox.width / 2,
                                         y: parentNode.absoluteBoundingBox.y + parentNode.absoluteBoundingBox.height / 2
@@ -1240,35 +1243,26 @@ var BaseConverter = /** @class */ (function () {
                                     rotatedY = offsetX * sin + offsetY * cos;
                                     dom.data.left = dom.bounds.x = rotatedX - box.width / 2 + parentNode.absoluteBoundingBox.width / 2;
                                     dom.data.top = dom.bounds.y = rotatedY - box.height / 2 + parentNode.absoluteBoundingBox.height / 2;
-                                    dom.style.position = 'absolute';
                                 }
-                                else if (parentHasAutoLayout && isExplicitAbsolute) {
-                                    // ========== 在Auto Layout容器中显式绝对定位 ==========
-                                    if (node.relativeTransform) {
-                                        dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
-                                        dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
-                                    }
-                                    else {
-                                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                                    }
-                                    dom.style.position = 'absolute';
+                                else if (node.relativeTransform) {
+                                    // 优先使用 relativeTransform [ [1, 0, x], [0, 1, y] ]
+                                    dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
+                                    dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
                                 }
                                 else {
-                                    // ========== 普通绝对定位（父元素无Auto Layout）==========
-                                    if (node.relativeTransform) {
-                                        dom.data.left = dom.bounds.x = node.relativeTransform[0][2];
-                                        dom.data.top = dom.bounds.y = node.relativeTransform[1][2];
-                                    }
-                                    else {
-                                        dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
-                                        dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
-                                    }
-                                    dom.style.position = 'absolute';
+                                    // 回退到 absoluteBoundingBox 差值计算
+                                    dom.data.left = dom.bounds.x = box.x - parentNode.absoluteBoundingBox.x;
+                                    dom.data.top = dom.bounds.y = box.y - parentNode.absoluteBoundingBox.y;
                                 }
                             }
-                            // 没有父元素，使用相对定位
+                            else if (page && page.absoluteBoundingBox) {
+                                // ========== 相对于页面的定位 (顶级节点) ==========
+                                dom.data.left = dom.bounds.x = box.x - page.absoluteBoundingBox.x;
+                                dom.data.top = dom.bounds.y = box.y - page.absoluteBoundingBox.y;
+                                dom.style.position = 'absolute';
+                            }
                             else {
+                                // ========== 无父节点 ==========
                                 dom.data.left = dom.bounds.x = 0;
                                 dom.data.top = dom.bounds.y = 0;
                                 dom.style.position = 'relative';
@@ -1412,6 +1406,49 @@ var BaseConverter = /** @class */ (function () {
             });
         });
     };
+    BaseConverter.prototype.getNodeAbsoluteBoundingBox = function (node) {
+        var e_2, _a;
+        var directBox = node.absoluteBoundingBox || node.absoluteRenderBounds;
+        if (directBox) {
+            return __assign({}, directBox);
+        }
+        if (!node.children || !node.children.length)
+            return null;
+        var minX = Infinity;
+        var minY = Infinity;
+        var maxX = -Infinity;
+        var maxY = -Infinity;
+        try {
+            for (var _b = __values(node.children), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var child = _c.value;
+                if (!child || child.visible === false)
+                    continue;
+                var childBox = this.getNodeAbsoluteBoundingBox(child);
+                if (!childBox)
+                    continue;
+                minX = Math.min(minX, childBox.x);
+                minY = Math.min(minY, childBox.y);
+                maxX = Math.max(maxX, childBox.x + childBox.width);
+                maxY = Math.max(maxY, childBox.y + childBox.height);
+            }
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_2) throw e_2.error; }
+        }
+        if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+            return null;
+        }
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY,
+        };
+    };
     // 生成节点对象
     BaseConverter.prototype.createDomNode = function (type, option) {
         var dom = __assign(__assign({ data: {}, attributes: {}, children: [] }, option), { style: __assign({ boxSizing: 'border-box' }, option === null || option === void 0 ? void 0 : option.style), filters: new Array, transform: {}, type: type });
@@ -1450,7 +1487,7 @@ var BaseConverter = /** @class */ (function () {
     BaseConverter.prototype.convertEffects = function (node, dom, option, container) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, _b, effect;
-            var e_2, _c;
+            var e_3, _c;
             return __generator(this, function (_d) {
                 if (!node.isMaskOutline && node.effects) {
                     try {
@@ -1492,12 +1529,12 @@ var BaseConverter = /** @class */ (function () {
                             }
                         }
                     }
-                    catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                    catch (e_3_1) { e_3 = { error: e_3_1 }; }
                     finally {
                         try {
                             if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                         }
-                        finally { if (e_2) throw e_2.error; }
+                        finally { if (e_3) throw e_3.error; }
                     }
                 }
                 return [2 /*return*/, dom];
@@ -1507,24 +1544,32 @@ var BaseConverter = /** @class */ (function () {
     // 处理填充
     BaseConverter.prototype.convertFills = function (node, dom, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, fill, _c, img, cssBlendMode, _d, _e, a, c, e, _f, b, d, f, rotation, v, v, v, v, v, v, v, color, e_3_1;
-            var e_3, _g;
-            return __generator(this, function (_h) {
-                switch (_h.label) {
+            var visibleFills, backgroundLayers, backgroundSizes, backgroundRepeats, backgroundBlendModes, visibleFills_1, visibleFills_1_1, fill, backgroundLayer, fillConfig, _a, color, colorString, img, _b, _c, a, c, e, _d, b, d, f, rotation, v, v, v, v, v, v, v, color, e_4_1, layeredBackgrounds, layeredSizes, layeredRepeats, layeredBlendModes, fillConfig;
+            var e_4, _e;
+            return __generator(this, function (_f) {
+                switch (_f.label) {
                     case 0:
-                        if (!(!node.isMaskOutline && node.fills)) return [3 /*break*/, 14];
-                        _h.label = 1;
+                        if (node.isMaskOutline || !node.fills)
+                            return [2 /*return*/, dom];
+                        visibleFills = node.fills.filter(function (fill) { return fill.visible !== false; });
+                        if (!visibleFills.length)
+                            return [2 /*return*/, dom];
+                        backgroundLayers = [];
+                        backgroundSizes = [];
+                        backgroundRepeats = [];
+                        backgroundBlendModes = [];
+                        _f.label = 1;
                     case 1:
-                        _h.trys.push([1, 12, 13, 14]);
-                        _a = __values(node.fills), _b = _a.next();
-                        _h.label = 2;
+                        _f.trys.push([1, 12, 13, 14]);
+                        visibleFills_1 = __values(visibleFills), visibleFills_1_1 = visibleFills_1.next();
+                        _f.label = 2;
                     case 2:
-                        if (!!_b.done) return [3 /*break*/, 11];
-                        fill = _b.value;
-                        if (fill.visible === false)
-                            return [3 /*break*/, 10];
-                        _c = fill.type;
-                        switch (_c) {
+                        if (!!visibleFills_1_1.done) return [3 /*break*/, 11];
+                        fill = visibleFills_1_1.value;
+                        backgroundLayer = '';
+                        fillConfig = this.getFillBackgroundConfig(fill);
+                        _a = fill.type;
+                        switch (_a) {
                             case types_1.PaintType.SOLID: return [3 /*break*/, 3];
                             case types_1.PaintType.GRADIENT_LINEAR: return [3 /*break*/, 4];
                             case types_1.PaintType.GRADIENT_DIAMOND: return [3 /*break*/, 5];
@@ -1535,96 +1580,66 @@ var BaseConverter = /** @class */ (function () {
                         return [3 /*break*/, 9];
                     case 3:
                         {
-                            if (typeof fill.opacity !== 'undefined')
-                                fill.color.a = fill.opacity;
-                            dom.style.backgroundColor = utils_1.util.colorToString(fill.color, 255);
+                            color = __assign(__assign({}, fill.color), { a: typeof fill.opacity !== 'undefined' ? fill.opacity : fill.color.a });
+                            colorString = utils_1.util.colorToString(color, 255);
+                            if (visibleFills.length > 1 && dom.type !== 'img') {
+                                backgroundLayer = "linear-gradient(".concat(colorString, ", ").concat(colorString, ")");
+                            }
+                            else {
+                                dom.style.backgroundColor = colorString;
+                            }
                             return [3 /*break*/, 9];
                         }
-                        _h.label = 4;
+                        _f.label = 4;
                     case 4:
                         {
-                            dom.style.background = this.convertLinearGradient(fill, dom, container);
+                            backgroundLayer = this.convertLinearGradient(fill, dom, container);
                             return [3 /*break*/, 9];
                         }
-                        _h.label = 5;
+                        _f.label = 5;
                     case 5:
                         {
-                            dom.style.background = this.convertRadialGradient(fill, dom, container);
+                            backgroundLayer = this.convertRadialGradient(fill, dom, container);
                             return [3 /*break*/, 9];
                         }
-                        _h.label = 6;
+                        _f.label = 6;
                     case 6:
                         if (!(option && option.getImage)) return [3 /*break*/, 8];
                         return [4 /*yield*/, option.getImage(fill.imageRef)];
                     case 7:
-                        img = _h.sent();
+                        img = _f.sent();
+                        dom.backgroundImageUrl = img || fill.imageRef;
                         if (img) {
                             if (dom.type === 'img') {
                                 dom.url = img;
                             }
                             else {
-                                dom.style.backgroundImage = "url(".concat(img, ")");
+                                backgroundLayer = "url(".concat(img, ")");
                             }
                         }
-                        dom.backgroundImageUrl = img || fill.imageRef;
-                        _h.label = 8;
+                        _f.label = 8;
                     case 8: return [3 /*break*/, 9];
                     case 9:
-                        switch (fill.scaleMode) {
-                            case types_1.PaintSolidScaleMode.FILL: {
-                                dom.data.imageSizeMode = dom.style.backgroundSize = 'cover';
-                                break;
-                            }
-                            case types_1.PaintSolidScaleMode.FIT: {
-                                dom.data.imageSizeMode = dom.style.backgroundSize = 'contain';
-                                break;
-                            }
-                            case types_1.PaintSolidScaleMode.CROP: {
-                                dom.data.imageSizeMode = dom.style.backgroundSize = 'stretch';
-                                break;
-                            }
-                            case types_1.PaintSolidScaleMode.STRETCH: {
-                                dom.style.backgroundSize = '100% 100%';
-                                dom.data.imageSizeMode = 'stretch';
-                                break;
-                            }
-                            // 平铺
-                            case types_1.PaintSolidScaleMode.TILE: {
-                                dom.data.imageSizeMode = dom.style.backgroundRepeat = 'repeat';
-                                break;
-                            }
+                        if (fill.scaleMode) {
+                            dom.data.imageSizeMode = fillConfig.mode;
                         }
-                        // 处理填充的混合模式
-                        if (fill.blendMode) {
-                            cssBlendMode = this.convertBlendMode(fill.blendMode);
-                            if (cssBlendMode && cssBlendMode !== 'normal') {
-                                // 对于填充的混合模式，使用 background-blend-mode
-                                dom.style.backgroundBlendMode = cssBlendMode;
-                            }
+                        if (backgroundLayer && dom.type !== 'img') {
+                            backgroundLayers.push(backgroundLayer);
+                            backgroundSizes.push(fillConfig.size);
+                            backgroundRepeats.push(fillConfig.repeat);
+                            backgroundBlendModes.push(fill.blendMode ? this.convertBlendMode(fill.blendMode) : 'normal');
                         }
                         if (dom && fill.imageTransform && fill.scaleMode === types_1.PaintSolidScaleMode.STRETCH) {
                             if (!dom.transform)
                                 dom.transform = {};
-                            _d = __read(fill.imageTransform, 2), _e = __read(_d[0], 3), a = _e[0], c = _e[1], e = _e[2], _f = __read(_d[1], 3), b = _f[0], d = _f[1], f = _f[2];
-                            // 计算旋转角度和正弦值
-                            dom.transform.translateX = utils_1.util.toPX(e); // * node.absoluteBoundingBox.width;                    
-                            dom.transform.translateY = utils_1.util.toPX(f); //* node.absoluteBoundingBox.width;
+                            _b = __read(fill.imageTransform, 2), _c = __read(_b[0], 3), a = _c[0], c = _c[1], e = _c[2], _d = __read(_b[1], 3), b = _d[0], d = _d[1], f = _d[2];
+                            dom.transform.translateX = utils_1.util.toPX(e);
+                            dom.transform.translateY = utils_1.util.toPX(f);
                             rotation = Math.atan2(b, a);
                             dom.transform.rotateZ = rotation;
-                            //const scaleX = Math.sqrt(a * a + b * b);
-                            //const scaleY = Math.sqrt(c * c + d * d);
                             dom.preserveRatio = true;
                         }
-                        // 如果有滤镜，则给指定
                         if (fill.filters) {
-                            /* exposure?: number; // 曝光度 (exposure): 控制图像的明亮程度或暗度。
-                            contrast?: number; // 对比
-                            saturation?: number; // 饱和度
-                            temperature?: number; // 色温
-                            tint?: number; // 色调
-                            highlights?: number; // 调整图像中高光部分的亮度和对比度。
-                            shadows?: number; // 阴影
-                            */
                             if (fill.filters.contrast) {
                                 v = utils_1.util.toNumberRange(fill.filters.contrast, -1, 1, 0.5, 1);
                                 dom.filters.push(new css_filters_1.ContrastFilter({
@@ -1677,31 +1692,84 @@ var BaseConverter = /** @class */ (function () {
                                 }));
                             }
                         }
-                        _h.label = 10;
+                        _f.label = 10;
                     case 10:
-                        _b = _a.next();
+                        visibleFills_1_1 = visibleFills_1.next();
                         return [3 /*break*/, 2];
                     case 11: return [3 /*break*/, 14];
                     case 12:
-                        e_3_1 = _h.sent();
-                        e_3 = { error: e_3_1 };
+                        e_4_1 = _f.sent();
+                        e_4 = { error: e_4_1 };
                         return [3 /*break*/, 14];
                     case 13:
                         try {
-                            if (_b && !_b.done && (_g = _a.return)) _g.call(_a);
+                            if (visibleFills_1_1 && !visibleFills_1_1.done && (_e = visibleFills_1.return)) _e.call(visibleFills_1);
                         }
-                        finally { if (e_3) throw e_3.error; }
+                        finally { if (e_4) throw e_4.error; }
                         return [7 /*endfinally*/];
-                    case 14: return [2 /*return*/, dom];
+                    case 14:
+                        if (backgroundLayers.length) {
+                            layeredBackgrounds = __spreadArray([], __read(backgroundLayers), false).reverse();
+                            layeredSizes = __spreadArray([], __read(backgroundSizes), false).reverse();
+                            layeredRepeats = __spreadArray([], __read(backgroundRepeats), false).reverse();
+                            layeredBlendModes = __spreadArray([], __read(backgroundBlendModes), false).reverse();
+                            dom.style.background = layeredBackgrounds.join(', ');
+                            dom.style.backgroundSize = layeredSizes.join(', ');
+                            dom.style.backgroundRepeat = layeredRepeats.join(', ');
+                            if (layeredBlendModes.some(function (mode) { return mode && mode !== 'normal'; })) {
+                                dom.style.backgroundBlendMode = layeredBlendModes.join(', ');
+                            }
+                        }
+                        else if (dom.type !== 'img' && dom.backgroundImageUrl) {
+                            fillConfig = this.getFillBackgroundConfig(visibleFills[0]);
+                            dom.style.backgroundSize = fillConfig.size;
+                            dom.style.backgroundRepeat = fillConfig.repeat;
+                        }
+                        return [2 /*return*/, dom];
                 }
             });
         });
     };
+    BaseConverter.prototype.getFillBackgroundConfig = function (fill) {
+        switch (fill.scaleMode) {
+            case types_1.PaintSolidScaleMode.FILL:
+                return {
+                    mode: 'cover',
+                    size: 'cover',
+                    repeat: 'no-repeat',
+                };
+            case types_1.PaintSolidScaleMode.FIT:
+                return {
+                    mode: 'contain',
+                    size: 'contain',
+                    repeat: 'no-repeat',
+                };
+            case types_1.PaintSolidScaleMode.CROP:
+            case types_1.PaintSolidScaleMode.STRETCH:
+                return {
+                    mode: 'stretch',
+                    size: '100% 100%',
+                    repeat: 'no-repeat',
+                };
+            case types_1.PaintSolidScaleMode.TILE:
+                return {
+                    mode: 'repeat',
+                    size: 'auto',
+                    repeat: 'repeat',
+                };
+            default:
+                return {
+                    mode: 'cover',
+                    size: 'auto',
+                    repeat: 'no-repeat',
+                };
+        }
+    };
     // 处理边框
     BaseConverter.prototype.convertStrokes = function (node, dom, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, stroke, _c, img, e_4_1;
-            var e_4, _d;
+            var _a, _b, stroke, _c, img, e_5_1;
+            var e_5, _d;
             return __generator(this, function (_e) {
                 switch (_e.label) {
                     case 0:
@@ -1783,14 +1851,14 @@ var BaseConverter = /** @class */ (function () {
                         return [3 /*break*/, 2];
                     case 10: return [3 /*break*/, 13];
                     case 11:
-                        e_4_1 = _e.sent();
-                        e_4 = { error: e_4_1 };
+                        e_5_1 = _e.sent();
+                        e_5 = { error: e_5_1 };
                         return [3 /*break*/, 13];
                     case 12:
                         try {
                             if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
                         }
-                        finally { if (e_4) throw e_4.error; }
+                        finally { if (e_5) throw e_5.error; }
                         return [7 /*endfinally*/];
                     case 13:
                         if (node.strokeWeight) {
@@ -1873,7 +1941,7 @@ var BaseConverter = /** @class */ (function () {
     };
     // 转换线性渐变
     BaseConverter.prototype.convertLinearGradient = function (gradient, dom, container) {
-        var e_5, _a;
+        var e_6, _a;
         var handlePositions = gradient.gradientHandlePositions;
         var gradientStops = gradient.gradientStops;
         /**
@@ -1950,12 +2018,12 @@ var BaseConverter = /** @class */ (function () {
                     }
                 }
             }
-            catch (e_5_1) { e_5 = { error: e_5_1 }; }
+            catch (e_6_1) { e_6 = { error: e_6_1 }; }
             finally {
                 try {
                     if (gradientStops_1_1 && !gradientStops_1_1.done && (_a = gradientStops_1.return)) _a.call(gradientStops_1);
                 }
-                finally { if (e_5) throw e_5.error; }
+                finally { if (e_6) throw e_6.error; }
             }
         }
         var linearGradient = "linear-gradient(".concat(this.getGradientDirection(handlePositions), ", ").concat(this.getGradientStops(gradientStops), ")");
@@ -2089,10 +2157,18 @@ var BaseConverter = /** @class */ (function () {
         // 旋转后的长方形的宽和高 newWidth newHeight
         var cos = Math.cos(radian);
         var sin = Math.sin(radian);
+        var denominator = Math.pow(cos, 2) - Math.pow(sin, 2);
+        // 在接近 45°/135° 时，反推会出现数值不稳定，直接回退
+        if (Math.abs(denominator) < 1e-6) {
+            return { width: newWidth, height: newHeight };
+        }
         // 解方程求原始长方形的宽度和高度
-        var w = (newWidth * Math.abs(cos) - newHeight * Math.abs(sin)) / (Math.pow(cos, 2) - Math.pow(sin, 2));
-        var h = (newHeight * Math.abs(cos) - newWidth * Math.abs(sin)) / (Math.pow(cos, 2) - Math.pow(sin, 2));
-        return { width: w, height: h };
+        var w = (newWidth * Math.abs(cos) - newHeight * Math.abs(sin)) / denominator;
+        var h = (newHeight * Math.abs(cos) - newWidth * Math.abs(sin)) / denominator;
+        return {
+            width: Number.isFinite(w) && w > 0 ? w : newWidth,
+            height: Number.isFinite(h) && h > 0 ? h : newHeight
+        };
     };
     // 转换混合模式
     BaseConverter.prototype.convertBlendMode = function (blendMode) {
@@ -2337,8 +2413,13 @@ var COMPONENTConverter = /** @class */ (function (_super) {
                     if (layoutSizingHorizontal) {
                         switch (layoutSizingHorizontal) {
                             case 'FILL':
-                                dom.style.flexGrow = '1';
-                                dom.style.flexBasis = '0';
+                                if (parentNode.layoutMode === 'HORIZONTAL') {
+                                    dom.style.flexGrow = '1';
+                                    dom.style.flexBasis = '0';
+                                }
+                                else {
+                                    dom.style.alignSelf = 'stretch';
+                                }
                                 dom.style.width = 'auto';
                                 break;
                             case 'HUG':
@@ -2350,7 +2431,13 @@ var COMPONENTConverter = /** @class */ (function (_super) {
                     if (layoutSizingVertical) {
                         switch (layoutSizingVertical) {
                             case 'FILL':
-                                dom.style.alignSelf = 'stretch';
+                                if (parentNode.layoutMode === 'VERTICAL') {
+                                    dom.style.flexGrow = '1';
+                                    dom.style.flexBasis = '0';
+                                }
+                                else {
+                                    dom.style.alignSelf = 'stretch';
+                                }
                                 dom.style.height = 'auto';
                                 break;
                             case 'HUG':
@@ -2474,8 +2561,13 @@ var COMPONENT_SETConverter = /** @class */ (function (_super) {
                     if (layoutSizingHorizontal) {
                         switch (layoutSizingHorizontal) {
                             case 'FILL':
-                                dom.style.flexGrow = '1';
-                                dom.style.flexBasis = '0';
+                                if (parentNode.layoutMode === 'HORIZONTAL') {
+                                    dom.style.flexGrow = '1';
+                                    dom.style.flexBasis = '0';
+                                }
+                                else {
+                                    dom.style.alignSelf = 'stretch';
+                                }
                                 dom.style.width = 'auto';
                                 break;
                             case 'HUG':
@@ -2487,7 +2579,13 @@ var COMPONENT_SETConverter = /** @class */ (function (_super) {
                     if (layoutSizingVertical) {
                         switch (layoutSizingVertical) {
                             case 'FILL':
-                                dom.style.alignSelf = 'stretch';
+                                if (parentNode.layoutMode === 'VERTICAL') {
+                                    dom.style.flexGrow = '1';
+                                    dom.style.flexBasis = '0';
+                                }
+                                else {
+                                    dom.style.alignSelf = 'stretch';
+                                }
                                 dom.style.height = 'auto';
                                 break;
                             case 'HUG':
@@ -2790,17 +2888,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __values = (this && this.__values) || function(o) {
-    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-    if (m) return m.call(o);
-    if (o && typeof o.length === "number") return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -2814,37 +2901,14 @@ var FRAMEConverter = /** @class */ (function (_super) {
     }
     FRAMEConverter.prototype.convert = function (node, dom, parentNode, page, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, child, parentLayoutMode, parentHasAutoLayout, isExplicitAbsolute, participatesInAutoLayout, layoutGrow, layoutAlign, layoutSizingHorizontal, layoutSizingVertical;
-            var e_1, _c;
-            return __generator(this, function (_d) {
+            var parentBounds, parentLayoutMode, parentHasAutoLayout, isExplicitAbsolute, participatesInAutoLayout, layoutGrow, layoutAlign, layoutSizingHorizontal, layoutSizingVertical;
+            return __generator(this, function (_a) {
                 if (parentNode && parentNode.type === 'CANVAS') {
                     dom.style.overflow = 'hidden';
-                    if (parentNode && !parentNode.absoluteBoundingBox) {
-                        // 如果是一级节点，则下面的节点都相对于它
-                        parentNode.absoluteBoundingBox = {
-                            x: 0,
-                            y: 0,
-                            width: 0,
-                            height: 0
-                        };
-                        // 取最左顶点角
-                        if (parentNode.children && parentNode.children.length) {
-                            try {
-                                for (_a = __values(parentNode.children), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                    child = _b.value;
-                                    if (child.absoluteBoundingBox) {
-                                        parentNode.absoluteBoundingBox.x = Math.min(parentNode.absoluteBoundingBox.x, child.absoluteBoundingBox.x);
-                                        parentNode.absoluteBoundingBox.y = Math.min(parentNode.absoluteBoundingBox.y, child.absoluteBoundingBox.y);
-                                    }
-                                }
-                            }
-                            catch (e_1_1) { e_1 = { error: e_1_1 }; }
-                            finally {
-                                try {
-                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
-                                }
-                                finally { if (e_1) throw e_1.error; }
-                            }
+                    if (!parentNode.absoluteBoundingBox) {
+                        parentBounds = this.getNodeAbsoluteBoundingBox(parentNode);
+                        if (parentBounds) {
+                            parentNode.absoluteBoundingBox = parentBounds;
                         }
                     }
                 }
@@ -2880,9 +2944,16 @@ var FRAMEConverter = /** @class */ (function (_super) {
                     if (layoutSizingHorizontal) {
                         switch (layoutSizingHorizontal) {
                             case 'FILL':
-                                // 填充：使用 flex-grow 拉伸
-                                dom.style.flexGrow = '1';
-                                dom.style.flexBasis = '0';
+                                // FILL 是“填充父容器在该轴向的可用空间”
+                                // 若父是 HORIZONTAL，则水平是主轴，使用 flex-grow
+                                if (parentNode.layoutMode === 'HORIZONTAL') {
+                                    dom.style.flexGrow = '1';
+                                    dom.style.flexBasis = '0';
+                                }
+                                else {
+                                    // 父是 VERTICAL 时，水平是交叉轴，使用 stretch
+                                    dom.style.alignSelf = 'stretch';
+                                }
                                 dom.style.width = 'auto';
                                 break;
                             case 'HUG':
@@ -2896,8 +2967,15 @@ var FRAMEConverter = /** @class */ (function (_super) {
                     if (layoutSizingVertical) {
                         switch (layoutSizingVertical) {
                             case 'FILL':
-                                // 填充：使用 align-self: stretch
-                                dom.style.alignSelf = 'stretch';
+                                // 若父是 VERTICAL，则垂直是主轴，使用 flex-grow
+                                if (parentNode.layoutMode === 'VERTICAL') {
+                                    dom.style.flexGrow = '1';
+                                    dom.style.flexBasis = '0';
+                                }
+                                else {
+                                    // 父是 HORIZONTAL 时，垂直是交叉轴，使用 stretch
+                                    dom.style.alignSelf = 'stretch';
+                                }
                                 dom.style.height = 'auto';
                                 break;
                             case 'HUG':
@@ -3119,8 +3197,13 @@ var INSTANCEConverter = /** @class */ (function (_super) {
                     if (layoutSizingHorizontal) {
                         switch (layoutSizingHorizontal) {
                             case 'FILL':
-                                dom.style.flexGrow = '1';
-                                dom.style.flexBasis = '0';
+                                if (parentNode.layoutMode === 'HORIZONTAL') {
+                                    dom.style.flexGrow = '1';
+                                    dom.style.flexBasis = '0';
+                                }
+                                else {
+                                    dom.style.alignSelf = 'stretch';
+                                }
                                 dom.style.width = 'auto';
                                 break;
                             case 'HUG':
@@ -3132,7 +3215,13 @@ var INSTANCEConverter = /** @class */ (function (_super) {
                     if (layoutSizingVertical) {
                         switch (layoutSizingVertical) {
                             case 'FILL':
-                                dom.style.alignSelf = 'stretch';
+                                if (parentNode.layoutMode === 'VERTICAL') {
+                                    dom.style.flexGrow = '1';
+                                    dom.style.flexBasis = '0';
+                                }
+                                else {
+                                    dom.style.alignSelf = 'stretch';
+                                }
                                 dom.style.height = 'auto';
                                 break;
                             case 'HUG':
@@ -3370,6 +3459,17 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -3534,6 +3634,9 @@ var PolygonConverter = /** @class */ (function (_super) {
                         }
                         // 生成路径
                         this.createPolygonPath(polygon, node, container);
+                        return [4 /*yield*/, this.createAdditionalFillLayers(node, dom, polygon, option, container)];
+                    case 2:
+                        _a.sent();
                         return [2 /*return*/, dom];
                 }
             });
@@ -3583,9 +3686,126 @@ var PolygonConverter = /** @class */ (function (_super) {
             dom.attributes['d'] = path;
         }
     };
+    PolygonConverter.prototype.createAdditionalFillLayers = function (node, dom, polygon, option, container) {
+        return __awaiter(this, void 0, void 0, function () {
+            var visibleFills, svgContainer, polygonIndex, insertIndex, _a, _b, fill, layerPolygon, e_1_1;
+            var e_1, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
+                    case 0:
+                        if (node.isMask)
+                            return [2 /*return*/];
+                        if (!node.fills || node.fills.length < 2)
+                            return [2 /*return*/];
+                        visibleFills = node.fills.filter(function (fill) { return fill.visible !== false; });
+                        if (visibleFills.length < 2)
+                            return [2 /*return*/];
+                        svgContainer = container || dom;
+                        polygonIndex = svgContainer.children.indexOf(polygon);
+                        if (polygonIndex < 0)
+                            return [2 /*return*/];
+                        insertIndex = polygonIndex;
+                        _d.label = 1;
+                    case 1:
+                        _d.trys.push([1, 6, 7, 8]);
+                        _a = __values(__spreadArray([], __read(visibleFills.slice(1)), false).reverse()), _b = _a.next();
+                        _d.label = 2;
+                    case 2:
+                        if (!!_b.done) return [3 /*break*/, 5];
+                        fill = _b.value;
+                        layerPolygon = this.createDomNode(polygon.type, {
+                            // @ts-ignore
+                            figmaData: node,
+                            attributes: __assign({}, polygon.attributes),
+                            style: __assign({}, polygon.style),
+                        });
+                        layerPolygon.bounds = __assign({}, polygon.bounds);
+                        delete layerPolygon.attributes['stroke'];
+                        delete layerPolygon.attributes['stroke-width'];
+                        delete layerPolygon.attributes['stroke-dasharray'];
+                        delete layerPolygon.style.fill;
+                        delete layerPolygon.style.mixBlendMode;
+                        return [4 /*yield*/, this.applySingleFillToPolygon(fill, node, layerPolygon, dom, option, container)];
+                    case 3:
+                        _d.sent();
+                        svgContainer.children.splice(insertIndex, 0, layerPolygon);
+                        insertIndex++;
+                        _d.label = 4;
+                    case 4:
+                        _b = _a.next();
+                        return [3 /*break*/, 2];
+                    case 5: return [3 /*break*/, 8];
+                    case 6:
+                        e_1_1 = _d.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 8];
+                    case 7:
+                        try {
+                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                        }
+                        finally { if (e_1) throw e_1.error; }
+                        return [7 /*endfinally*/];
+                    case 8: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    PolygonConverter.prototype.applySingleFillToPolygon = function (fill, node, polygon, dom, option, container) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _a, color, cssBlendMode;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _a = fill.type;
+                        switch (_a) {
+                            case types_1.PaintType.SOLID: return [3 /*break*/, 1];
+                            case types_1.PaintType.GRADIENT_LINEAR: return [3 /*break*/, 2];
+                            case types_1.PaintType.GRADIENT_DIAMOND: return [3 /*break*/, 3];
+                            case types_1.PaintType.GRADIENT_ANGULAR: return [3 /*break*/, 3];
+                            case types_1.PaintType.GRADIENT_RADIAL: return [3 /*break*/, 3];
+                            case types_1.PaintType.IMAGE: return [3 /*break*/, 4];
+                        }
+                        return [3 /*break*/, 6];
+                    case 1:
+                        {
+                            color = __assign(__assign({}, fill.color), { a: typeof fill.opacity !== 'undefined' ? fill.opacity : fill.color.a });
+                            polygon.style.fill = utils_1.util.colorToString(color, 255);
+                            return [3 /*break*/, 6];
+                        }
+                        _b.label = 2;
+                    case 2:
+                        {
+                            polygon.style.fill = this.convertLinearGradient(fill, dom, container);
+                            return [3 /*break*/, 6];
+                        }
+                        _b.label = 3;
+                    case 3:
+                        {
+                            polygon.style.fill = this.convertRadialGradient(fill, dom, container);
+                            return [3 /*break*/, 6];
+                        }
+                        _b.label = 4;
+                    case 4: return [4 /*yield*/, _super.prototype.convertFills.call(this, __assign(__assign({}, node), { fills: [fill] }), polygon, option, container)];
+                    case 5:
+                        _b.sent();
+                        return [3 /*break*/, 6];
+                    case 6:
+                        if (fill.blendMode) {
+                            cssBlendMode = this.convertBlendMode(fill.blendMode);
+                            if (cssBlendMode && cssBlendMode !== 'normal') {
+                                polygon.style.mixBlendMode = cssBlendMode;
+                            }
+                        }
+                        if (!polygon.style.fill)
+                            polygon.style.fill = 'none';
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     // 获取蒙板
     PolygonConverter.prototype.getMask = function (container) {
-        var e_1, _a;
+        var e_2, _a;
         var _b;
         var defs = container.children[0];
         if ((_b = defs.children) === null || _b === void 0 ? void 0 : _b.length) {
@@ -3596,19 +3816,19 @@ var PolygonConverter = /** @class */ (function (_super) {
                         return child;
                 }
             }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
             finally {
                 try {
                     if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
-                finally { if (e_1) throw e_1.error; }
+                finally { if (e_2) throw e_2.error; }
             }
         }
         return null;
     };
     // 用id获取当前图形
     PolygonConverter.prototype.getPolygon = function (node, dom) {
-        var e_2, _a;
+        var e_3, _a;
         var _b;
         // 优先使用保存的polygon引用
         if (dom._polygon)
@@ -3626,12 +3846,12 @@ var PolygonConverter = /** @class */ (function (_super) {
                     }
                 }
             }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            catch (e_3_1) { e_3 = { error: e_3_1 }; }
             finally {
                 try {
                     if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
-                finally { if (e_2) throw e_2.error; }
+                finally { if (e_3) throw e_3.error; }
             }
         }
         //if(dom.figmaData?.id === node.id) return dom;
@@ -3640,9 +3860,9 @@ var PolygonConverter = /** @class */ (function (_super) {
     // 处理填充
     PolygonConverter.prototype.convertFills = function (node, dom, option, container) {
         return __awaiter(this, void 0, void 0, function () {
-            var polygon, parentFills, visibleFill, _a, cssBlendMode;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var polygon, parentFills, visibleFill;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
                         polygon = this.getPolygon(node, container || dom);
                         parentFills = node._parentFills;
@@ -3650,60 +3870,18 @@ var PolygonConverter = /** @class */ (function (_super) {
                             polygon.style.fill = 'transparent';
                             return [2 /*return*/, dom];
                         }
-                        // 没有 fills 或 fills 为空数组时，设置 fill 为 none
                         if (!node.fills || node.fills.length === 0) {
                             polygon.style.fill = 'none';
                             return [2 /*return*/, dom];
                         }
                         visibleFill = node.fills.find(function (fill) { return fill.visible !== false; });
-                        if (!visibleFill) return [3 /*break*/, 7];
-                        _a = visibleFill.type;
-                        switch (_a) {
-                            case types_1.PaintType.SOLID: return [3 /*break*/, 1];
-                            case types_1.PaintType.GRADIENT_LINEAR: return [3 /*break*/, 2];
-                            case types_1.PaintType.GRADIENT_DIAMOND: return [3 /*break*/, 3];
-                            case types_1.PaintType.GRADIENT_ANGULAR: return [3 /*break*/, 3];
-                            case types_1.PaintType.GRADIENT_RADIAL: return [3 /*break*/, 3];
-                            case types_1.PaintType.IMAGE: return [3 /*break*/, 4];
-                        }
-                        return [3 /*break*/, 6];
-                    case 1:
-                        {
-                            if (typeof visibleFill.opacity !== 'undefined')
-                                visibleFill.color.a = visibleFill.opacity;
-                            polygon.style.fill = utils_1.util.colorToString(visibleFill.color, 255);
-                            return [3 /*break*/, 6];
-                        }
-                        _b.label = 2;
-                    case 2:
-                        {
-                            polygon.style.fill = this.convertLinearGradient(visibleFill, dom, container);
-                            return [3 /*break*/, 6];
-                        }
-                        _b.label = 3;
-                    case 3:
-                        {
-                            polygon.style.fill = this.convertRadialGradient(visibleFill, dom, container);
-                            return [3 /*break*/, 6];
-                        }
-                        _b.label = 4;
-                    case 4: return [4 /*yield*/, _super.prototype.convertFills.call(this, node, polygon, option, container)];
-                    case 5:
-                        _b.sent();
-                        return [3 /*break*/, 6];
-                    case 6:
-                        // 处理混合模式
-                        if (visibleFill.blendMode) {
-                            cssBlendMode = this.convertBlendMode(visibleFill.blendMode);
-                            if (cssBlendMode && cssBlendMode !== 'normal') {
-                                polygon.style.mixBlendMode = cssBlendMode;
-                            }
-                        }
-                        _b.label = 7;
-                    case 7:
-                        // 默认透明（如果没有可见的 fill）
-                        if (!polygon.style.fill)
+                        if (!visibleFill) {
                             polygon.style.fill = 'none';
+                            return [2 /*return*/, dom];
+                        }
+                        return [4 /*yield*/, this.applySingleFillToPolygon(visibleFill, node, polygon, dom, option, container)];
+                    case 1:
+                        _a.sent();
                         return [2 /*return*/, dom];
                 }
             });
@@ -3713,7 +3891,7 @@ var PolygonConverter = /** @class */ (function (_super) {
     PolygonConverter.prototype.convertStrokes = function (node, dom, option, container) {
         return __awaiter(this, void 0, void 0, function () {
             var polygon, _a, _b, stroke;
-            var e_3, _c;
+            var e_4, _c;
             return __generator(this, function (_d) {
                 polygon = this.getPolygon(node, container || dom);
                 if (node.strokes && node.strokes.length) {
@@ -3748,12 +3926,12 @@ var PolygonConverter = /** @class */ (function (_super) {
                             }
                         }
                     }
-                    catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                    catch (e_4_1) { e_4 = { error: e_4_1 }; }
                     finally {
                         try {
                             if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                         }
-                        finally { if (e_3) throw e_3.error; }
+                        finally { if (e_4) throw e_4.error; }
                     }
                     if (node.strokeWeight) {
                         if (dom.style.outlineColor)
@@ -3835,7 +4013,7 @@ var PolygonConverter = /** @class */ (function (_super) {
     };
     // Helper function to get the gradient stops
     PolygonConverter.prototype.getGradientStopDoms = function (gradientStops) {
-        var e_4, _a;
+        var e_5, _a;
         var stops = [];
         try {
             for (var gradientStops_1 = __values(gradientStops), gradientStops_1_1 = gradientStops_1.next(); !gradientStops_1_1.done; gradientStops_1_1 = gradientStops_1.next()) {
@@ -3846,12 +4024,12 @@ var PolygonConverter = /** @class */ (function (_super) {
                 stops.push(stop_1);
             }
         }
-        catch (e_4_1) { e_4 = { error: e_4_1 }; }
+        catch (e_5_1) { e_5 = { error: e_5_1 }; }
         finally {
             try {
                 if (gradientStops_1_1 && !gradientStops_1_1.done && (_a = gradientStops_1.return)) _a.call(gradientStops_1);
             }
-            finally { if (e_4) throw e_4.error; }
+            finally { if (e_5) throw e_5.error; }
         }
         return stops;
     };

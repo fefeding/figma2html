@@ -26,3 +26,6 @@ build/package-lock.json
 docs/.api
 .vs
 npminstall-debug.log
+.codebuddy
+assets/CodeBubbyAssets
+example/figma
